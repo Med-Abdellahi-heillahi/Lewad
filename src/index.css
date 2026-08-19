@@ -80,6 +80,85 @@
   --focus: #cef36a;
 }
 
+/* =====================================================================
+   Espace membre — palette neutre.
+
+   La landing garde l'identité de marque (sable, vert forêt, citron vert).
+   L'espace connecté, lui, doit se lire comme un outil : noir et blanc,
+   gris neutres, accents rares. Plutôt que de réécrire chaque composant, on
+   redéfinit les tokens sous `[data-surface='app']` — `@theme inline` fait que
+   toutes les utilitaires `bg-brand`, `text-brand-deep`, `bg-surface`… suivent
+   automatiquement à l'intérieur de la coquille applicative.
+
+   Les couleurs de statut (`--answer` succès, `--ask` erreur) sont volontairement
+   conservées : elles portent du sens, pas de l'identité.
+   ===================================================================== */
+[data-surface='app'] {
+  --page: #f6f7f8;
+  --page-alt: #f0f1f3;
+  --surface: #ffffff;
+  --surface-2: #f1f2f4;
+  --surface-contrast: #e5e7ea;
+  --ink: #0f1012;
+  --ink-soft: #3a3d42;
+  --muted: #5d6167;
+  --line: rgb(15 16 18 / 0.12);
+  --line-strong: rgb(15 16 18 / 0.22);
+
+  /* Bouton principal : noir sur blanc. */
+  --brand: #17181a;
+  --brand-soft: #eceef0;
+  --brand-ink: #ffffff;
+  --brand-deep: #17181a;
+
+  --panel: #17181a;
+  --panel-ink: #f5f6f7;
+  --panel-muted: rgb(245 246 247 / 0.72);
+  --panel-line: rgb(245 246 247 / 0.16);
+
+  /* Carte illustrative : gris neutre, comme un fond de plan « silver ». */
+  --map-bg: #e9ebee;
+  --map-line: rgb(15 16 18 / 0.16);
+  --map-road: rgb(255 255 255 / 0.9);
+  /* Repères secondaires : la distinction entre agences reste fonctionnelle. */
+  --pin-2: #6a65c9;
+  --pin-3: #b87a52;
+
+  --focus: #17181a;
+}
+
+[data-theme='dark'] [data-surface='app'] {
+  --page: #0b0b0c;
+  --page-alt: #101113;
+  --surface: #141517;
+  --surface-2: #1c1e21;
+  --surface-contrast: #26292d;
+  --ink: #f2f3f4;
+  --ink-soft: #c8cbd0;
+  --muted: #9aa0a8;
+  --line: rgb(240 242 245 / 0.13);
+  --line-strong: rgb(240 242 245 / 0.26);
+
+  /* Inversion : bouton blanc, texte noir. */
+  --brand: #f2f3f4;
+  --brand-soft: #22252a;
+  --brand-ink: #0f1012;
+  --brand-deep: #e8eaed;
+
+  --panel: #17191c;
+  --panel-ink: #f2f3f4;
+  --panel-muted: rgb(242 243 244 / 0.72);
+  --panel-line: rgb(242 243 244 / 0.14);
+
+  --map-bg: #1a1c1f;
+  --map-line: rgb(240 242 245 / 0.12);
+  --map-road: rgb(240 242 245 / 0.24);
+  --pin-2: #8f8bdd;
+  --pin-3: #d09a72;
+
+  --focus: #f2f3f4;
+}
+
 @theme inline {
   --font-sans: 'Geist', 'IBM Plex Sans Arabic', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-display: 'Inter', 'IBM Plex Sans Arabic', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -124,6 +203,16 @@
 }
 
 /* Bandeau publicitaire : défilement continu de droite à gauche. */
+/* Barre de progression indéterminée pendant la vérification de session. */
+@keyframes sessionSweep {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
 @keyframes marquee {
   from {
     transform: translateX(0);

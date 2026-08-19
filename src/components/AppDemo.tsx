@@ -1,196 +1,691 @@
-import { useEffect, useRef, useState } from 'react'
-import { dictionaries, locales, type Locale, useI18n } from '../i18n'
-import { useTheme } from '../lib/theme'
-import { useDismiss } from '../lib/useDismiss'
-import { btnGhost, btnPrimary, card, iconBtn, wrap } from '../lib/ui'
+import { useMemo, useRef, useState } from 'react'
+import { type Locale, useI18n } from '../i18n'
+import { searchDemoEstablishments } from '../lib/content'
+import { type Db2Branch, type Db2Establishment } from '../lib/db2'
+import { searchServicesWithCredit } from '../lib/db3a'
+import { createMissingServiceRequest } from '../lib/db3b'
+import { formatNumber } from '../lib/format'
+import { isAdminRole } from '../lib/routeAuth'
+import { findClosestSearchMatch, getSearchSuggestions, normalizeSearchText } from '../lib/searchMatching'
+import { appPad, appWrap, btnGhost, btnPrimary, card } from '../lib/ui'
+import { useAccount } from '../hooks/useAccount'
 import { Icon, type IconName } from './Icon'
-import { Logo } from './Logo'
+import { AppShell } from './shell/AppShell'
 
-type SearchState = 'initial' | 'validation' | 'loading' | 'found' | 'unavailable' | 'requested'
+type SearchState = 'initial' | 'loading' | 'found' | 'unavailable' | 'insufficient' | 'requested'
+type ValidationMessage = 'empty' | 'minimum' | null
+type RequestState = 'idle' | 'loading' | 'created' | 'duplicate' | 'error'
 
 const appCopy = {
   fr: {
-    title: 'Recherche publique', language: 'Choisir la langue', menu: 'Ouvrir le menu', closeMenu: 'Fermer le menu',
-    items: { profile: 'Profil', contact: 'Contact', settings: 'Paramètres', search: 'Faire une recherche', recharge: 'Recharger mon compte' },
+    title: 'Recherche', language: 'Choisir la langue', menu: 'Ouvrir le menu', closeMenu: 'Fermer le menu',
+    items: { profile: 'Profil', credits: 'Crédits', contact: 'Contact', settings: 'Paramètres', search: 'Recherche', recharge: 'Recharger' },
+    auth: 'Connexion', signOut: 'Se déconnecter', account: 'Mon compte', greeting: 'Bonjour',
+    pointsUnit: 'points', pointsUnavailable: 'Points indisponibles',
     welcome: 'Que cherchez-vous aujourd’hui ?', description: 'Recherchez un service, une agence ou un établissement local en Mauritanie.',
     input: 'Rechercher un service', placeholder: 'Ex. Bankily, pharmacie, restaurant…', submit: 'Rechercher', examples: 'Exemples',
-    chips: ['Bankily', 'Pharmacie', 'Salle de sport', 'Restaurant'], initialTitle: 'Commencez votre recherche', initialText: 'Testez Lewad sans compte avec un service local.',
-    empty: 'Veuillez saisir le nom d’un service.', loading: 'Recherche en cours…', demo: 'Résultat de démonstration', category: 'Services financiers',
-    phone: 'Téléphone', website: 'Site web', location: 'Localisation', city: 'Nouakchott, Mauritanie', nearby: 'Agences proches', nearbyCount: '3 agences proches', nearest: 'La plus proche',
-    call: 'Appeler', whatsapp: 'WhatsApp', directions: 'Itinéraire', ok: 'OK', note: 'Données de démonstration pour la V1.',
-    unavailableTitle: 'Ce service n’est pas disponible pour le moment.', unavailableText: 'Veuillez demander à l’équipe Lewad de l’ajouter.', request: 'Demander l’ajout',
-    requestedTitle: 'Demande préparée', requestedText: 'Votre demande a été préparée. L’équipe Lewad pourra bientôt recevoir ce type de demande.', reset: 'Nouvelle recherche',
-    version: 'Version 1.0.0', by: 'By Wasla', mapLabel: 'Carte illustrative des agences Bankily',
+    chips: ['Bankily', 'Pharmacie', 'Salle de sport', 'Restaurant'], initialTitle: 'Commencez votre recherche', initialText: 'Recherchez un service local.',
+    empty: 'Veuillez saisir le nom d’un service.', minimum: 'Saisissez au moins 2 caractères pour lancer la recherche.', loading: 'Recherche en cours…',
+    dataFromLewad: 'Données Lewad', verified: 'Vérifié', categoryUnavailable: 'Catégorie non renseignée',
+    phone: 'Téléphone', website: 'Site web', location: 'Localisation', nearby: 'Agences', agenciesFound: 'agences trouvées', nearest: 'La plus proche', mainBranch: 'Agence principale',
+    call: 'Appeler', whatsapp: 'WhatsApp', directions: 'Voir les agences', ok: 'Nouvelle recherche', notAvailable: 'Non renseigné', noBranches: 'Aucune agence active disponible.', branchesError: 'Les agences sont momentanément indisponibles.',
+    unavailableTitle: 'Ce service n’est pas encore disponible sur Lewad.', unavailableText: 'Vous pouvez préparer une demande pour que notre équipe l’ajoute.', request: 'Demander l’ajout',
+    searchErrorTitle: 'La recherche est momentanément indisponible.', searchErrorText: 'Réessayez dans quelques instants.',
+    insufficientTitle: 'Points insuffisants', insufficientText: 'Vous n’avez pas assez de points pour effectuer cette recherche.', recharge: 'Recharger mes points', debitNotice: '1 point a été utilisé pour cette recherche.', unlimitedMode: 'Mode admin : recherches illimitées', unlimitedNotice: 'Recherche illimitée — aucun point débité.',
+    balance: 'Solde', currentBalance: 'Solde actuel', costPerSearch: '1 point = 1 recherche.', emptyWallet: 'Vous n’avez plus de points. Rechargez votre compte pour continuer vos recherches.', viewCredits: 'Voir mes crédits', searchedQuery: '« {query} »',
+    requesting: 'Envoi de la demande…', retryRequest: 'Réessayer', requestError: 'Impossible d’envoyer la demande pour le moment.',
+    requestedTitle: 'Demande envoyée', requestedText: 'Votre demande a été envoyée à l’équipe Lewad.', requestDuplicateTitle: 'Demande déjà en attente', requestDuplicateText: 'Une demande pour ce service est déjà en attente.', reset: 'Nouvelle recherche',
+    version: 'Version 1.0.0', by: 'By Wasla', mapLabel: 'Carte illustrative des agences',
   },
   ar: {
-    title: 'البحث العام', language: 'اختيار اللغة', menu: 'فتح القائمة', closeMenu: 'إغلاق القائمة',
-    items: { profile: 'الملف الشخصي', contact: 'التواصل', settings: 'الإعدادات', search: 'إجراء بحث', recharge: 'شحن حسابي' },
+    title: 'البحث', language: 'اختيار اللغة', menu: 'فتح القائمة', closeMenu: 'إغلاق القائمة',
+    items: { profile: 'الملف الشخصي', credits: 'النقاط', contact: 'التواصل', settings: 'الإعدادات', search: 'بحث', recharge: 'شحن' },
+    auth: 'تسجيل الدخول', signOut: 'تسجيل الخروج', account: 'حسابي', greeting: 'مرحبًا',
+    pointsUnit: 'نقاط', pointsUnavailable: 'النقاط غير متاحة',
     welcome: 'ماذا تبحث عنه اليوم؟', description: 'ابحث عن خدمة أو وكالة أو مؤسسة محلية في موريتانيا.',
     input: 'ابحث عن خدمة', placeholder: 'مثال: Bankily أو صيدلية أو مطعم…', submit: 'ابحث', examples: 'أمثلة',
-    chips: ['Bankily', 'صيدلية', 'قاعة رياضية', 'مطعم'], initialTitle: 'ابدأ بحثك', initialText: 'جرّب لواد دون حساب باستخدام خدمة محلية.',
-    empty: 'يرجى إدخال اسم خدمة.', loading: 'جارٍ البحث…', demo: 'نتيجة تجريبية', category: 'خدمات مالية',
-    phone: 'الهاتف', website: 'الموقع الإلكتروني', location: 'الموقع', city: 'نواكشوط، موريتانيا', nearby: 'وكالات قريبة', nearbyCount: '3 وكالات قريبة', nearest: 'الأقرب',
-    call: 'اتصال', whatsapp: 'واتساب', directions: 'الاتجاهات', ok: 'حسنًا', note: 'بيانات تجريبية للنسخة الأولى.',
-    unavailableTitle: 'هذه الخدمة غير متاحة حاليًا.', unavailableText: 'يرجى طلب إضافتها من فريق لواد.', request: 'طلب الإضافة',
-    requestedTitle: 'تم تجهيز الطلب', requestedText: 'تم تجهيز طلبك. سيتمكن فريق لواد قريبًا من استلام هذا النوع من الطلبات.', reset: 'بحث جديد',
-    version: 'الإصدار 1.0.0', by: 'By Wasla', mapLabel: 'خريطة توضيحية لوكالات Bankily',
+    chips: ['Bankily', 'صيدلية', 'قاعة رياضية', 'مطعم'], initialTitle: 'ابدأ بحثك', initialText: 'ابحث عن خدمة محلية.',
+    empty: 'يرجى إدخال اسم خدمة.', minimum: 'أدخل حرفين على الأقل لبدء البحث.', loading: 'جارٍ البحث…',
+    dataFromLewad: 'بيانات لواد', verified: 'موثّق', categoryUnavailable: 'فئة غير محددة',
+    phone: 'الهاتف', website: 'الموقع الإلكتروني', location: 'الموقع', nearby: 'الوكالات', agenciesFound: 'وكالات موجودة', nearest: 'الأقرب', mainBranch: 'الوكالة الرئيسية',
+    call: 'اتصال', whatsapp: 'واتساب', directions: 'عرض الوكالات', ok: 'بحث جديد', notAvailable: 'غير متاح', noBranches: 'لا توجد وكالة نشطة حاليًا.', branchesError: 'الوكالات غير متاحة مؤقتًا.',
+    unavailableTitle: 'هذه الخدمة غير متاحة بعد على لواد.', unavailableText: 'يمكنك تجهيز طلب ليضيفها فريقنا.', request: 'طلب الإضافة',
+    searchErrorTitle: 'البحث غير متاح مؤقتًا.', searchErrorText: 'حاول مرة أخرى بعد قليل.',
+    insufficientTitle: 'النقاط غير كافية', insufficientText: 'ليس لديك نقاط كافية لإجراء هذا البحث.', recharge: 'شحن نقاطي', debitNotice: 'تم استخدام نقطة واحدة لهذا البحث.', unlimitedMode: 'وضع الإدارة: بحث غير محدود', unlimitedNotice: 'بحث غير محدود — لم يتم خصم أي نقطة.',
+    balance: 'الرصيد', currentBalance: 'الرصيد الحالي', costPerSearch: 'نقطة واحدة = عملية بحث واحدة.', emptyWallet: 'لم تعد لديك نقاط. أعد شحن حسابك لمتابعة البحث.', viewCredits: 'عرض نقاطي', searchedQuery: '«‏ {query} ‏»',
+    requesting: 'جارٍ إرسال الطلب…', retryRequest: 'أعد المحاولة', requestError: 'تعذّر إرسال الطلب حاليًا.',
+    requestedTitle: 'تم إرسال الطلب', requestedText: 'تم إرسال طلبك إلى فريق لواد.', requestDuplicateTitle: 'الطلب قيد الانتظار بالفعل', requestDuplicateText: 'يوجد طلب قيد الانتظار لهذه الخدمة بالفعل.', reset: 'بحث جديد',
+    version: 'الإصدار 1.0.0', by: 'By Wasla', mapLabel: 'خريطة توضيحية للوكالات',
   },
   en: {
-    title: 'Public search', language: 'Choose language', menu: 'Open menu', closeMenu: 'Close menu',
-    items: { profile: 'Profile', contact: 'Contact', settings: 'Settings', search: 'Search', recharge: 'Recharge my account' },
+    title: 'Search', language: 'Choose language', menu: 'Open menu', closeMenu: 'Close menu',
+    items: { profile: 'Profile', credits: 'Credits', contact: 'Contact', settings: 'Settings', search: 'Search', recharge: 'Recharge' },
+    auth: 'Sign in', signOut: 'Sign out', account: 'My account', greeting: 'Hello',
+    pointsUnit: 'points', pointsUnavailable: 'Points unavailable',
     welcome: 'What are you looking for today?', description: 'Search for a local service, agency or business in Mauritania.',
     input: 'Search for a service', placeholder: 'E.g. Bankily, pharmacy, restaurant…', submit: 'Search', examples: 'Examples',
-    chips: ['Bankily', 'Pharmacy', 'Gym', 'Restaurant'], initialTitle: 'Start your search', initialText: 'Try Lewad without an account using a local service.',
-    empty: 'Please enter a service name.', loading: 'Searching…', demo: 'Demo result', category: 'Financial services',
-    phone: 'Phone', website: 'Website', location: 'Location', city: 'Nouakchott, Mauritania', nearby: 'Nearby agencies', nearbyCount: '3 nearby agencies', nearest: 'Nearest',
-    call: 'Call', whatsapp: 'WhatsApp', directions: 'Directions', ok: 'OK', note: 'Demo data for V1.',
-    unavailableTitle: 'This service is not available yet.', unavailableText: 'Please ask the Lewad team to add it.', request: 'Request addition',
-    requestedTitle: 'Request prepared', requestedText: 'Your request has been prepared. The Lewad team will soon be able to receive this type of request.', reset: 'New search',
-    version: 'Version 1.0.0', by: 'By Wasla', mapLabel: 'Illustrative map of Bankily agencies',
+    chips: ['Bankily', 'Pharmacy', 'Gym', 'Restaurant'], initialTitle: 'Start your search', initialText: 'Search for a local service.',
+    empty: 'Please enter a service name.', minimum: 'Enter at least 2 characters to search.', loading: 'Searching…',
+    dataFromLewad: 'Lewad data', verified: 'Verified', categoryUnavailable: 'Category unavailable',
+    phone: 'Phone', website: 'Website', location: 'Location', nearby: 'Agencies', agenciesFound: 'agencies found', nearest: 'Nearest', mainBranch: 'Main agency',
+    call: 'Call', whatsapp: 'WhatsApp', directions: 'View agencies', ok: 'New search', notAvailable: 'Not available', noBranches: 'No active agency is available.', branchesError: 'Agencies are temporarily unavailable.',
+    unavailableTitle: 'This service is not available on Lewad yet.', unavailableText: 'You can prepare a request for our team to add it.', request: 'Request addition',
+    searchErrorTitle: 'Search is temporarily unavailable.', searchErrorText: 'Please try again in a moment.',
+    insufficientTitle: 'Insufficient points', insufficientText: 'You do not have enough points to run this search.', recharge: 'Recharge my points', debitNotice: '1 point was used for this search.', unlimitedMode: 'Admin mode: unlimited searches', unlimitedNotice: 'Unlimited search — no point was debited.',
+    balance: 'Balance', currentBalance: 'Current balance', costPerSearch: '1 point = 1 search.', emptyWallet: 'You have no points left. Recharge your account to continue searching.', viewCredits: 'View my credits', searchedQuery: '“{query}”',
+    requesting: 'Sending request…', retryRequest: 'Try again', requestError: 'Unable to send the request right now.',
+    requestedTitle: 'Request sent', requestedText: 'Your request was sent to the Lewad team.', requestDuplicateTitle: 'Request already pending', requestDuplicateText: 'A request for this service is already pending.', reset: 'New search',
+    version: 'Version 1.0.0', by: 'By Wasla', mapLabel: 'Illustrative agency map',
   },
 } as const
 
-const agencies = [
-  { name: 'Tevragh Zeina', distance: '1.2 km' },
-  { name: 'Ksar', distance: '2.4 km' },
-  { name: 'Arafat', distance: '4.8 km' },
-] as const
+type AppCopy = (typeof appCopy)[Locale]
 
-function normalize(value: string) {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase()
+const pinPositions = ['start-[11%] top-[70%]', 'start-[43%] top-[48%]', 'end-[12%] top-[18%]'] as const
+const pinColors = ['bg-brand text-brand-ink', 'bg-[var(--pin-2)] text-white', 'bg-[var(--pin-3)] text-white'] as const
+
+function formatLocation(branch: Db2Branch | undefined, fallback: string) {
+  if (!branch) return fallback
+  return [branch.neighborhood, branch.city].filter(Boolean).join(', ') || fallback
 }
 
-function AppDemoNavbar({ onSearch }: { onSearch: () => void }) {
-  const { locale, setLocale, t } = useI18n()
-  const { theme, toggleTheme } = useTheme()
-  const copy = appCopy[locale]
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [langOpen, setLangOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
-  const langRef = useRef<HTMLDivElement>(null)
+function phoneHref(phone: string) {
+  return `tel:${phone.replace(/[^+\d]/g, '')}`
+}
 
-  useDismiss(menuOpen, menuRef, () => setMenuOpen(false))
-  useDismiss(langOpen, langRef, () => setLangOpen(false))
+function isActionablePhone(phone: string) {
+  return /^[+\d\s().-]+$/.test(phone) && phone.replace(/\D/g, '').length >= 8
+}
 
-  const items: { id: keyof typeof copy.items; href: string; icon: IconName }[] = [
-    { id: 'profile', href: '#app-search', icon: 'user' },
-    { id: 'contact', href: '/#contact', icon: 'message' },
-    { id: 'settings', href: '#app-search', icon: 'info' },
-    { id: 'search', href: '#app-search', icon: 'search' },
-    { id: 'recharge', href: '#app-search', icon: 'wallet' },
-  ]
+function whatsappHref(phone: string) {
+  return `https://wa.me/${phone.replace(/\D/g, '')}`
+}
+
+function websiteHref(website: string) {
+  return /^https?:\/\//i.test(website) ? website : `https://${website}`
+}
+
+function MockMap({ copy, branches }: { copy: AppCopy; branches: Db2Branch[] }) {
+  const mappableBranches = branches.filter((branch) => branch.latitude !== null && branch.longitude !== null).slice(0, 3)
+  const nearestBranch = branches.find((branch) => branch.is_main) ?? branches[0]
+
+  return <div className="relative min-h-72 overflow-hidden rounded-2xl border border-line bg-[var(--map-bg)]" role="img" aria-label={copy.mapLabel}>
+    <div className="absolute inset-0 opacity-45 [background-image:linear-gradient(30deg,transparent_45%,var(--map-line)_46%,var(--map-line)_49%,transparent_50%),linear-gradient(120deg,transparent_42%,var(--map-road)_43%,var(--map-road)_47%,transparent_48%),radial-gradient(var(--map-line)_1px,transparent_1px)] [background-size:170px_110px,210px_170px,13px_13px]" />
+    <svg className="absolute inset-0 size-full" viewBox="0 0 440 310" fill="none" aria-hidden="true"><path d="M61 242C122 213 125 155 196 173c59 15 92-76 182-112" stroke="var(--map-line)" strokeWidth="5" strokeDasharray="9 8" /><path d="M61 242C122 213 125 155 196 173c59 15 92-76 182-112" stroke="var(--map-road)" strokeWidth="2" /></svg>
+    {mappableBranches.map((branch, index) => <span key={branch.id} title={branch.name} className={`absolute grid size-9 place-items-center rounded-full border-4 border-surface ${pinPositions[index]} ${pinColors[index]}`}><Icon name="pin" size={17} /></span>)}
+    <span className="absolute start-4 top-4 rounded-full bg-surface/90 px-3 py-1.5 text-xs font-bold text-ink shadow-sm">{branches.length} {copy.agenciesFound}</span>
+    {nearestBranch && <span className="absolute bottom-4 end-4 max-w-[72%] truncate rounded-full border border-line bg-surface/90 px-3 py-1.5 text-xs font-bold text-ink shadow-sm">{copy.nearest} · {nearestBranch.name}</span>}
+  </div>
+}
+
+/**
+ * Panneau de solde. C'est le contrat de la recherche : ce qu'il reste, ce
+ * qu'une recherche coûte, et comment recharger. Sur mobile il se glisse sous
+ * le champ ; à partir de `lg` il occupe la colonne de droite.
+ */
+function WalletPanel({ copy, balance, loading, unlimited }: { copy: AppCopy; balance: number | null; loading: boolean; unlimited: boolean }) {
+  const { locale } = useI18n()
+  const empty = balance === 0
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-page/90 backdrop-blur-md">
-      <div className={`${wrap} grid h-16 grid-cols-[1fr_auto_1fr] items-center gap-2 sm:h-[72px]`}>
-        <a href="/" aria-label="Lewad" className="w-max rounded-lg"><Logo /></a>
+    <aside className={`${card} p-5`} aria-label={copy.balance}>
+      <p className="text-xs font-semibold text-muted">{copy.balance}</p>
 
-        <div className="flex items-center gap-2">
-          <div className="relative" ref={langRef}>
-            <button type="button" className={`${iconBtn} w-auto gap-1.5 px-2.5 text-xs font-bold`} aria-label={copy.language} aria-expanded={langOpen} aria-haspopup="true" onClick={() => { setLangOpen((open) => !open); setMenuOpen(false) }}>
-              <Icon name="globe" size={18} />
-              <span aria-hidden="true">{dictionaries[locale].meta.short}</span>
-            </button>
-            {langOpen && <ul className="absolute start-1/2 top-[calc(100%+8px)] z-50 w-40 -translate-x-1/2 list-none rounded-xl border border-line bg-surface p-1.5 shadow-lg shadow-black/10 rtl:translate-x-1/2">
-              {locales.map((item) => <li key={item}><button type="button" lang={item} aria-current={item === locale} onClick={() => { setLocale(item); setLangOpen(false) }} className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-start text-sm ${item === locale ? 'bg-surface-2 font-semibold text-ink' : 'text-muted hover:bg-surface-2'}`}>
-                {dictionaries[item].meta.label}{item === locale && <Icon name="check" size={15} />}
-              </button></li>)}
-            </ul>}
-          </div>
-          <button type="button" className={iconBtn} onClick={toggleTheme} aria-label={theme === 'light' ? t.nav.toDark : t.nav.toLight}><Icon name={theme === 'light' ? 'moon' : 'sun'} size={18} /></button>
-        </div>
+      {loading && balance === null ? (
+        <span aria-hidden="true" className="mt-2 block h-9 w-28 rounded-lg bg-surface-2 motion-safe:animate-pulse" />
+      ) : balance === null ? (
+        <p className="mt-2 text-base font-semibold text-muted">{copy.pointsUnavailable}</p>
+      ) : (
+        <p className="mt-1 flex flex-wrap items-baseline gap-2">
+          <span className="tabular text-3xl leading-none font-bold tracking-tight text-ink">{formatNumber(balance, locale)}</span>
+          <span className="text-sm font-semibold text-muted">{copy.pointsUnit}</span>
+        </p>
+      )}
 
-        <div className="relative justify-self-end" ref={menuRef}>
-          <button type="button" className={iconBtn} aria-label={menuOpen ? copy.closeMenu : copy.menu} aria-expanded={menuOpen} aria-haspopup="true" aria-controls="app-demo-menu" onClick={() => { setMenuOpen((open) => !open); setLangOpen(false) }}><Icon name={menuOpen ? 'close' : 'menu'} size={19} /></button>
-          {menuOpen && <nav id="app-demo-menu" aria-label={copy.menu} className="absolute end-0 top-[calc(100%+8px)] z-50 w-64 rounded-2xl border border-line bg-surface p-1.5 shadow-xl shadow-black/10">
-            <ul className="list-none">{items.map((item) => <li key={item.id}><a href={item.href} onClick={() => { setMenuOpen(false); if (item.id === 'search') window.setTimeout(onSearch, 0) }} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-ink-soft transition-colors hover:bg-surface-2 hover:text-ink"><Icon name={item.icon} size={18} />{copy.items[item.id]}</a></li>)}</ul>
-          </nav>}
-        </div>
+      {unlimited ? (
+        <p className="mt-3 flex items-start gap-2 rounded-xl border border-answer/25 bg-answer-bg px-3 py-2.5 text-sm font-semibold leading-6 text-answer" role="status">
+          <span className="mt-0.5 shrink-0">
+            <Icon name="sparkle" size={16} />
+          </span>
+          {copy.unlimitedMode}
+        </p>
+      ) : (
+        <p className="mt-3 flex items-start gap-2 text-sm leading-6 text-muted">
+          <span className="mt-0.5 shrink-0 text-muted">
+            <Icon name="info" size={16} />
+          </span>
+          {copy.costPerSearch}
+        </p>
+      )}
+
+      {empty && !unlimited && (
+        <p className="mt-3 flex items-start gap-2 rounded-xl border border-ask/25 bg-ask-bg px-3 py-2.5 text-sm font-medium text-ask" role="status">
+          <span className="mt-0.5 shrink-0">
+            <Icon name="alert" size={16} />
+          </span>
+          {copy.emptyWallet}
+        </p>
+      )}
+
+      <div className="mt-4 grid gap-2">
+        <a href="/recharge" className={`${empty && !unlimited ? btnPrimary : btnGhost} w-full`}>
+          {copy.recharge}
+        </a>
+        <a href="/credits" className="inline-flex min-h-11 items-center justify-center text-sm font-semibold text-muted transition-colors hover:text-ink">
+          {copy.viewCredits}
+        </a>
       </div>
-    </header>
+    </aside>
   )
 }
 
-function MockMap({ copy }: { copy: (typeof appCopy)[Locale] }) {
-  return <div className="relative min-h-72 overflow-hidden rounded-2xl border border-line bg-[#dcebd2] dark:bg-[#1b2d24]" role="img" aria-label={copy.mapLabel}>
-    <div className="absolute inset-0 opacity-45 [background-image:linear-gradient(30deg,transparent_45%,rgba(48,92,55,.32)_46%,rgba(48,92,55,.32)_49%,transparent_50%),linear-gradient(120deg,transparent_42%,rgba(255,255,255,.8)_43%,rgba(255,255,255,.8)_47%,transparent_48%),radial-gradient(rgba(43,74,60,.35)_1px,transparent_1px)] [background-size:170px_110px,210px_170px,13px_13px]" />
-    <svg className="absolute inset-0 size-full" viewBox="0 0 440 310" fill="none" aria-hidden="true"><path d="M61 242C122 213 125 155 196 173c59 15 92-76 182-112" stroke="rgba(43,74,60,.58)" strokeWidth="5" strokeDasharray="9 8" /><path d="M61 242C122 213 125 155 196 173c59 15 92-76 182-112" stroke="rgba(255,253,248,.82)" strokeWidth="2" /></svg>
-    <span className="absolute start-[11%] top-[70%] grid size-9 place-items-center rounded-full border-4 border-surface bg-brand-deep text-brand"><Icon name="pin" size={17} /></span>
-    <span className="absolute start-[43%] top-[48%] grid size-9 place-items-center rounded-full border-4 border-surface bg-[#6a65c9] text-white"><Icon name="pin" size={17} /></span>
-    <span className="absolute end-[12%] top-[18%] grid size-9 place-items-center rounded-full border-4 border-surface bg-[#ce8e62] text-white"><Icon name="pin" size={17} /></span>
-    <span className="absolute start-4 top-4 rounded-full bg-surface/90 px-3 py-1.5 text-xs font-bold text-ink shadow-sm">{copy.nearbyCount}</span>
-    <span className="absolute bottom-4 end-4 rounded-full border border-white/60 bg-surface/90 px-3 py-1.5 text-xs font-bold text-ink shadow-sm">{copy.nearest} · Tevragh Zeina</span>
-  </div>
+/** Points épuisés : l'écran explique la situation et donne la seule sortie utile. */
+function InsufficientCredits({ copy, balance }: { copy: AppCopy; balance: number | null }) {
+  const { locale } = useI18n()
+
+  return (
+    <section className={`${card} p-6 sm:p-8`} role="status">
+      <span className="grid size-11 place-items-center rounded-xl bg-ask-bg text-ask">
+        <Icon name="wallet" size={21} />
+      </span>
+      <h2 className="mt-5 text-xl font-bold tracking-tight sm:text-2xl">{copy.insufficientTitle}</h2>
+      <p className="mt-2 max-w-xl text-[15px] leading-7 text-muted sm:text-base">{copy.insufficientText}</p>
+
+      <p className="mt-5 inline-flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-sm">
+        <span className="font-semibold text-muted">{copy.currentBalance}</span>
+        <span className="tabular font-bold text-ink">
+          {balance === null ? copy.pointsUnavailable : `${formatNumber(balance, locale)} ${copy.pointsUnit}`}
+        </span>
+      </p>
+
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <a href="/recharge" className={`${btnPrimary} w-full sm:w-auto`}>
+          {copy.recharge}
+          <span className="rtl:rotate-180">
+            <Icon name="arrow" size={17} />
+          </span>
+        </a>
+        <a href="/credits" className={`${btnGhost} w-full sm:w-auto`}>
+          {copy.viewCredits}
+        </a>
+      </div>
+    </section>
+  )
 }
 
 export function PublicSearchDemo() {
-  const { locale } = useI18n()
+  const { locale, t } = useI18n()
+  const { wallet, profile, loading: accountLoading, refresh, applyWalletBalance } = useAccount()
   const copy = appCopy[locale]
+  const searchCopy = t.appSearch
   const [query, setQuery] = useState('')
   const [state, setState] = useState<SearchState>('initial')
+  const [validation, setValidation] = useState<ValidationMessage>(null)
+  const [results, setResults] = useState<Db2Establishment[]>([])
+  const [didYouMean, setDidYouMean] = useState<Db2Establishment | null>(null)
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false)
+  const [searchFailed, setSearchFailed] = useState(false)
+  const [debited, setDebited] = useState(false)
+  const [unlimitedSearch, setUnlimitedSearch] = useState(false)
+  const [lastNotFoundQuery, setLastNotFoundQuery] = useState<string | null>(null)
+  const [lastSearchLogId, setLastSearchLogId] = useState<string | null>(null)
+  const [requestState, setRequestState] = useState<RequestState>('idle')
   const inputRef = useRef<HTMLInputElement>(null)
-  const timerRef = useRef<number | null>(null)
+  const searchIdRef = useRef(0)
 
-  useEffect(() => {
-    document.title = `${copy.title} — Lewad`
-  }, [copy.title])
-  useEffect(() => () => { if (timerRef.current) window.clearTimeout(timerRef.current) }, [])
-
+  const suggestions = useMemo(
+    () => getSearchSuggestions(searchDemoEstablishments, query),
+    [query],
+  )
+  const hasSuggestionQuery = normalizeSearchText(query).length >= 2
+  const balance = wallet?.balance ?? null
+  const hasUnlimitedSearches = isAdminRole(profile?.role)
   const focusSearch = () => inputRef.current?.focus()
-  const runSearch = (raw = query) => {
-    const value = normalize(raw)
-    if (!value) { setState('validation'); focusSearch(); return }
-    if (timerRef.current) window.clearTimeout(timerRef.current)
-    setState('loading')
-    timerRef.current = window.setTimeout(() => setState(value === 'bankily' || value === 'bankilly' ? 'found' : 'unavailable'), 420)
+
+  const clearSearchState = () => {
+    setResults([])
+    setDidYouMean(null)
+    setSearchFailed(false)
+    setDebited(false)
+    setUnlimitedSearch(false)
+    setLastNotFoundQuery(null)
+    setLastSearchLogId(null)
+    setRequestState('idle')
   }
-  const reset = () => { setQuery(''); setState('initial'); window.setTimeout(focusSearch, 0) }
 
-  return <div className="min-h-screen bg-page text-ink">
-    <AppDemoNavbar onSearch={focusSearch} />
-    <a href="#app-search" className="sr-only focus:not-sr-only focus:fixed focus:start-3 focus:top-3 focus:z-60 focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-brand-ink">{copy.input}</a>
-    <main id="app-search" className={`${wrap} py-10 sm:py-14 lg:py-18`}>
-      <section className="mx-auto max-w-4xl" aria-labelledby="app-demo-title">
-        <div className="max-w-2xl">
-          <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 text-[11px] font-bold tracking-[0.08em] text-muted uppercase rtl:tracking-normal rtl:normal-case"><span className="size-1.5 rounded-full bg-brand-deep dark:bg-brand" />Lewad V1</span>
-          <h1 id="app-demo-title" className="mt-5 text-4xl leading-[1.08] font-bold tracking-[-0.045em] text-ink sm:text-5xl">{copy.welcome}</h1>
-          <p className="mt-4 max-w-xl text-base leading-7 text-muted sm:text-lg">{copy.description}</p>
-        </div>
+  const runSearch = async (raw = query) => {
+    const requestedQuery = raw.trim()
+    const normalizedQuery = normalizeSearchText(raw)
+    const searchId = ++searchIdRef.current
 
-        <form className="mt-8" onSubmit={(event) => { event.preventDefault(); runSearch() }} noValidate>
-          <label htmlFor="service-search" className="mb-2 block text-sm font-semibold text-ink">{copy.input}</label>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="relative flex-1"><Icon name="search" size={20} className="pointer-events-none absolute start-4 top-1/2 -translate-y-1/2 text-muted" /><input ref={inputRef} id="service-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={copy.placeholder} className="h-12 w-full rounded-xl border border-line bg-surface py-3 pe-4 ps-11 text-base text-ink shadow-sm outline-none placeholder:text-muted focus:border-brand-deep" autoComplete="off" /></div>
-            <button className={`${btnPrimary} h-12 sm:min-w-35`} type="submit" disabled={state === 'loading'}>{state === 'loading' ? copy.loading : <><Icon name="search" size={18} />{copy.submit}</>}</button>
+    if (!normalizedQuery || normalizedQuery.length < 2) {
+      clearSearchState()
+      setValidation(normalizedQuery ? 'minimum' : 'empty')
+      setState('initial')
+      focusSearch()
+      return
+    }
+
+    setValidation(null)
+    setSuggestionsOpen(false)
+    clearSearchState()
+    setState('loading')
+    const result = await searchServicesWithCredit(requestedQuery)
+
+    if (searchId !== searchIdRef.current) return
+
+    // The RPC debits atomically and returns the post-debit balance. Reflect it
+    // immediately in the shared account state so the page and AppBar never
+    // wait for a second network round-trip to show the new value.
+    if (result.balance !== null) applyWalletBalance(result.balance)
+
+    // Re-read the wallet after any debit (or a confirmed insufficient balance)
+    // to keep the UI aligned with DB1 without ever mutating it from the client.
+    if (result.debitedPoints > 0 || result.status === 'insufficient_credits') void refresh()
+
+    if (result.status === 'invalid_query') {
+      setValidation('minimum')
+      setState('initial')
+      return
+    }
+
+    if (result.status === 'insufficient_credits') {
+      if (hasUnlimitedSearches || result.unlimited) {
+        setSearchFailed(true)
+        setState('unavailable')
+        return
+      }
+      setState('insufficient')
+      return
+    }
+
+    if (!result.ok || result.status === 'unauthenticated' || result.status === 'error') {
+      setSearchFailed(true)
+      setState('unavailable')
+      return
+    }
+
+    setResults(result.results)
+    setDebited(result.debitedPoints === 1)
+    setUnlimitedSearch(result.unlimited)
+
+    if (result.status === 'success' && result.results.length) {
+      setState('found')
+      return
+    }
+
+    setLastNotFoundQuery(requestedQuery)
+    // DB3A does not expose search_log_id yet. DB3B accepts null safely.
+    setLastSearchLogId(null)
+    setDidYouMean(findClosestSearchMatch(searchDemoEstablishments, normalizedQuery))
+    setState('unavailable')
+  }
+
+  const handleRequestMissingService = async () => {
+    if (!lastNotFoundQuery || requestState === 'loading') return
+
+    setDidYouMean(null)
+    setRequestState('loading')
+    const result = await createMissingServiceRequest({
+      query: lastNotFoundQuery,
+      message: null,
+      searchLogId: lastSearchLogId,
+    })
+
+    if (result.status === 'created' || result.status === 'duplicate') {
+      setRequestState(result.status)
+      setState('requested')
+      return
+    }
+
+    setRequestState('error')
+  }
+
+  const reset = () => {
+    searchIdRef.current += 1
+    setQuery('')
+    setValidation(null)
+    setSuggestionsOpen(false)
+    clearSearchState()
+    setState('initial')
+    window.setTimeout(focusSearch, 0)
+  }
+
+  const chooseSuggestion = (establishment: Db2Establishment) => {
+    setQuery(establishment.name)
+    void runSearch(establishment.name)
+  }
+
+  const didYouMeanLabel = didYouMean ? searchCopy.didYouMean.replace('{name}', didYouMean.name) : ''
+  const searchedQueryLabel = lastNotFoundQuery ? copy.searchedQuery.replace('{query}', lastNotFoundQuery) : ''
+
+  return (
+    <AppShell active="search" documentTitle={copy.title} skipLabel={copy.input}>
+      <main id="app-main" className={`${appWrap} ${appPad}`}>
+        {/* Desktop : la recherche garde la colonne large, le solde tient une
+            colonne dédiée qui reste visible pendant qu'on lit un résultat.
+            Mobile : une seule colonne, le solde juste sous le champ. */}
+        <div className="mx-auto max-w-3xl lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start lg:gap-8">
+          <header className="min-w-0 lg:col-start-1">
+            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 text-[11px] font-bold tracking-[0.08em] text-muted uppercase rtl:tracking-normal rtl:normal-case">
+              <span className="size-1.5 rounded-full bg-brand-deep dark:bg-brand" />
+              Lewad V1
+            </span>
+            <h1 id="app-demo-title" className="mt-4 text-[30px] leading-[1.12] font-bold tracking-[-0.04em] text-ink sm:mt-5 sm:text-4xl">
+              {copy.welcome}
+            </h1>
+            <p className="mt-3 max-w-xl text-[15px] leading-7 text-muted sm:mt-4 sm:text-lg">{copy.description}</p>
+          </header>
+
+          {/* Le solde reste immédiatement visible au pouce sur mobile ; à
+              partir de `lg`, il rejoint sa colonne latérale fixe. */}
+          <div className="mt-6 lg:col-start-2 lg:row-span-full lg:mt-0 lg:sticky lg:top-24">
+            <WalletPanel copy={copy} balance={balance} loading={accountLoading} unlimited={hasUnlimitedSearches} />
           </div>
-          {state === 'validation' && <p className="mt-3 flex items-center gap-2 rounded-xl border border-ask/25 bg-ask-bg px-3 py-2.5 text-sm font-medium text-ask" role="alert"><Icon name="alert" size={17} />{copy.empty}</p>}
-        </form>
 
-        <div className="mt-5 flex flex-wrap items-center gap-2"><span className="me-1 text-xs font-semibold text-muted">{copy.examples}</span>{copy.chips.map((chip) => <button type="button" key={chip} onClick={() => { setQuery(chip); runSearch(chip) }} className="rounded-full border border-line bg-surface px-3 py-1.5 text-sm text-ink-soft transition-colors hover:border-brand-deep hover:bg-brand-soft">{chip}</button>)}</div>
+          <form
+            className="mt-7 min-w-0 sm:mt-8 lg:col-start-1"
+            onSubmit={(event) => {
+              event.preventDefault()
+              void runSearch()
+            }}
+            noValidate
+          >
+            <label htmlFor="service-search" className="mb-2 block text-sm font-semibold text-ink">
+              {copy.input}
+            </label>
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-3">
+              <div className="relative flex-1">
+                <Icon name="search" size={20} className="pointer-events-none absolute start-4 top-1/2 -translate-y-1/2 text-muted" />
+                <input
+                  ref={inputRef}
+                  id="service-search"
+                  value={query}
+                  onFocus={() => setSuggestionsOpen(true)}
+                  onChange={(event) => {
+                    setQuery(event.target.value)
+                    setValidation(null)
+                    setDidYouMean(null)
+                    setState('initial')
+                    setSuggestionsOpen(true)
+                  }}
+                  placeholder={copy.placeholder}
+                  className="h-13 w-full rounded-xl border border-line bg-surface py-3 pe-4 ps-11 text-base text-ink shadow-sm outline-none transition-colors placeholder:text-muted focus:border-brand-deep focus:ring-2 focus:ring-brand-deep/15"
+                  autoComplete="off"
+                  enterKeyHint="search"
+                  aria-autocomplete="list"
+                  aria-controls="service-suggestions"
+                  aria-expanded={suggestionsOpen && hasSuggestionQuery}
+                />
+                {suggestionsOpen && hasSuggestionQuery && (
+                  <div
+                    id="service-suggestions"
+                    role="listbox"
+                    aria-label={searchCopy.suggestions}
+                    className="absolute z-30 mt-2 w-full overflow-hidden rounded-xl border border-line bg-surface p-1 shadow-lg"
+                  >
+                    <p className="px-3 py-2 text-xs font-bold tracking-[0.08em] text-muted uppercase rtl:tracking-normal rtl:normal-case">
+                      {searchCopy.suggestions}
+                    </p>
+                    {suggestions.length ? (
+                      suggestions.map((suggestion) => (
+                        <button
+                          key={suggestion.id}
+                          type="button"
+                          role="option"
+                          className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-start text-sm font-semibold text-ink transition-colors hover:bg-brand-soft focus:bg-brand-soft focus:outline-none"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => chooseSuggestion(suggestion)}
+                        >
+                          <Icon name="store" size={17} className="text-brand-deep dark:text-brand" />
+                          <span>{suggestion.name}</span>
+                          <span className="ms-auto text-xs font-medium text-muted">{suggestion.category?.name}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <p className="px-3 py-3 text-sm text-muted">{searchCopy.noSuggestions}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+              <button className={`${btnPrimary} h-13 sm:min-w-36`} type="submit" disabled={state === 'loading'}>
+                {state === 'loading' ? copy.loading : <><Icon name="search" size={18} />{copy.submit}</>}
+              </button>
+            </div>
+            {validation && (
+              <p className="mt-3 flex items-center gap-2 rounded-xl border border-ask/25 bg-ask-bg px-3.5 py-3 text-sm font-medium text-ask" role="alert">
+                <Icon name="alert" size={17} />
+                {copy[validation]}
+              </p>
+            )}
+          </form>
 
-        <div className="mt-10" aria-live="polite">
-          {(state === 'initial' || state === 'validation') && <section className={`${card} grid min-h-48 place-items-center border-dashed px-6 py-10 text-center`}><div><span className="mx-auto grid size-11 place-items-center rounded-xl bg-brand-soft text-brand-deep"><Icon name="search" size={21} /></span><h2 className="mt-4 text-xl font-bold">{copy.initialTitle}</h2><p className="mt-2 max-w-sm text-sm leading-6 text-muted">{copy.initialText}</p></div></section>}
-          {state === 'loading' && <section className={`${card} overflow-hidden p-5 sm:p-7`} role="status"><div className="h-5 w-40 animate-pulse rounded bg-surface-2" /><div className="mt-5 grid gap-4 lg:grid-cols-2"><div className="h-58 animate-pulse rounded-2xl bg-surface-2" /><div className="h-58 animate-pulse rounded-2xl bg-surface-2" /></div><span className="sr-only">{copy.loading}</span></section>}
-          {state === 'found' && <BankilyResult copy={copy} onReset={reset} />}
-          {state === 'unavailable' && <section className={`${card} p-6 sm:p-8`}><span className="grid size-11 place-items-center rounded-xl bg-brand-soft text-brand-deep"><Icon name="search" size={21} /></span><h2 className="mt-5 text-2xl font-bold tracking-tight">{copy.unavailableTitle}</h2><p className="mt-2 max-w-xl text-base leading-7 text-muted">{copy.unavailableText}</p><button type="button" className={`${btnPrimary} mt-6`} onClick={() => setState('requested')}><Icon name="plus" size={18} />{copy.request}</button></section>}
-          {state === 'requested' && <section className={`${card} border-answer/25 bg-answer-bg p-6 sm:p-8`} role="status"><span className="grid size-11 place-items-center rounded-xl bg-answer text-white"><Icon name="check" size={22} /></span><h2 className="mt-5 text-2xl font-bold tracking-tight">{copy.requestedTitle}</h2><p className="mt-2 max-w-xl text-base leading-7 text-ink-soft">{copy.requestedText}</p><button type="button" className={`${btnGhost} mt-6`} onClick={reset}>{copy.reset}</button></section>}
+          <div className="-mx-4 mt-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 lg:col-start-1">
+            <span className="shrink-0 text-xs font-semibold text-muted">{copy.examples}</span>
+            {copy.chips.map((chip) => (
+              <button
+                type="button"
+                key={chip}
+                onClick={() => {
+                  setQuery(chip)
+                  void runSearch(chip)
+                }}
+                className="min-h-11 shrink-0 rounded-full border border-line bg-surface px-4 text-sm text-ink transition-colors hover:border-brand-deep hover:bg-brand-soft"
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-6 min-w-0 sm:mt-8 lg:col-start-1" aria-live="polite">
+            {state === 'initial' && (
+              <section className={`${card} grid min-h-48 place-items-center border-dashed px-6 py-10 text-center`}>
+                <div>
+                  <span className="mx-auto grid size-11 place-items-center rounded-xl bg-brand-soft text-brand-deep">
+                    <Icon name="search" size={21} />
+                  </span>
+                  <h2 className="mt-4 text-xl font-bold">{copy.initialTitle}</h2>
+                  <p className="mt-2 max-w-sm text-sm leading-6 text-muted">{copy.initialText}</p>
+                </div>
+              </section>
+            )}
+
+            {state === 'loading' && (
+              <section className={`${card} p-5 sm:p-7`} role="status" aria-busy="true">
+                <span aria-hidden="true" className="block h-5 w-40 rounded bg-surface-2 motion-safe:animate-pulse" />
+                <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                  <span aria-hidden="true" className="block h-52 rounded-2xl bg-surface-2 motion-safe:animate-pulse" />
+                  <span aria-hidden="true" className="block h-52 rounded-2xl bg-surface-2 motion-safe:animate-pulse" />
+                </div>
+                <span className="sr-only">{copy.loading}</span>
+              </section>
+            )}
+
+            {state === 'insufficient' && <InsufficientCredits copy={copy} balance={balance} />}
+
+            {state === 'found' && (
+              <div className="grid gap-4">
+                {unlimitedSearch ? (
+                  <p className="flex items-center gap-2 rounded-xl border border-answer/25 bg-answer-bg px-3.5 py-3 text-sm font-medium text-answer" role="status">
+                    <Icon name="sparkle" size={17} />
+                    {copy.unlimitedNotice}
+                  </p>
+                ) : debited && (
+                  <p className="flex items-center gap-2 rounded-xl border border-answer/25 bg-answer-bg px-3.5 py-3 text-sm font-medium text-answer" role="status">
+                    <Icon name="check" size={17} />
+                    {copy.debitNotice}
+                  </p>
+                )}
+                <div className="grid gap-6">
+                  {results.map((establishment) => (
+                    <EstablishmentResult key={establishment.id} establishment={establishment} copy={copy} onReset={reset} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {state === 'unavailable' && (
+              <section className={`${card} p-6 sm:p-8`}>
+                <span className="grid size-11 place-items-center rounded-xl bg-brand-soft text-brand-deep">
+                  <Icon name="search" size={21} />
+                </span>
+
+                {unlimitedSearch && (
+                  <p className="mt-5 flex items-center gap-2 rounded-xl border border-answer/25 bg-answer-bg px-3.5 py-3 text-sm font-medium text-answer" role="status">
+                    <Icon name="sparkle" size={17} />
+                    {copy.unlimitedNotice}
+                  </p>
+                )}
+
+                {didYouMean ? (
+                  <>
+                    <h2 className="mt-5 text-xl font-bold tracking-tight sm:text-2xl">{didYouMeanLabel}</h2>
+                    <p className="mt-2 max-w-xl text-[15px] leading-7 text-muted sm:text-base">{searchCopy.demoNote}</p>
+                    <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                      <button type="button" className={`${btnPrimary} w-full sm:w-auto`} onClick={() => chooseSuggestion(didYouMean)}>
+                        {searchCopy.yes}
+                      </button>
+                      <button type="button" className={`${btnGhost} w-full sm:w-auto`} onClick={() => setDidYouMean(null)}>
+                        {searchCopy.no}
+                      </button>
+                    </div>
+                    {lastNotFoundQuery && (
+                      <button type="button" className={`${btnGhost} mt-3 w-full sm:w-auto`} onClick={() => void handleRequestMissingService()}>
+                        <Icon name="plus" size={18} />
+                        {copy.request}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <h2 className="mt-5 text-xl font-bold tracking-tight sm:text-2xl">
+                      {searchFailed ? copy.searchErrorTitle : copy.unavailableTitle}
+                    </h2>
+
+                    {/* Rappeler le terme cherché : l'utilisateur voit tout de
+                        suite s'il s'agit d'une faute de frappe. */}
+                    {!searchFailed && lastNotFoundQuery && (
+                      <p dir="auto" className="mt-3 inline-flex max-w-full items-center gap-2 rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-sm">
+                        <span className="shrink-0 text-muted">
+                          <Icon name="search" size={15} />
+                        </span>
+                        <span className="truncate font-semibold text-ink">{searchedQueryLabel}</span>
+                      </p>
+                    )}
+
+                    <p className="mt-3 max-w-xl text-[15px] leading-7 text-muted sm:text-base">
+                      {searchFailed ? copy.searchErrorText : copy.unavailableText}
+                    </p>
+
+                    {requestState === 'error' && (
+                      <p className="mt-4 flex items-center gap-2 text-sm font-medium text-ask" role="alert">
+                        <Icon name="alert" size={17} />
+                        {copy.requestError}
+                      </p>
+                    )}
+
+                    <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                      {lastNotFoundQuery && (
+                        <button
+                          type="button"
+                          className={`${btnPrimary} w-full sm:w-auto`}
+                          disabled={requestState === 'loading'}
+                          onClick={() => void handleRequestMissingService()}
+                        >
+                          <Icon name={requestState === 'loading' ? 'clock' : 'plus'} size={18} />
+                          {requestState === 'loading' ? copy.requesting : requestState === 'error' ? copy.retryRequest : copy.request}
+                        </button>
+                      )}
+                      <button type="button" className={`${btnGhost} w-full sm:w-auto`} onClick={reset}>
+                        {copy.reset}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </section>
+            )}
+
+            {state === 'requested' && (
+              <section className={`${card} border-answer/25 bg-answer-bg p-6 sm:p-8`} role="status">
+                <span className="grid size-11 place-items-center rounded-xl bg-answer text-white">
+                  <Icon name="check" size={22} />
+                </span>
+                <h2 className="mt-5 text-xl font-bold tracking-tight sm:text-2xl">
+                  {requestState === 'duplicate' ? copy.requestDuplicateTitle : copy.requestedTitle}
+                </h2>
+                <p className="mt-2 max-w-xl text-[15px] leading-7 text-ink-soft sm:text-base">
+                  {requestState === 'duplicate' ? copy.requestDuplicateText : copy.requestedText}
+                </p>
+                <button type="button" className={`${btnGhost} mt-6 w-full sm:w-auto`} onClick={reset}>
+                  {copy.reset}
+                </button>
+              </section>
+            )}
+          </div>
         </div>
-      </section>
-    </main>
-    <footer className="border-t border-line"><div className={`${wrap} flex flex-wrap items-center justify-between gap-3 py-5 text-sm text-muted`}><span className="tabular">{copy.version}</span><span className="font-semibold text-ink-soft">{copy.by}</span></div></footer>
-  </div>
+      </main>
+    </AppShell>
+  )
 }
 
-function BankilyResult({ copy, onReset }: { copy: (typeof appCopy)[Locale]; onReset: () => void }) {
-  return <article className={`${card} overflow-hidden`} aria-label="Bankily">
-    <div className="border-b border-line p-5 sm:p-7"><div className="flex flex-wrap items-start justify-between gap-4"><div className="flex items-center gap-4"><span className="grid size-12 place-items-center rounded-2xl bg-brand text-brand-ink"><Icon name="wallet" size={24} /></span><div><span className="text-xs font-bold tracking-[0.08em] text-muted uppercase rtl:tracking-normal rtl:normal-case">{copy.demo}</span><h2 className="mt-1 text-2xl font-bold tracking-tight">Bankily</h2><p className="mt-1 text-sm text-muted">{copy.category}</p></div></div><span className="rounded-full border border-line bg-surface-2 px-3 py-1.5 text-xs font-bold text-ink">{copy.nearbyCount}</span></div></div>
-    <div className="grid gap-7 p-5 sm:p-7 lg:grid-cols-[.9fr_1.1fr]">
-      <div><dl className="grid gap-3 text-sm"><div className="flex items-center gap-3 rounded-xl bg-surface-2 px-3 py-3"><Icon name="phone" size={18} className="text-brand-deep dark:text-brand" /><div><dt className="text-xs font-semibold text-muted">{copy.phone}</dt><dd className="ltr-isolate mt-0.5 font-semibold text-ink">+222 36 XX XX XX</dd></div></div><div className="flex items-center gap-3 rounded-xl bg-surface-2 px-3 py-3"><Icon name="message" size={18} className="text-brand-deep dark:text-brand" /><div><dt className="text-xs font-semibold text-muted">WhatsApp</dt><dd className="ltr-isolate mt-0.5 font-semibold text-ink">+222 36 XX XX XX</dd></div></div><div className="flex items-center gap-3 rounded-xl bg-surface-2 px-3 py-3"><Icon name="globe" size={18} className="text-brand-deep dark:text-brand" /><div><dt className="text-xs font-semibold text-muted">{copy.website}</dt><dd className="ltr-isolate mt-0.5 font-semibold text-ink">bankily.mr</dd></div></div><div className="flex items-center gap-3 rounded-xl bg-surface-2 px-3 py-3"><Icon name="pin" size={18} className="text-brand-deep dark:text-brand" /><div><dt className="text-xs font-semibold text-muted">{copy.location}</dt><dd className="mt-0.5 font-semibold text-ink">{copy.city}</dd></div></div></dl>
-        <div className="mt-5 grid grid-cols-2 gap-2"><a className={btnPrimary} href="tel:+22236000000"><Icon name="phone" size={17} />{copy.call}</a><a className={btnGhost} href="https://wa.me/22236000000" target="_blank" rel="noreferrer"><Icon name="message" size={17} />{copy.whatsapp}</a><a className={`${btnGhost} col-span-2`} href="#nearby-agencies"><Icon name="route" size={17} />{copy.directions}</a></div>
+function SimpleEstablishmentResult({
+  copy,
+  establishment,
+  demoNote,
+  onReset,
+}: {
+  copy: AppCopy
+  establishment: Db2Establishment
+  demoNote: string
+  onReset: () => void
+}) {
+  return (
+    <article className={`${card} p-5 sm:p-7`} aria-label={establishment.name}>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <span className="grid size-12 place-items-center rounded-2xl bg-brand text-brand-ink">
+            <Icon name="store" size={24} />
+          </span>
+          <div>
+            <h2 className="text-xl font-bold tracking-tight sm:text-2xl">{establishment.name}</h2>
+            <p className="mt-1 text-sm text-muted">{establishment.category?.name ?? copy.categoryUnavailable}</p>
+          </div>
+        </div>
+        <span className="rounded-full border border-line bg-page-alt px-3 py-1.5 text-xs font-bold text-muted">
+          {copy.notAvailable}
+        </span>
       </div>
-      <MockMap copy={copy} />
-    </div>
-    <div id="nearby-agencies" className="border-t border-line bg-page-alt p-5 sm:p-7"><div className="flex items-center justify-between gap-3"><h3 className="text-base font-bold">{copy.nearby}</h3><span className="text-xs font-semibold text-muted">{copy.nearbyCount}</span></div><ol className="mt-4 grid gap-2 sm:grid-cols-3">{agencies.map((agency, index) => <li key={agency.name} className="flex items-center gap-3 rounded-xl border border-line bg-surface px-3 py-3"><span className={`size-2.5 rounded-full ${index === 0 ? 'bg-brand-deep dark:bg-brand' : index === 1 ? 'bg-[#6a65c9]' : 'bg-[#ce8e62]'}`} /><div><p className="text-sm font-semibold text-ink">{agency.name}</p><p className="mt-0.5 text-xs text-muted">{agency.distance}</p></div></li>)}</ol></div>
-    <div className="flex flex-col gap-4 border-t border-line p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7"><p className="flex items-center gap-2 text-sm text-muted"><Icon name="info" size={17} />{copy.note}</p><button type="button" className={btnPrimary} onClick={onReset}>{copy.ok}<Icon name="check" size={17} /></button></div>
+      <p className="mt-5 max-w-2xl text-sm leading-6 text-muted">{demoNote}</p>
+      <button type="button" className={`${btnGhost} mt-6 w-full sm:w-auto`} onClick={onReset}>
+        {copy.ok}
+      </button>
+    </article>
+  )
+}
+
+function ContactRow({ copy, icon, label, value, href, external = false }: { copy: AppCopy; icon: IconName; label: string; value: string | null; href?: string; external?: boolean }) {
+  return <div className="flex items-center gap-3 rounded-xl bg-surface-2 px-3 py-3"><Icon name={icon} size={18} className="text-brand-deep dark:text-brand" /><div className="min-w-0"><dt className="text-xs font-semibold text-muted">{label}</dt><dd className="ltr-isolate mt-0.5 truncate font-semibold text-ink">{value ? (href ? <a className="hover:text-brand-deep hover:underline dark:hover:text-brand" href={href} target={external ? '_blank' : undefined} rel={external ? 'noreferrer' : undefined}>{value}</a> : value) : copy.notAvailable}</dd></div></div>
+}
+
+function EstablishmentResult({ copy, establishment, onReset }: { copy: AppCopy; establishment: Db2Establishment; onReset: () => void }) {
+  const mainBranch = establishment.branches.find((branch) => branch.is_main) ?? establishment.branches[0]
+  const phone = establishment.phone
+  const whatsapp = establishment.whatsapp
+  const canCall = Boolean(phone && isActionablePhone(phone))
+  const canWhatsApp = Boolean(whatsapp && isActionablePhone(whatsapp))
+
+  return <article className={`${card} overflow-hidden`} aria-label={establishment.name}>
+    <div className="border-b border-line p-5 sm:p-7"><div className="flex flex-wrap items-start justify-between gap-4"><div className="flex items-center gap-4"><span className="grid size-12 place-items-center rounded-2xl bg-brand text-brand-ink"><Icon name="store" size={24} /></span><div><span className="text-xs font-bold tracking-[0.08em] text-muted uppercase rtl:tracking-normal rtl:normal-case">{copy.dataFromLewad}</span><div className="mt-1 flex flex-wrap items-center gap-2"><h2 className="text-2xl font-bold tracking-tight">{establishment.name}</h2>{establishment.is_verified && <span className="inline-flex items-center gap-1 rounded-full bg-answer-bg px-2 py-1 text-xs font-bold text-answer"><Icon name="check" size={14} />{copy.verified}</span>}</div><p className="mt-1 text-sm text-muted">{establishment.category?.name ?? copy.categoryUnavailable}</p></div></div><span className="rounded-full border border-line bg-surface-2 px-3 py-1.5 text-xs font-bold text-ink">{establishment.branches.length} {copy.agenciesFound}</span></div>{establishment.description && <p className="mt-5 max-w-3xl text-sm leading-6 text-muted">{establishment.description}</p>}</div>
+    <div className="grid gap-7 p-5 sm:p-7 lg:grid-cols-[.9fr_1.1fr]"><div><dl className="grid gap-3"><ContactRow copy={copy} icon="phone" label={copy.phone} value={phone} href={canCall && phone ? phoneHref(phone) : undefined} /><ContactRow copy={copy} icon="message" label={copy.whatsapp} value={whatsapp} href={canWhatsApp && whatsapp ? whatsappHref(whatsapp) : undefined} external /><ContactRow copy={copy} icon="globe" label={copy.website} value={establishment.website} href={establishment.website ? websiteHref(establishment.website) : undefined} external /><ContactRow copy={copy} icon="pin" label={copy.location} value={formatLocation(mainBranch, copy.notAvailable)} /></dl>
+        <div className="mt-5 grid grid-cols-2 gap-2">{canCall && phone ? <a className={btnPrimary} href={phoneHref(phone)}><Icon name="phone" size={17} />{copy.call}</a> : <span className={`${btnPrimary} cursor-not-allowed opacity-50`}><Icon name="phone" size={17} />{copy.call}</span>}{canWhatsApp && whatsapp ? <a className={btnGhost} href={whatsappHref(whatsapp)} target="_blank" rel="noreferrer"><Icon name="message" size={17} />{copy.whatsapp}</a> : <span className={`${btnGhost} cursor-not-allowed opacity-50`}><Icon name="message" size={17} />{copy.whatsapp}</span>}<a className={`${btnGhost} col-span-2`} href={`#branches-${establishment.id}`}><Icon name="route" size={17} />{copy.directions}</a></div></div><MockMap copy={copy} branches={establishment.branches} /></div>
+    <div id={`branches-${establishment.id}`} className="border-t border-line bg-page-alt p-5 sm:p-7"><div className="flex items-center justify-between gap-3"><h3 className="text-base font-bold">{copy.nearby}</h3><span className="text-xs font-semibold text-muted">{establishment.branches.length} {copy.agenciesFound}</span></div>{establishment.branchesError ? <p className="mt-4 text-sm text-muted">{copy.branchesError}</p> : establishment.branches.length ? <ol className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{establishment.branches.map((branch, index) => <BranchCard key={branch.id} branch={branch} establishment={establishment} copy={copy} index={index} />)}</ol> : <p className="mt-4 text-sm text-muted">{copy.noBranches}</p>}</div>
+    <div className="flex justify-end border-t border-line p-5 sm:p-7"><button type="button" className={btnPrimary} onClick={onReset}>{copy.ok}<Icon name="check" size={17} /></button></div>
   </article>
+}
+
+function BranchCard({ branch, establishment, copy, index }: { branch: Db2Branch; establishment: Db2Establishment; copy: AppCopy; index: number }) {
+  const phone = branch.phone ?? establishment.phone
+  const whatsapp = branch.whatsapp ?? establishment.whatsapp
+
+  return <li className="rounded-xl border border-line bg-surface px-3 py-3"><div className="flex items-start gap-3"><span className={`mt-1 size-2.5 shrink-0 rounded-full ${pinColors[index % pinColors.length].split(' ')[0]}`} /><div className="min-w-0"><div className="flex flex-wrap items-center gap-1.5"><p className="text-sm font-semibold text-ink">{branch.name}</p>{branch.is_main && <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-bold text-brand-deep dark:text-brand">{copy.mainBranch}</span>}</div><p className="mt-1 text-xs text-muted">{[branch.neighborhood, branch.city].filter(Boolean).join(', ') || copy.notAvailable}</p>{branch.address && <p className="mt-1 text-xs leading-5 text-muted">{branch.address}</p>}<p className="mt-2 ltr-isolate text-xs font-medium text-ink">{phone ?? copy.notAvailable}</p>{whatsapp && isActionablePhone(whatsapp) && <a className="mt-1 inline-block text-xs font-semibold text-brand-deep hover:underline dark:text-brand" href={whatsappHref(whatsapp)} target="_blank" rel="noreferrer">{copy.whatsapp}</a>}</div></div></li>
 }

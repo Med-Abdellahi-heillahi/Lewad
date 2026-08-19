@@ -1,5 +1,5 @@
 import { useI18n } from '../../i18n'
-import { btnGhost, btnPrimary, card, eyebrow, sectionPad, wrap } from '../../lib/ui'
+import { btnPrimary, card, eyebrow, sectionPad, wrap } from '../../lib/ui'
 import { Icon } from '../Icon'
 import { Reveal } from '../Reveal'
 
@@ -20,13 +20,7 @@ export function WhatWeDo() {
           <p className="mt-4 text-[15px] leading-relaxed text-muted">{t.what.text}</p>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            <a href="#demo" className={btnPrimary}>
-              {t.what.primary}
-              <span className="rtl:rotate-180">
-                <Icon name="arrow" size={17} />
-              </span>
-            </a>
-            <a href="#service" className={btnGhost}>
+            <a href="#service" className={btnPrimary}>
               {t.what.secondary}
             </a>
           </div>

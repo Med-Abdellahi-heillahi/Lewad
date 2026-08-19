@@ -14,6 +14,16 @@ export const en: Dictionary = {
     openMenu: 'Open menu',
     closeMenu: 'Close menu',
     language: 'Change language',
+    signIn: 'Sign in',
+    login: 'Login',
+    account: 'My account',
+    signUp: 'Sign up',
+    mySpace: 'My space',
+    signOut: 'Sign out',
+    signingOut: 'Signing out…',
+    backToTop: 'Back to top',
+    createAccount: 'Create an account',
+    navigate: 'Navigation',
     toLight: 'Switch to light mode',
     toDark: 'Switch to dark mode',
     sections: {
@@ -31,8 +41,10 @@ export const en: Dictionary = {
     eyebrow: 'Local search · Mauritania',
     title: 'Find the services around you, fast.',
     text: 'Search, find, then call or go. Lewad brings together the useful details of businesses and services across Mauritania.',
-    primary: 'Open Lewad',
     secondary: 'See how it works',
+    primary: 'Sign up',
+    bonus: '5 free points when you sign up',
+    pointRule: '1 point = 1 search',
     steps: ['Search', 'Find', 'Contact'],
   },
 
@@ -41,7 +53,6 @@ export const en: Dictionary = {
     title: 'Local search that makes everyday life simpler.',
     lead: 'Lewad is a local search web app that makes your day-to-day easier.',
     text: 'Instead of calling relatives or searching for ages to find a shop, a market, a gym, a hospital, a supermarket or any other service in Mauritania, Lewad gets you the details you need in seconds.',
-    primary: 'Open Lewad',
     secondary: 'See how it works',
     points: [
       { title: 'One single place', text: 'Local information gathered together instead of scattered around.' },
@@ -131,13 +142,20 @@ export const en: Dictionary = {
         q: 'As a user, what do I have to do?',
         a: [
           'Nothing complicated.',
-          'Just create an account with your phone number and a password. You then receive an OTP code to enter in the verification field.',
+          'Just create an account with your email address and a password. Phone sign-in with an OTP code may be offered in the future.',
         ],
       },
       {
         q: 'How do I get what I am looking for?',
         a: [
           'Once your account is created, or once you are signed in, you can easily search for a service by name. If the service exists in Lewad, the useful information is shown right away.',
+        ],
+      },
+      {
+        q: 'What if the service I am looking for is not there yet?',
+        a: [
+          'Lewad then offers to request it, in one click, straight from the search screen.',
+          'The request goes to the Lewad team, who add the service to the directory.',
         ],
       },
       {
@@ -161,9 +179,9 @@ export const en: Dictionary = {
       {
         q: 'I own a business — how do I add it to Lewad?',
         a: [
-          'It is simple.',
-          'Once signed in, you will see a “+” button at the top. Click “Add a business”, fill in the form, check the amount shown, pay, then wait for the Lewad team to review it.',
-          'Processing is estimated at up to one hour.',
+          'Adding a business yourself is coming soon.',
+          'You will fill in a form from your account, then the Lewad team will check the details before it goes live.',
+          'In the meantime, write to us from the Contact section and we will add your business.',
         ],
       },
     ] as FaqItem[],
@@ -208,6 +226,34 @@ export const en: Dictionary = {
     businessTitle: 'Do you own a business?',
     businessText: 'Join Lewad and let your customers find you, call you, or come to you directly.',
     businessCta: 'Message us on WhatsApp',
+  },
+
+  appSearch: {
+    suggestions: 'Suggestions',
+    noSuggestions: 'No suggestions',
+    didYouMean: 'Did you mean “{name}”?',
+    yes: 'Yes',
+    no: 'No',
+    addEstablishment: 'Add an establishment',
+    addEstablishmentMessage: 'The establishment-addition request will be available soon.',
+    unavailable: 'This service is not available on Lewad yet.',
+    requestAddition: 'Request addition',
+    demoNote: 'Local demo catalogue: the information shown does not yet come from the Lewad directory.',
+  },
+
+  profileAvatar: {
+    uploadAvatar: 'Choose a photo',
+    avatarHint: 'PNG, JPG, JPEG or WebP, up to 2 MB.',
+    fileTooLarge: 'The image must not exceed 2 MB.',
+    unsupportedImage: 'Choose a PNG, JPG, JPEG, or WebP image.',
+    uploadFailed: 'We could not upload the image right now. Please try again shortly.',
+    uploadingAvatar: 'Uploading image…',
+    profileImageUpdated: 'Profile image updated.',
+    phoneAlreadyUsed: 'This phone number is already used by another account.',
+    invalidPhone: 'The number must contain 8 digits and start with 2, 3, or 4.',
+    saveProfile: 'Save profile',
+    savingProfile: 'Saving…',
+    profileSaved: 'Profile updated.',
   },
 
   footer: {

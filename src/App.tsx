@@ -1,11 +1,15 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { LazyMotion, domAnimation } from 'framer-motion'
 import { I18nProvider, useI18n } from './i18n'
 import { ThemeProvider } from './lib/theme'
 import { useOnlineStatus } from './lib/useOnlineStatus'
 import { Navbar } from './components/Navbar'
 import { Footer } from './components/Footer'
+import { BackToTop } from './components/BackToTop'
 import { PublicSearchDemo } from './components/AppDemo'
+import { AdminPage, RequireAdmin } from './components/AdminPage'
+import { AuthPage } from './components/AuthPage'
+import { AddBusinessPage, ContactPage, ProtectedAppPage, type PrivatePageName } from './components/AppPages'
 import { Hero } from './components/sections/Hero'
 import { WhatWeDo } from './components/sections/WhatWeDo'
 import { AnimationStrip } from './components/sections/AnimationStrip'
@@ -16,13 +20,55 @@ import { Offers } from './components/sections/Offers'
 import { Contact } from './components/sections/Contact'
 import { ErrorPage, errorCodes, type ErrorCode } from './components/system/ErrorPage'
 import { OfflineScreen } from './components/system/OfflineScreen'
+import { SessionLoading } from './components/system/SessionLoading'
+import { useAuthSession } from './hooks/useAuthSession'
+import { AccountProvider } from './hooks/useAccount'
+import { authUrlForCurrentRoute } from './lib/routeAuth'
 
-/** `/app` est la démo publique ; `/errors/<code>` affiche l’erreur correspondante. */
-function useRoute(): ErrorCode | 'app' | null {
+type Route = ErrorCode | 'admin' | 'app' | 'auth' | 'contact' | 'add-business' | PrivatePageName | null
+
+function RequireAuthentication({ children }: { children: ReactNode }) {
+  const { loading, isAuthenticated } = useAuthSession()
+  const wasAuthenticated = useRef(false)
+
+  useEffect(() => {
+    if (loading) return
+    if (isAuthenticated) {
+      wasAuthenticated.current = true
+      return
+    }
+    /*
+     * Deux situations très différentes se ressemblent ici :
+     *
+     * - jamais authentifié sur cette page = accès direct à une URL protégée,
+     *   on envoie vers la connexion en conservant la destination ;
+     * - authentifié puis plus du tout = la session s'est terminée pendant la
+     *   visite (déconnexion), on repart sur l'accueil public.
+     *
+     * Sans cette distinction, `signOut()` émet SIGNED_OUT avant que le composant
+     * appelant n'ait pu naviguer : le garde gagnait la course et produisait le
+     * double saut /app → /auth?redirect=/app.
+     */
+    window.location.replace(wasAuthenticated.current ? '/' : authUrlForCurrentRoute())
+  }, [isAuthenticated, loading])
+
+  // Pendant la vérification, et pendant la redirection qui suit, on n'affiche
+  // jamais le contenu protégé — même une fraction de seconde.
+  if (loading || !isAuthenticated) return <SessionLoading />
+  return <>{children}</>
+}
+
+/** La landing, l’authentification et le contact sont publics ; les pages membre requièrent une session. */
+function useRoute(): Route {
   return useMemo(() => {
     const path = window.location.pathname.replace(/\/+$/, '')
     if (path === '' || path === '/index.html') return null
+    if (path === '/admin' || path.startsWith('/admin/')) return 'admin'
     if (path === '/app') return 'app'
+    if (path === '/auth') return 'auth'
+    if (path === '/contact') return 'contact'
+    if (path === '/add-business') return 'add-business'
+    if (path === '/profile' || path === '/credits' || path === '/settings' || path === '/recharge') return path.slice(1) as PrivatePageName
 
     const code = path.match(/^\/errors\/([a-z0-9]+)$/i)?.[1]
     if (code && (errorCodes as readonly string[]).includes(code)) return code as ErrorCode
@@ -57,6 +103,7 @@ function Landing() {
       </main>
 
       <Footer />
+      <BackToTop />
     </>
   )
 }
@@ -66,7 +113,14 @@ function Shell() {
   const { online, recheck } = useOnlineStatus()
 
   if (!online) return <OfflineScreen onRetry={recheck} />
-  if (route === 'app') return <PublicSearchDemo />
+  // `AccountProvider` coiffe les pages applicatives : le bandeau et la page
+  // qu'il surmonte lisent le même profil et le même portefeuille.
+  if (route === 'app') return <RequireAuthentication><AccountProvider><PublicSearchDemo /></AccountProvider></RequireAuthentication>
+  if (route === 'admin') return <RequireAuthentication><AccountProvider><RequireAdmin><AdminPage /></RequireAdmin></AccountProvider></RequireAuthentication>
+  if (route === 'auth') return <AuthPage />
+  if (route === 'contact') return <AccountProvider><ContactPage /></AccountProvider>
+  if (route === 'add-business') return <RequireAuthentication><AccountProvider><AddBusinessPage /></AccountProvider></RequireAuthentication>
+  if (route === 'profile' || route === 'credits' || route === 'settings' || route === 'recharge') return <RequireAuthentication><AccountProvider><ProtectedAppPage page={route} /></AccountProvider></RequireAuthentication>
   if (route) return <ErrorPage code={route} onRetry={() => window.location.reload()} />
   return <Landing />
 }

@@ -19,7 +19,7 @@ export function Hero() {
         }
 
   return (
-    <section id="top" className="relative overflow-hidden pt-28 pb-16 sm:pt-36 sm:pb-24">
+    <section id="top" className="relative overflow-hidden pt-24 pb-14 sm:pt-36 sm:pb-24">
       {/* Halo discret derrière le titre. */}
       <div
         aria-hidden="true"
@@ -34,7 +34,7 @@ export function Hero() {
 
         <m.h1
           {...rise(0.06)}
-          className="mx-auto mt-5 max-w-3xl text-[34px] leading-[1.05] font-bold tracking-[-0.035em] text-balance sm:text-5xl lg:text-6xl"
+          className="mx-auto mt-5 max-w-3xl text-[32px] leading-[1.08] font-bold tracking-[-0.035em] text-balance sm:text-5xl lg:text-6xl"
         >
           {t.hero.title}
         </m.h1>
@@ -43,17 +43,31 @@ export function Hero() {
           {t.hero.text}
         </m.p>
 
-        <m.div {...rise(0.18)} className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <a href="#demo" className={btnPrimary}>
+        {/* Le premier bouton mène à l'inscription : la landing doit ouvrir sur
+            le produit réel, pas seulement sur son explication. */}
+        <m.div {...rise(0.18)} className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap">
+          <a href="/auth" className={`${btnPrimary} w-full sm:w-auto`}>
             {t.hero.primary}
             <span className="rtl:rotate-180">
-              <Icon name="arrow" size={17} />
+              <Icon name="arrow" size={16} />
             </span>
           </a>
-          <a href="#what" className={btnGhost}>
+          <a href="#what" className={`${btnGhost} w-full sm:w-auto`}>
             {t.hero.secondary}
           </a>
         </m.div>
+
+        <m.p
+          {...rise(0.21)}
+          className="mt-4 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[13px] text-muted"
+        >
+          <span className="inline-flex items-center gap-1.5 font-semibold text-ink-soft">
+            <Icon name="sparkle" size={14} />
+            {t.hero.bonus}
+          </span>
+          <span aria-hidden="true" className="text-muted/60">·</span>
+          <span>{t.hero.pointRule}</span>
+        </m.p>
 
         {/* Boucle produit : chercher → trouver → contacter */}
         <m.ol
@@ -75,7 +89,7 @@ export function Hero() {
         {/* Aperçu : barre de recherche + première réponse */}
         <m.div
           {...rise(0.3)}
-          className="mx-auto mt-12 w-full max-w-lg rounded-2xl border border-line bg-surface p-2 shadow-xl shadow-black/[0.06] dark:shadow-black/30"
+          className="mx-auto mt-10 w-full max-w-lg rounded-2xl border border-line bg-surface p-2 shadow-xl shadow-black/[0.06] dark:shadow-black/30 sm:mt-12"
         >
           <div className="flex items-center gap-2.5 rounded-xl bg-surface-2 px-3.5 py-3">
             <span className="text-muted">

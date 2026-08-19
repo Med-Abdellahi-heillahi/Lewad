@@ -21,6 +21,16 @@ export const fr = {
     openMenu: 'Ouvrir le menu',
     closeMenu: 'Fermer le menu',
     language: 'Changer de langue',
+    signIn: 'Connexion',
+    login: 'Connexion',
+    account: 'Mon compte',
+    signUp: 'Inscription',
+    mySpace: 'Mon espace',
+    signOut: 'Déconnexion',
+    signingOut: 'Déconnexion…',
+    backToTop: 'Retour en haut',
+    createAccount: 'Créer un compte',
+    navigate: 'Navigation',
     toLight: 'Activer le mode clair',
     toDark: 'Activer le mode sombre',
     sections: {
@@ -38,8 +48,10 @@ export const fr = {
     eyebrow: 'Recherche locale · Mauritanie',
     title: 'Trouvez rapidement les services autour de vous.',
     text: 'Chercher, trouver, contacter ou s’y rendre. Lewad réunit les informations utiles des établissements et services en Mauritanie.',
-    primary: 'Vers Lewad',
     secondary: 'Voir comment ça marche',
+    primary: 'Inscription',
+    bonus: '5 points offerts à l’inscription',
+    pointRule: '1 point = 1 recherche',
     steps: ['Chercher', 'Trouver', 'Contacter'],
   },
 
@@ -48,7 +60,6 @@ export const fr = {
     title: 'Une recherche locale qui simplifie votre quotidien.',
     lead: 'Lewad est une application web de recherche locale qui facilite votre quotidien.',
     text: 'Au lieu d’appeler vos proches ou de chercher longtemps pour trouver une boutique, un marché, une salle de sport, un hôpital, un supermarché ou n’importe quel service en Mauritanie, Lewad vous aide à obtenir les informations utiles en quelques secondes.',
-    primary: 'Vers Lewad',
     secondary: 'Voir comment ça marche',
     points: [
       { title: 'Un seul endroit', text: 'Les informations locales rassemblées, au lieu d’être dispersées.' },
@@ -150,13 +161,20 @@ export const fr = {
         q: 'Moi comme utilisateur, je suis obligé de faire quoi ?',
         a: [
           'Rien de compliqué.',
-          'Il suffit de créer un compte avec votre numéro de téléphone et un mot de passe. Ensuite, vous recevez un code OTP à saisir dans le champ de vérification.',
+          'Il suffit de créer un compte avec votre adresse e-mail et un mot de passe. La connexion par téléphone avec un code OTP pourra être proposée ultérieurement.',
         ],
       },
       {
         q: 'Comment je peux avoir ce que je cherche ?',
         a: [
           'Après la création du compte ou la connexion, vous pouvez rechercher facilement un service par son nom. Si le service existe dans Lewad, les informations utiles s’affichent directement.',
+        ],
+      },
+      {
+        q: 'Et si le service que je cherche n’existe pas encore ?',
+        a: [
+          'Lewad vous propose alors de demander son ajout, en un clic, depuis l’écran de recherche.',
+          'La demande part à l’équipe Lewad, qui se charge d’ajouter le service à l’annuaire.',
         ],
       },
       {
@@ -182,9 +200,9 @@ export const fr = {
       {
         q: 'J’ai un établissement, comment je peux le mettre dans Lewad ?',
         a: [
-          'C’est simple.',
-          'Après connexion, vous aurez un bouton « + » en haut. Cliquez sur « Ajouter un établissement », remplissez le formulaire demandé, vérifiez le montant affiché, payez, puis attendez la validation de l’équipe Lewad.',
-          'Le traitement est estimé jusqu’à une heure.',
+          'L’ajout d’un établissement par son propriétaire arrive prochainement.',
+          'Vous remplirez un formulaire depuis votre compte, puis l’équipe Lewad vérifiera les informations avant la mise en ligne.',
+          'En attendant, écrivez-nous depuis la section Contact et nous ajoutons votre établissement.',
         ],
       },
     ] as FaqItem[],
@@ -230,6 +248,34 @@ export const fr = {
     businessText:
       'Rejoignez Lewad et permettez à vos clients de vous trouver, de vous appeler ou de venir directement chez vous.',
     businessCta: 'Nous écrire sur WhatsApp',
+  },
+
+  appSearch: {
+    suggestions: 'Suggestions',
+    noSuggestions: 'Aucune suggestion',
+    didYouMean: 'Voulez-vous dire « {name} » ?',
+    yes: 'Oui',
+    no: 'Non',
+    addEstablishment: 'Ajouter un établissement',
+    addEstablishmentMessage: 'La demande d’ajout d’un établissement sera disponible prochainement.',
+    unavailable: 'Ce service n’est pas encore disponible sur Lewad.',
+    requestAddition: 'Demander l’ajout',
+    demoNote: 'Catalogue de démonstration local : les informations affichées ne proviennent pas encore de l’annuaire Lewad.',
+  },
+
+  profileAvatar: {
+    uploadAvatar: 'Choisir une photo',
+    avatarHint: 'PNG, JPG, JPEG ou WebP, 2 Mo maximum.',
+    fileTooLarge: 'L’image ne doit pas dépasser 2 Mo.',
+    unsupportedImage: 'Choisissez une image PNG, JPG, JPEG ou WebP.',
+    uploadFailed: 'Impossible de téléverser l’image pour le moment. Réessayez dans un instant.',
+    uploadingAvatar: 'Téléversement de l’image…',
+    profileImageUpdated: 'Photo de profil mise à jour.',
+    phoneAlreadyUsed: 'Ce numéro est déjà utilisé par un autre compte.',
+    invalidPhone: 'Le numéro doit contenir 8 chiffres et commencer par 2, 3 ou 4.',
+    saveProfile: 'Enregistrer le profil',
+    savingProfile: 'Enregistrement…',
+    profileSaved: 'Profil mis à jour.',
   },
 
   footer: {

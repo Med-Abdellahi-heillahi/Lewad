@@ -1,0 +1,611 @@
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useI18n } from '../i18n'
+import { useAccount } from '../hooks/useAccount'
+import {
+  adminUpdateUserStatus,
+  getAdminCreditLedger,
+  getAdminMissingRequests,
+  getAdminOverview,
+  getAdminSearchLogs,
+  getAdminServices,
+  getAdminUsers,
+  getAdminWallets,
+  superAdminUpdateUserRole,
+  updateMissingRequestStatus,
+  type AdminCreditLedgerEntry,
+  type AdminMissingRequest,
+  type AdminOverview,
+  type AdminSearchLog,
+  type AdminServices,
+  type AdminUser,
+  type AdminUserRoleFilter,
+  type AdminUserStatusFilter,
+  type AdminWallet,
+} from '../lib/admin'
+import type { MissingServiceRequestStatus } from '../lib/db3b'
+import { formatDate, formatNumber, formatSignedPoints } from '../lib/format'
+import { appPad, appWrap, btnGhost, btnPrimary, card, cardMuted, field, fieldLabel, pill } from '../lib/ui'
+import { Icon, type IconName } from './Icon'
+import { AppShell } from './shell/AppShell'
+import { EmptyState, InlineAlert, LoadingCard, Skeleton } from './system/States'
+import { SessionLoading } from './system/SessionLoading'
+import { adminCopy, type AdminTabId } from './admin/adminCopy'
+import { SuperAdminPanel } from './admin/SuperAdminPanel'
+import { AdminDashboard } from './admin/AdminDashboard'
+import { AdminBottomNav } from './admin/AdminBottomNav'
+import { AdminActionButton, type AdminIcon } from './admin/AdminUi'
+import { AdminSidebar } from './admin/AdminSidebar'
+import { AdminUsers } from './admin/AdminUsers'
+import { PaginationControls } from './ui/PaginationControls'
+import { Building2, Eye, LayoutDashboard, ListChecks, Plus, Search, Shield, Users, Wallet } from 'lucide-react'
+import { DEFAULT_PAGE_SIZE, paginatedResult, type PaginatedResult } from '../lib/pagination'
+
+type AdminTab = AdminTabId
+type AdminListPage = 'requests' | 'users' | 'wallets' | 'ledger' | 'searchLogs' | 'categories' | 'establishments' | 'branches'
+
+type DisplayUser = {
+  full_name: string | null
+  full_name_ar: string | null
+  email: string | null
+}
+
+const tabs: { id: AdminTab; icon: AdminIcon }[] = [
+  { id: 'dashboard', icon: LayoutDashboard },
+  { id: 'requests', icon: ListChecks },
+  { id: 'users', icon: Users },
+  { id: 'credits', icon: Wallet },
+  { id: 'search-logs', icon: Search },
+  { id: 'services', icon: Building2 },
+  { id: 'system', icon: Shield },
+]
+
+const requestStatuses: MissingServiceRequestStatus[] = ['pending', 'reviewed', 'duplicate', 'rejected', 'added']
+
+function emptyPage<T>(): PaginatedResult<T> {
+  return paginatedResult([], 0, { pageSize: DEFAULT_PAGE_SIZE })
+}
+
+function personName(user: DisplayUser | null, locale: 'fr' | 'ar' | 'en') {
+  const content = adminCopy[locale].content
+  if (!user) return content.unknownUser
+  if (locale === 'ar' && user.full_name_ar?.trim()) return user.full_name_ar.trim()
+  return user.full_name?.trim() || user.full_name_ar?.trim() || user.email || content.unnamedUser
+}
+
+function statusClass(status: string) {
+  if (['active', 'approved', 'added', 'success'].includes(status)) return 'bg-answer-bg text-answer'
+  if (['pending', 'reviewed', 'draft'].includes(status)) return 'bg-brand-soft text-brand-deep'
+  if (['rejected', 'suspended', 'error', 'insufficient_credits', 'closed'].includes(status)) return 'bg-ask-bg text-ask'
+  return 'bg-surface-2 text-ink-soft'
+}
+
+function StatusBadge({ value }: { value: string }) {
+  const { locale } = useI18n()
+  return <span className={`${pill} ${statusClass(value)}`}>{adminCopy[locale].content.status[value] ?? value.replaceAll('_', ' ')}</span>
+}
+
+function AdminAccessPage({ unavailable = false, onRetry }: { unavailable?: boolean; onRetry?: () => void }) {
+  const { locale } = useI18n()
+  const copy = adminCopy[locale].access
+  const title = unavailable ? copy.unavailableTitle : copy.deniedTitle
+  const text = unavailable ? copy.unavailableText : copy.deniedText
+
+  return (
+    <AppShell documentTitle={title}>
+      <main id="app-main" className={`${appWrap} ${appPad}`}>
+        <section className={`${card} mx-auto max-w-xl p-6 text-center sm:p-8`}>
+          <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-ask-bg text-ask">
+            <Icon name={unavailable ? 'alert' : 'shield'} size={23} />
+          </span>
+          <h1 className="mt-5 text-2xl font-bold text-ink">{title}</h1>
+          <p className="mt-3 text-sm leading-6 text-muted">{text}</p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            {unavailable && onRetry && <button type="button" className={btnPrimary} onClick={onRetry}>{copy.retry}</button>}
+            <a href={unavailable ? '/' : '/app'} className={unavailable ? btnGhost : btnPrimary}>{unavailable ? copy.backHome : copy.backToApp}</a>
+          </div>
+        </section>
+      </main>
+    </AppShell>
+  )
+}
+
+/** Client-side convenience gate only; the migration's RLS policies enforce access server-side. */
+export function RequireAdmin({ children }: { children: ReactNode }) {
+  const { loading, profile, profileError, refresh } = useAccount()
+  const { locale } = useI18n()
+
+  if (loading) return <SessionLoading label={adminCopy[locale].access.checking} />
+  if (profileError || !profile) return <AdminAccessPage unavailable onRetry={() => void refresh()} />
+  if ((profile.role !== 'admin' && profile.role !== 'super_admin') || profile.status !== 'active') return <AdminAccessPage />
+
+  return <>{children}</>
+}
+
+function TableWrap({ children }: { children: ReactNode }) {
+  return <div className={`${card} overflow-hidden`}><div className="overflow-x-auto">{children}</div></div>
+}
+
+function TableHeader({ children }: { children: ReactNode }) {
+  return <thead className="border-b border-line bg-page-alt text-start text-[11px] font-bold tracking-[0.08em] text-muted uppercase rtl:tracking-normal rtl:normal-case"><tr>{children}</tr></thead>
+}
+
+function TableCell({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <td className={`px-4 py-3.5 align-top text-sm text-ink-soft ${className}`}>{children}</td>
+}
+
+function TableTitle({ children }: { children: ReactNode }) {
+  return <h3 className="font-semibold text-ink" dir="auto">{children}</h3>
+}
+
+/** Les tableaux restent denses au bureau ; sous `lg`, une ligne devient une carte lisible au pouce. */
+function MobileCardList({ children }: { children: ReactNode }) {
+  return <ul className="grid list-none gap-3 lg:hidden">{children}</ul>
+}
+
+function MobileCard({ children }: { children: ReactNode }) {
+  return <li className={`${card} min-w-0 p-3`}>{children}</li>
+}
+
+function MobileDetails({ children }: { children: ReactNode }) {
+  return <dl className="mt-3 grid gap-1.5 border-t border-line pt-2.5 text-xs">{children}</dl>
+}
+
+function MobileDetail({ label, children }: { label: string; children: ReactNode }) {
+  return <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] items-start gap-3">
+    <dt className="text-muted">{label}</dt>
+    <dd className="min-w-0 break-words text-end text-ink-soft">{children}</dd>
+  </div>
+}
+
+function RequestsView({
+  requests,
+  pagination,
+  loading,
+  onSave,
+  onPageChange,
+}: {
+  requests: AdminMissingRequest[]
+  pagination: PaginatedResult<AdminMissingRequest>
+  loading: boolean
+  onSave: (request: AdminMissingRequest, status: MissingServiceRequestStatus, adminNote: string) => Promise<void>
+  onPageChange: (page: number) => void
+}) {
+  const { locale } = useI18n()
+  const copy = adminCopy[locale]
+  const { mobile, content } = copy
+  const [statuses, setStatuses] = useState<Record<string, MissingServiceRequestStatus>>({})
+  const [notes, setNotes] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState<string | null>(null)
+
+  useEffect(() => {
+    setStatuses({})
+    setNotes({})
+  }, [requests])
+
+  if (loading) return <LoadingCard label={content.loading.requests} lines={5} />
+  if (requests.length === 0) return <EmptyState icon="message" title={content.empty.requestsTitle} text={content.empty.requestsText} />
+
+  const save = async (request: AdminMissingRequest) => {
+    setSaving(request.id)
+    await onSave(request, statuses[request.id] ?? request.status, notes[request.id] ?? request.admin_note ?? '')
+    setSaving(null)
+  }
+
+  return (
+    <>
+      <MobileCardList>
+        {requests.map((request) => (
+          <MobileCard key={request.id}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0"><TableTitle>{request.query}</TableTitle><p className="mt-1 break-words text-xs text-muted">{request.normalized_query}</p></div>
+              <StatusBadge value={statuses[request.id] ?? request.status} />
+            </div>
+            <MobileDetails>
+              <MobileDetail label={mobile.user}><span dir="auto">{personName(request.user, locale)}</span><span className="ltr-isolate mt-1 block text-xs text-muted">{request.user?.email ?? '—'}</span></MobileDetail>
+              <MobileDetail label={mobile.createdAt}><time dateTime={request.created_at}>{formatDate(request.created_at, locale)}</time></MobileDetail>
+              <MobileDetail label={mobile.linkedLog}>{request.search_log ? <span>{request.search_log.query}<span className="mt-1 block"><StatusBadge value={request.search_log.status} /></span></span> : '—'}</MobileDetail>
+            </MobileDetails>
+            <div className="mt-4 grid gap-3">
+              <label className={fieldLabel} htmlFor={`mobile-status-${request.id}`}>{mobile.requestStatus}</label>
+              <select id={`mobile-status-${request.id}`} value={statuses[request.id] ?? request.status} onChange={(event) => setStatuses((value) => ({ ...value, [request.id]: event.target.value as MissingServiceRequestStatus }))} className={field}><option value="pending">{content.status.pending}</option>{requestStatuses.filter((status) => status !== 'pending').map((status) => <option key={status} value={status}>{content.status[status] ?? status}</option>)}</select>
+              <label className={fieldLabel} htmlFor={`mobile-note-${request.id}`}>{mobile.teamNote}</label>
+              <textarea id={`mobile-note-${request.id}`} value={notes[request.id] ?? request.admin_note ?? ''} onChange={(event) => setNotes((value) => ({ ...value, [request.id]: event.target.value }))} className={`${field} h-24 py-3`} placeholder={mobile.notePlaceholder} />
+              <AdminActionButton icon={ListChecks} label={saving === request.id ? mobile.saving : mobile.save} disabled={saving === request.id} onClick={() => void save(request)} tone="primary" className="w-full justify-center" />
+            </div>
+          </MobileCard>
+        ))}
+      </MobileCardList>
+      <div className="hidden lg:block"><TableWrap>
+        <table className="min-w-[1120px] w-full border-collapse">
+          <TableHeader>
+            <th className="px-4 py-3">{content.table.request}</th><th className="px-4 py-3">{content.table.user}</th><th className="px-4 py-3">{content.table.status}</th><th className="px-4 py-3">{content.table.linkedLog}</th><th className="px-4 py-3">{content.table.teamNote}</th><th className="px-4 py-3">{content.table.action}</th>
+          </TableHeader>
+          <tbody className="divide-y divide-line">
+            {requests.map((request) => (
+              <tr key={request.id}>
+                <TableCell><TableTitle>{request.query}</TableTitle><p className="mt-1 text-xs text-muted">{request.normalized_query}</p><time className="mt-2 block text-xs text-muted" dateTime={request.created_at}>{formatDate(request.created_at, locale)}</time></TableCell>
+                <TableCell><p dir="auto">{personName(request.user, locale)}</p><p className="ltr-isolate mt-1 text-xs text-muted">{request.user?.email ?? '—'}</p></TableCell>
+                <TableCell><label className="sr-only" htmlFor={`status-${request.id}`}>{mobile.requestStatus}</label><select id={`status-${request.id}`} value={statuses[request.id] ?? request.status} onChange={(event) => setStatuses((value) => ({ ...value, [request.id]: event.target.value as MissingServiceRequestStatus }))} className={`${field} min-w-36`}><option value="pending">{content.status.pending}</option>{requestStatuses.filter((status) => status !== 'pending').map((status) => <option key={status} value={status}>{content.status[status] ?? status}</option>)}</select></TableCell>
+                <TableCell>{request.search_log ? <><p>{request.search_log.query}</p><div className="mt-1"><StatusBadge value={request.search_log.status} /></div></> : <span className="text-muted">—</span>}</TableCell>
+                <TableCell><label className="sr-only" htmlFor={`note-${request.id}`}>{mobile.teamNote}</label><textarea id={`note-${request.id}`} value={notes[request.id] ?? request.admin_note ?? ''} onChange={(event) => setNotes((value) => ({ ...value, [request.id]: event.target.value }))} className={`${field} h-24 min-w-64 py-3`} placeholder={mobile.notePlaceholder} /></TableCell>
+                <TableCell><AdminActionButton icon={ListChecks} label={saving === request.id ? mobile.saving : mobile.save} disabled={saving === request.id} onClick={() => void save(request)} tone="primary" /></TableCell>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableWrap></div>
+      <PaginationControls {...pagination} labels={copy.pagination} disabled={loading} onPageChange={onPageChange} />
+    </>
+  )
+}
+
+function CreditsView({
+  wallets,
+  walletPagination,
+  ledger,
+  ledgerPagination,
+  loading,
+  onWalletPageChange,
+  onLedgerPageChange,
+}: {
+  wallets: AdminWallet[]
+  walletPagination: PaginatedResult<AdminWallet>
+  ledger: AdminCreditLedgerEntry[]
+  ledgerPagination: PaginatedResult<AdminCreditLedgerEntry>
+  loading: boolean
+  onWalletPageChange: (page: number) => void
+  onLedgerPageChange: (page: number) => void
+}) {
+  const { locale } = useI18n()
+  const copy = adminCopy[locale]
+  const { mobile, content } = copy
+  const latestByWallet = useMemo(() => {
+    const value = new Map<string, AdminCreditLedgerEntry>()
+    ledger.forEach((entry) => { if (!value.has(entry.wallet_id)) value.set(entry.wallet_id, entry) })
+    return value
+  }, [ledger])
+  if (loading) return <LoadingCard label={content.loading.credits} lines={5} />
+  if (wallets.length === 0 && ledger.length === 0) return <EmptyState icon="wallet" title={content.empty.creditsTitle} />
+  return <div className="space-y-6">
+    <section><h2 className="mb-3 text-base font-bold text-ink">{content.sections.wallets}</h2>
+      <MobileCardList>{wallets.map((wallet) => {
+        const last = latestByWallet.get(wallet.id)
+        return <MobileCard key={wallet.id}>
+          <TableTitle>{personName(wallet.user, locale)}</TableTitle><p className="ltr-isolate mt-1 break-all text-xs text-muted">{wallet.user?.email ?? '—'}</p>
+          <MobileDetails>
+            <MobileDetail label={mobile.balance}><span className="tabular text-base font-bold text-ink">{formatNumber(wallet.balance, locale)} pts</span></MobileDetail>
+            <MobileDetail label={mobile.lastMovement}>{last ? <span><span className="font-medium">{content.status[last.type] ?? last.type.replaceAll('_', ' ')}</span><span className="ms-2 block tabular text-muted">{formatSignedPoints(last.amount, locale, 'pts')}</span></span> : '—'}</MobileDetail>
+            <MobileDetail label={mobile.updatedAt}><time dateTime={wallet.updated_at}>{formatDate(wallet.updated_at, locale)}</time></MobileDetail>
+          </MobileDetails>
+        </MobileCard>
+      })}</MobileCardList>
+      <div className="hidden lg:block"><TableWrap><table className="min-w-[800px] w-full border-collapse"><TableHeader><th className="px-4 py-3">{content.table.user}</th><th className="px-4 py-3">{content.table.balance}</th><th className="px-4 py-3">{content.table.lastMovement}</th><th className="px-4 py-3">{content.table.updatedAt}</th></TableHeader><tbody className="divide-y divide-line">{wallets.map((wallet) => { const last = latestByWallet.get(wallet.id); return <tr key={wallet.id}><TableCell><TableTitle>{personName(wallet.user, locale)}</TableTitle><p className="ltr-isolate mt-1 text-xs text-muted">{wallet.user?.email ?? '—'}</p></TableCell><TableCell><span className="tabular text-base font-bold text-ink">{formatNumber(wallet.balance, locale)} pts</span></TableCell><TableCell>{last ? <><span className="font-medium">{content.status[last.type] ?? last.type.replaceAll('_', ' ')}</span><span className="ms-2 tabular text-muted">{formatSignedPoints(last.amount, locale, 'pts')}</span></> : <span className="text-muted">—</span>}</TableCell><TableCell><time dateTime={wallet.updated_at}>{formatDate(wallet.updated_at, locale)}</time></TableCell></tr> })}</tbody></table></TableWrap></div>
+      <PaginationControls {...walletPagination} labels={copy.pagination} disabled={loading} onPageChange={onWalletPageChange} />
+    </section>
+    <section><h2 className="mb-3 text-base font-bold text-ink">{content.sections.recentMovements}</h2>
+      <MobileCardList>{ledger.map((entry) => <MobileCard key={entry.id}>
+        <TableTitle>{personName(entry.user, locale)}</TableTitle><p className="ltr-isolate mt-1 break-all text-xs text-muted">{entry.user?.email ?? '—'}</p>
+        <MobileDetails>
+          <MobileDetail label={mobile.movement}><span><span className="font-medium">{content.status[entry.type] ?? entry.type.replaceAll('_', ' ')}</span><span className="ms-2 block tabular font-bold text-ink">{formatSignedPoints(entry.amount, locale, 'pts')}</span></span></MobileDetail>
+          <MobileDetail label={mobile.reason}>{entry.reason ?? '—'}</MobileDetail>
+          <MobileDetail label={mobile.date}><time dateTime={entry.created_at}>{formatDate(entry.created_at, locale)}</time></MobileDetail>
+        </MobileDetails>
+      </MobileCard>)}</MobileCardList>
+      <div className="hidden lg:block"><TableWrap><table className="min-w-[850px] w-full border-collapse"><TableHeader><th className="px-4 py-3">{content.table.user}</th><th className="px-4 py-3">{content.table.movement}</th><th className="px-4 py-3">{content.table.reason}</th><th className="px-4 py-3">{content.table.date}</th></TableHeader><tbody className="divide-y divide-line">{ledger.map((entry) => <tr key={entry.id}><TableCell><TableTitle>{personName(entry.user, locale)}</TableTitle><p className="ltr-isolate mt-1 text-xs text-muted">{entry.user?.email ?? '—'}</p></TableCell><TableCell><span className="font-medium">{content.status[entry.type] ?? entry.type.replaceAll('_', ' ')}</span><span className="ms-2 tabular font-bold text-ink">{formatSignedPoints(entry.amount, locale, 'pts')}</span></TableCell><TableCell>{entry.reason ?? '—'}</TableCell><TableCell><time dateTime={entry.created_at}>{formatDate(entry.created_at, locale)}</time></TableCell></tr>)}</tbody></table></TableWrap></div>
+      <PaginationControls {...ledgerPagination} labels={copy.pagination} disabled={loading} onPageChange={onLedgerPageChange} />
+    </section>
+  </div>
+}
+
+function SearchLogsView({
+  logs,
+  pagination,
+  loading,
+  onPageChange,
+}: {
+  logs: AdminSearchLog[]
+  pagination: PaginatedResult<AdminSearchLog>
+  loading: boolean
+  onPageChange: (page: number) => void
+}) {
+  const { locale } = useI18n()
+  const copy = adminCopy[locale]
+  const { mobile, content } = copy
+  const [query, setQuery] = useState('')
+  const [status, setStatus] = useState('all')
+  const [date, setDate] = useState('')
+  const filteredLogs = useMemo(() => logs.filter((entry) => {
+    const matchesQuery = !query.trim() || `${entry.query} ${entry.normalized_query}`.toLowerCase().includes(query.trim().toLowerCase())
+    const matchesStatus = status === 'all' || entry.status === status
+    const matchesDate = !date || entry.created_at.startsWith(date)
+    return matchesQuery && matchesStatus && matchesDate
+  }), [date, logs, query, status])
+  if (loading) return <LoadingCard label={content.loading.searches} lines={5} />
+  return <div className="space-y-4">
+    <div className={`${cardMuted} grid gap-3 p-3 sm:grid-cols-[minmax(0,1fr)_180px_180px]`}><div><label className="sr-only" htmlFor="admin-search-query">{content.filters.searchLabel}</label><input id="admin-search-query" value={query} onChange={(event) => setQuery(event.target.value)} className={field} placeholder={content.filters.searchPlaceholder} /></div><div><label className="sr-only" htmlFor="admin-search-status">{content.filters.statusLabel}</label><select id="admin-search-status" value={status} onChange={(event) => setStatus(event.target.value)} className={field}><option value="all">{content.filters.allStatuses}</option><option value="success">{content.status.success}</option><option value="not_found">{content.status.not_found}</option><option value="insufficient_credits">{content.status.insufficient_credits}</option><option value="invalid_query">{content.status.invalid_query}</option><option value="error">{content.status.error}</option></select></div><div><label className="sr-only" htmlFor="admin-search-date">{content.filters.dateLabel}</label><input id="admin-search-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} className={field} /></div></div>
+    {filteredLogs.length === 0 ? <EmptyState icon="search" title={content.empty.searchesTitle} text={content.empty.searchesText} /> : <>
+      <MobileCardList>{filteredLogs.map((entry) => <MobileCard key={entry.id}>
+        <div className="flex items-start justify-between gap-3"><div className="min-w-0"><TableTitle>{entry.query}</TableTitle><p className="mt-1 break-words text-xs text-muted">{entry.normalized_query}</p></div><StatusBadge value={entry.status} /></div>
+        <MobileDetails>
+          <MobileDetail label={mobile.user}><span dir="auto">{personName(entry.user, locale)}</span><span className="ltr-isolate mt-1 block text-xs text-muted">{entry.user?.email ?? '—'}</span></MobileDetail>
+          <MobileDetail label={mobile.points}><span className="tabular">−{formatNumber(entry.debited_points, locale)}</span></MobileDetail>
+          <MobileDetail label={mobile.results}><span className="tabular">{formatNumber(entry.results_count, locale)}</span></MobileDetail>
+          <MobileDetail label={mobile.date}><time dateTime={entry.created_at}>{formatDate(entry.created_at, locale)}</time></MobileDetail>
+        </MobileDetails>
+      </MobileCard>)}</MobileCardList>
+      <div className="hidden lg:block"><TableWrap><table className="min-w-[920px] w-full border-collapse"><TableHeader><th className="px-4 py-3">{content.table.search}</th><th className="px-4 py-3">{content.table.user}</th><th className="px-4 py-3">{content.table.status}</th><th className="px-4 py-3">{content.table.points}</th><th className="px-4 py-3">{content.table.results}</th><th className="px-4 py-3">{content.table.date}</th></TableHeader><tbody className="divide-y divide-line">{filteredLogs.map((entry) => <tr key={entry.id}><TableCell><TableTitle>{entry.query}</TableTitle><p className="mt-1 text-xs text-muted">{entry.normalized_query}</p></TableCell><TableCell><p dir="auto">{personName(entry.user, locale)}</p><p className="ltr-isolate mt-1 text-xs text-muted">{entry.user?.email ?? '—'}</p></TableCell><TableCell><StatusBadge value={entry.status} /></TableCell><TableCell className="tabular">−{formatNumber(entry.debited_points, locale)}</TableCell><TableCell className="tabular">{formatNumber(entry.results_count, locale)}</TableCell><TableCell><time dateTime={entry.created_at}>{formatDate(entry.created_at, locale)}</time></TableCell></tr>)}</tbody></table></TableWrap></div>
+    </>}
+    {logs.length > 0 && <PaginationControls {...pagination} labels={copy.pagination} disabled={loading} onPageChange={onPageChange} />}
+  </div>
+}
+
+function ServicesView({
+  services,
+  loading,
+  onCategoryPageChange,
+  onEstablishmentPageChange,
+  onBranchPageChange,
+}: {
+  services: AdminServices | null
+  loading: boolean
+  onCategoryPageChange: (page: number) => void
+  onEstablishmentPageChange: (page: number) => void
+  onBranchPageChange: (page: number) => void
+}) {
+  const { locale } = useI18n()
+  const copy = adminCopy[locale]
+  const { actions, content, mobile } = copy
+
+  if (loading) return <LoadingCard label={content.loading.services} lines={5} />
+  if (!services) return <EmptyState icon="store" title={content.empty.servicesTitle} />
+
+  const sections = [
+    { id: 'categories', title: content.sections.categories, emptyIcon: 'sparkle' as const, emptyTitle: content.sections.categoriesEmpty, result: services.categories, onPageChange: onCategoryPageChange },
+    { id: 'establishments', title: content.sections.establishments, emptyIcon: 'store' as const, emptyTitle: content.sections.establishmentsEmpty, result: services.establishments, onPageChange: onEstablishmentPageChange },
+    { id: 'branches', title: content.sections.branches, emptyIcon: 'pin' as const, emptyTitle: content.sections.branchesEmpty, result: services.branches, onPageChange: onBranchPageChange },
+  ] as const
+
+  return <div className="space-y-6">
+    {sections.map((section) => (
+      <section key={section.id}>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-base font-bold text-ink">{section.title}</h2>
+          <div className="flex flex-wrap gap-2"><AdminActionButton icon={Eye} label={actions.view} disabled title={actions.soonTitle} /><AdminActionButton icon={Plus} label={actions.add} disabled title={actions.soonTitle} /></div>
+        </div>
+        {section.result.data.length === 0 ? <EmptyState icon={section.emptyIcon} title={section.emptyTitle} /> : section.id === 'categories' ? <>
+          <MobileCardList>{section.result.data.map((category) => <MobileCard key={category.id}><div className="flex items-start justify-between gap-3"><TableTitle>{category.name}</TableTitle><StatusBadge value={category.status} /></div><MobileDetails><MobileDetail label={mobile.slug}><span className="ltr-isolate">{category.slug}</span></MobileDetail><MobileDetail label={mobile.order}><span className="tabular">{formatNumber(category.sort_order, locale)}</span></MobileDetail></MobileDetails></MobileCard>)}</MobileCardList>
+          <div className="hidden lg:block"><TableWrap><table className="min-w-[620px] w-full border-collapse"><TableHeader><th className="px-4 py-3">{content.table.name}</th><th className="px-4 py-3">{content.table.slug}</th><th className="px-4 py-3">{content.table.status}</th><th className="px-4 py-3">{content.table.order}</th></TableHeader><tbody className="divide-y divide-line">{section.result.data.map((category) => <tr key={category.id}><TableCell><TableTitle>{category.name}</TableTitle></TableCell><TableCell>{category.slug}</TableCell><TableCell><StatusBadge value={category.status} /></TableCell><TableCell className="tabular">{formatNumber(category.sort_order, locale)}</TableCell></tr>)}</tbody></table></TableWrap></div>
+        </> : section.id === 'establishments' ? <>
+          <MobileCardList>{section.result.data.map((establishment) => <MobileCard key={establishment.id}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><TableTitle>{establishment.name}</TableTitle><p className="mt-1 break-all text-xs text-muted">{establishment.slug}</p></div><StatusBadge value={establishment.status} /></div><MobileDetails><MobileDetail label={mobile.category}>{establishment.category?.name ?? '—'}</MobileDetail><MobileDetail label={mobile.verified}>{establishment.is_verified ? <span className="text-answer">{mobile.yes}</span> : <span className="text-muted">{mobile.no}</span>}</MobileDetail><MobileDetail label={mobile.createdAt}><time dateTime={establishment.created_at}>{formatDate(establishment.created_at, locale)}</time></MobileDetail></MobileDetails></MobileCard>)}</MobileCardList>
+          <div className="hidden lg:block"><TableWrap><table className="min-w-[760px] w-full border-collapse"><TableHeader><th className="px-4 py-3">{content.table.establishment}</th><th className="px-4 py-3">{content.table.category}</th><th className="px-4 py-3">{content.table.status}</th><th className="px-4 py-3">{content.table.verified}</th><th className="px-4 py-3">{content.table.createdAt}</th></TableHeader><tbody className="divide-y divide-line">{section.result.data.map((establishment) => <tr key={establishment.id}><TableCell><TableTitle>{establishment.name}</TableTitle><p className="mt-1 text-xs text-muted">{establishment.slug}</p></TableCell><TableCell>{establishment.category?.name ?? '—'}</TableCell><TableCell><StatusBadge value={establishment.status} /></TableCell><TableCell>{establishment.is_verified ? <span className="text-answer">{mobile.yes}</span> : <span className="text-muted">{mobile.no}</span>}</TableCell><TableCell><time dateTime={establishment.created_at}>{formatDate(establishment.created_at, locale)}</time></TableCell></tr>)}</tbody></table></TableWrap></div>
+        </> : <>
+          <MobileCardList>{section.result.data.map((branch) => <MobileCard key={branch.id}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><TableTitle>{branch.name}</TableTitle><p className="mt-1 break-words text-xs text-muted">{branch.neighborhood ?? '—'}</p></div><StatusBadge value={branch.status} /></div><MobileDetails><MobileDetail label={mobile.establishment}>{branch.establishment?.name ?? '—'}</MobileDetail><MobileDetail label={mobile.city}>{branch.city ?? '—'}</MobileDetail><MobileDetail label={mobile.main}>{branch.is_main ? <span className="text-answer">{mobile.yes}</span> : <span className="text-muted">{mobile.no}</span>}</MobileDetail></MobileDetails></MobileCard>)}</MobileCardList>
+          <div className="hidden lg:block"><TableWrap><table className="min-w-[760px] w-full border-collapse"><TableHeader><th className="px-4 py-3">{content.table.branch}</th><th className="px-4 py-3">{content.table.establishment}</th><th className="px-4 py-3">{content.table.city}</th><th className="px-4 py-3">{content.table.status}</th><th className="px-4 py-3">{content.table.main}</th></TableHeader><tbody className="divide-y divide-line">{section.result.data.map((branch) => <tr key={branch.id}><TableCell><TableTitle>{branch.name}</TableTitle><p className="mt-1 text-xs text-muted">{branch.neighborhood ?? '—'}</p></TableCell><TableCell>{branch.establishment?.name ?? '—'}</TableCell><TableCell>{branch.city ?? '—'}</TableCell><TableCell><StatusBadge value={branch.status} /></TableCell><TableCell>{branch.is_main ? <span className="text-answer">{mobile.yes}</span> : <span className="text-muted">{mobile.no}</span>}</TableCell></tr>)}</tbody></table></TableWrap></div>
+        </>}
+        {section.result.totalCount > 0 && <PaginationControls {...section.result} labels={copy.pagination} disabled={loading} onPageChange={section.onPageChange} />}
+      </section>
+    ))}
+  </div>
+}
+
+export function AdminPage() {
+  const { locale } = useI18n()
+  const { profile } = useAccount()
+  const [activeTab, setActiveTab] = useState<AdminTab>(() => {
+    const requested = new URLSearchParams(window.location.search).get('tab')
+    return tabs.some((tab) => tab.id === requested) ? requested as AdminTab : 'dashboard'
+  })
+  const [loading, setLoading] = useState<Partial<Record<AdminTab, boolean>>>({})
+  const [errors, setErrors] = useState<Partial<Record<AdminTab, string>>>({})
+  const [warnings, setWarnings] = useState<Partial<Record<AdminTab, string>>>({})
+  const [overview, setOverview] = useState<AdminOverview | null>(null)
+  const [requests, setRequests] = useState<PaginatedResult<AdminMissingRequest>>(() => emptyPage())
+  const [users, setUsers] = useState<PaginatedResult<AdminUser>>(() => emptyPage())
+  const [userFilters, setUserFilters] = useState<{
+    search: string
+    role: AdminUserRoleFilter
+    status: AdminUserStatusFilter
+  }>({ search: '', role: 'all', status: 'all' })
+  const [wallets, setWallets] = useState<PaginatedResult<AdminWallet>>(() => emptyPage())
+  const [ledger, setLedger] = useState<PaginatedResult<AdminCreditLedgerEntry>>(() => emptyPage())
+  const [searchLogs, setSearchLogs] = useState<PaginatedResult<AdminSearchLog>>(() => emptyPage())
+  const [services, setServices] = useState<AdminServices | null>(null)
+  const [pages, setPages] = useState<Record<AdminListPage, number>>({
+    requests: 1, users: 1, wallets: 1, ledger: 1, searchLogs: 1, categories: 1, establishments: 1, branches: 1,
+  })
+  const [rechargeRequested, setRechargeRequested] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const isSuperAdmin = profile?.role === 'super_admin'
+  const visibleTabs = tabs.filter((tab) => tab.id !== 'system' || isSuperAdmin)
+  const safeActiveTab = activeTab === 'system' && !isSuperAdmin ? 'dashboard' : activeTab
+  const copy = adminCopy[locale]
+
+  const setPage = useCallback((target: AdminListPage, page: number) => {
+    setPages((current) => ({ ...current, [target]: page }))
+  }, [])
+
+  const setUsersFilters = useCallback((filters: {
+    search: string
+    role: AdminUserRoleFilter
+    status: AdminUserStatusFilter
+  }) => {
+    setUserFilters(filters)
+    setPage('users', 1)
+  }, [setPage])
+
+  const load = useCallback(async (target: AdminTab) => {
+    setLoading((value) => ({ ...value, [target]: true }))
+    setErrors((value) => ({ ...value, [target]: undefined }))
+    setWarnings((value) => ({ ...value, [target]: undefined }))
+    if (target === 'dashboard') {
+      // Les services alimentent deux alertes (établissements sans agence, agences
+      // sans coordonnées). Leur échec ne doit pas masquer les compteurs.
+      const [result, servicesResult] = await Promise.all([getAdminOverview(), getAdminServices()])
+      setOverview(result.data)
+      if (servicesResult.data) setServices(servicesResult.data)
+      if (result.error) {
+        const error = result.error
+        setErrors((value) => ({ ...value, dashboard: error }))
+      }
+    }
+    if (target === 'requests') {
+      const result = await getAdminMissingRequests({ page: pages.requests, pageSize: DEFAULT_PAGE_SIZE })
+      setRequests(result.data)
+      if (result.warning) {
+        const warning = result.warning
+        setWarnings((value) => ({ ...value, requests: warning }))
+      }
+      if (result.error) {
+        const error = result.error
+        setErrors((value) => ({ ...value, requests: error }))
+      }
+    }
+    if (target === 'users') {
+      const result = await getAdminUsers({ page: pages.users, pageSize: DEFAULT_PAGE_SIZE, ...userFilters })
+      setUsers(result.data)
+      if (result.error) {
+        const error = result.error
+        setErrors((value) => ({ ...value, users: error }))
+      }
+    }
+    if (target === 'credits') {
+      const [walletResult, ledgerResult] = await Promise.all([
+        getAdminWallets({ page: pages.wallets, pageSize: DEFAULT_PAGE_SIZE }),
+        getAdminCreditLedger({ page: pages.ledger, pageSize: DEFAULT_PAGE_SIZE }),
+      ])
+      setWallets(walletResult.data)
+      setLedger(ledgerResult.data)
+      const warning = walletResult.warning ?? ledgerResult.warning
+      if (warning) setWarnings((value) => ({ ...value, credits: warning }))
+      const error = walletResult.error ?? ledgerResult.error
+      if (error) setErrors((value) => ({ ...value, credits: error }))
+    }
+    if (target === 'search-logs') {
+      const result = await getAdminSearchLogs({ page: pages.searchLogs, pageSize: DEFAULT_PAGE_SIZE })
+      setSearchLogs(result.data)
+      if (result.warning) {
+        const warning = result.warning
+        setWarnings((value) => ({ ...value, 'search-logs': warning }))
+      }
+      if (result.error) {
+        const error = result.error
+        setErrors((value) => ({ ...value, 'search-logs': error }))
+      }
+    }
+    if (target === 'services') {
+      const result = await getAdminServices({
+        categories: { page: pages.categories, pageSize: DEFAULT_PAGE_SIZE },
+        establishments: { page: pages.establishments, pageSize: DEFAULT_PAGE_SIZE },
+        branches: { page: pages.branches, pageSize: DEFAULT_PAGE_SIZE },
+      })
+      setServices(result.data)
+      if (result.error) {
+        const error = result.error
+        setErrors((value) => ({ ...value, services: error }))
+      }
+    }
+    setLoading((value) => ({ ...value, [target]: false }))
+  }, [pages, userFilters])
+
+  useEffect(() => {
+    if (activeTab === 'system' && !isSuperAdmin) setActiveTab('dashboard')
+  }, [activeTab, isSuperAdmin])
+
+  useEffect(() => {
+    if (safeActiveTab === 'system') {
+      void load('dashboard')
+      return
+    }
+    void load(safeActiveTab)
+  }, [load, safeActiveTab])
+
+  useEffect(() => {
+    if (!rechargeRequested || safeActiveTab !== 'dashboard' || loading.dashboard) return
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById('admin-recharges')?.scrollIntoView({ block: 'start' })
+      setRechargeRequested(false)
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [loading.dashboard, rechargeRequested, safeActiveTab])
+
+  const saveRequest = async (request: AdminMissingRequest, status: MissingServiceRequestStatus, adminNote: string) => {
+    const result = await updateMissingRequestStatus({ id: request.id, status, adminNote })
+    if (result.error || !result.data) {
+      setErrors((value) => ({ ...value, requests: result.error ?? 'La demande n’a pas pu être mise à jour.' }))
+      return
+    }
+    setRequests((value) => ({
+      ...value,
+      data: value.data.map((item) => item.id === request.id ? result.data as AdminMissingRequest : item),
+    }))
+    if (result.warning) {
+      const warning = result.warning
+      setWarnings((value) => ({ ...value, requests: warning }))
+    }
+    void load('dashboard')
+  }
+
+  const saveUserStatus = async (user: AdminUser, status: 'active' | 'suspended') => {
+    const result = await adminUpdateUserStatus({ userId: user.id, status })
+    if (result.error || !result.data) return result.error ?? 'User status update failed.'
+
+    setUsers((value) => ({ ...value, data: value.data.map((item) => item.id === user.id ? result.data as AdminUser : item) }))
+    void load('dashboard')
+    return null
+  }
+
+  const saveUserRole = async (user: AdminUser, role: AdminUser['role']) => {
+    const result = await superAdminUpdateUserRole({ userId: user.id, role })
+    if (result.error || !result.data) return result.error ?? 'User role update failed.'
+
+    setUsers((value) => ({ ...value, data: value.data.map((item) => item.id === user.id ? result.data as AdminUser : item) }))
+    void load('dashboard')
+    return null
+  }
+
+  const activeLabel = copy.tabs[safeActiveTab]
+  const adminRole = isSuperAdmin ? copy.header.superAdmin : copy.header.admin
+  const openRechargePanel = () => {
+    setRechargeRequested(true)
+    setActiveTab('dashboard')
+  }
+
+  return (
+    <AppShell
+      documentTitle={copy.header.product}
+      adminBar={{
+        productLabel: copy.header.product,
+        sectionLabel: activeLabel,
+        roleLabel: adminRole,
+        sidebarCollapsed,
+        mobileSidebarOpen,
+        desktopToggleLabel: sidebarCollapsed ? copy.sidebar.expand : copy.sidebar.collapse,
+        mobileToggleLabel: copy.sidebar.menu,
+        onDesktopSidebarToggle: () => setSidebarCollapsed((value) => !value),
+        onMobileSidebarToggle: () => setMobileSidebarOpen(true),
+      }}
+    >
+      <>
+      <main id="app-main" className={`${appWrap} pb-24 pt-4 sm:pt-5 lg:pb-12 lg:pt-5`}>
+        <div className={`lg:grid lg:items-start lg:gap-6 ${sidebarCollapsed ? 'lg:grid-cols-[5rem_minmax(0,1fr)]' : 'lg:grid-cols-[17rem_minmax(0,1fr)]'}`}>
+          <AdminSidebar tabs={visibleTabs} activeTab={safeActiveTab} collapsed={sidebarCollapsed} mobileOpen={mobileSidebarOpen} onMobileOpenChange={setMobileSidebarOpen} onSelectTab={setActiveTab} onSelectRecharge={openRechargePanel} />
+
+          <section className="min-w-0" aria-label={activeLabel}>
+          {errors[safeActiveTab] && <InlineAlert tone="error" title={copy.header.dataErrorTitle} className="mb-5">{errors[safeActiveTab]} {copy.header.dataErrorText}</InlineAlert>}
+          {warnings[safeActiveTab] && <InlineAlert tone="info" title={copy.content.partialProfilesUnavailable} className="mb-5">{warnings[safeActiveTab]}</InlineAlert>}
+          {safeActiveTab === 'dashboard' && <AdminDashboard overview={overview} services={services} loading={Boolean(loading.dashboard)} />}
+          {safeActiveTab === 'requests' && <RequestsView requests={requests.data} pagination={requests} loading={Boolean(loading.requests)} onSave={saveRequest} onPageChange={(page) => setPage('requests', page)} />}
+          {safeActiveTab === 'users' && <AdminUsers users={users.data} pagination={users} loading={Boolean(loading.users)} currentRole={isSuperAdmin ? 'super_admin' : 'admin'} filters={userFilters} onFiltersChange={setUsersFilters} onPageChange={(page) => setPage('users', page)} onStatusChange={saveUserStatus} onRoleChange={saveUserRole} displayName={(user) => personName(user, locale)} />}
+          {safeActiveTab === 'credits' && <CreditsView wallets={wallets.data} walletPagination={wallets} ledger={ledger.data} ledgerPagination={ledger} loading={Boolean(loading.credits)} onWalletPageChange={(page) => setPage('wallets', page)} onLedgerPageChange={(page) => setPage('ledger', page)} />}
+          {safeActiveTab === 'search-logs' && <SearchLogsView logs={searchLogs.data} pagination={searchLogs} loading={Boolean(loading['search-logs'])} onPageChange={(page) => setPage('searchLogs', page)} />}
+          {safeActiveTab === 'services' && <ServicesView services={services} loading={Boolean(loading.services)} onCategoryPageChange={(page) => setPage('categories', page)} onEstablishmentPageChange={(page) => setPage('establishments', page)} onBranchPageChange={(page) => setPage('branches', page)} />}
+          {safeActiveTab === 'system' && isSuperAdmin && <SuperAdminPanel locale={locale} overview={overview} loading={Boolean(loading.dashboard)} />}
+          </section>
+        </div>
+      </main>
+      <AdminBottomNav activeTab={safeActiveTab} onSelectTab={setActiveTab} />
+      </>
+    </AppShell>
+  )
+}

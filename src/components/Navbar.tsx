@@ -1,30 +1,49 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
-import { dictionaries, locales, useI18n } from '../i18n'
-import { useTheme } from '../lib/theme'
-import { useDismiss } from '../lib/useDismiss'
-import { sectionIds } from '../lib/content'
-import { ease } from '../lib/motion'
-import { iconBtn, wrap } from '../lib/ui'
+import { useCallback, useEffect, useState } from 'react'
+import { useI18n } from '../i18n'
+import { useAuthSession } from '../hooks/useAuthSession'
+import { primarySectionIds, sectionIds } from '../lib/content'
+import { getMyProfile } from '../lib/db1'
+import { defaultDestinationForRole } from '../lib/routeAuth'
+import { signOut } from '../lib/auth'
+import { btnGhost, btnPrimary, iconBtn, wrap } from '../lib/ui'
 import { Icon } from './Icon'
 import { Logo } from './Logo'
+import { Drawer } from './shell/Drawer'
+import { LanguageMenu } from './shell/LanguageMenu'
+import { ThemeToggle } from './shell/ThemeToggle'
 
+/**
+ * Barre de navigation de la landing.
+ *
+ * Mobile  : logo · langue + thème · menu. Les libellés d'authentification
+ *           restent dans le tiroir pour que FR, AR et EN tiennent à 390 px.
+ * Desktop : logo · liens de sections en clair · langue + thème + CTA.
+ * Les deux ne sont pas la même barre étirée — le desktop expose la navigation,
+ * le mobile la range dans un tiroir pour garder la barre respirable.
+ */
 export function Navbar() {
-  const { t, locale, setLocale } = useI18n()
-  const { theme, toggleTheme } = useTheme()
-  const reduce = useReducedMotion()
-
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [langOpen, setLangOpen] = useState(false)
+  const { t } = useI18n()
+  const { isAuthenticated } = useAuthSession()
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
+  const [spaceHref, setSpaceHref] = useState('/app')
+  const accountHref = isAuthenticated ? spaceHref : '/auth'
+  const accountLabel = isAuthenticated ? t.nav.mySpace : t.nav.signUp
+  const signInHref = '/auth'
 
-  const menuRef = useRef<HTMLDivElement>(null)
-  const langRef = useRef<HTMLDivElement>(null)
+  const closeDrawer = useCallback(() => setDrawerOpen(false), [])
 
-  const closeMenu = useCallback(() => setMenuOpen(false), [])
-  const closeLang = useCallback(() => setLangOpen(false), [])
-  useDismiss(menuOpen, menuRef, closeMenu)
-  useDismiss(langOpen, langRef, closeLang)
+  const handleSignOut = async () => {
+    setSigningOut(true)
+    const { error } = await signOut()
+    if (error) {
+      setSigningOut(false)
+      return
+    }
+    closeDrawer()
+    window.location.assign('/')
+  }
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
@@ -33,136 +52,131 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const panel = reduce
-    ? {}
-    : {
-        initial: { opacity: 0, y: -6, scale: 0.98 },
-        animate: { opacity: 1, y: 0, scale: 1 },
-        exit: { opacity: 0, y: -6, scale: 0.98 },
-        transition: { duration: 0.18, ease },
-      }
+  // Le même rôle que celui résolu par la page d'authentification détermine
+  // l'espace de retour. En cas de profil indisponible, la destination sûre
+  // reste l'espace utilisateur, jamais l'administration.
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setSpaceHref('/app')
+      return
+    }
+
+    let active = true
+    void getMyProfile().then((result) => {
+      if (!active) return
+      setSpaceHref(defaultDestinationForRole(result.error || !result.data ? 'user' : result.data.role))
+    })
+
+    return () => {
+      active = false
+    }
+  }, [isAuthenticated])
 
   return (
-    <header
-      className={`fixed inset-x-0 top-0 z-50 border-b transition-colors duration-300 ${
-        scrolled ? 'border-line bg-page/85 backdrop-blur-md' : 'border-transparent bg-page/60 backdrop-blur-sm'
-      }`}
-    >
-      <div className={`${wrap} flex h-16 items-center justify-between gap-3 sm:h-[72px]`}>
-        {/* Gauche — logo */}
-        <div className="flex flex-1 justify-start">
-          <a href="#top" aria-label="Lewad" className="rounded-lg">
-            <Logo />
+    <>
+      <header
+        className={`fixed inset-x-0 top-0 z-50 border-b transition-colors duration-300 ${
+          scrolled ? 'border-line bg-page/85 backdrop-blur-md' : 'border-transparent bg-page/60 backdrop-blur-sm'
+        }`}
+      >
+        <div className={`${wrap} flex h-16 min-w-0 items-center gap-3 overflow-x-clip sm:h-[72px]`}>
+          {/* --- Logo : toujours au bord de début --- */}
+          <div className="flex min-w-0 flex-1 justify-start lg:flex-none">
+            <a href="#top" aria-label="Lewad" className="min-w-0 max-w-full rounded-lg">
+              <Logo className="max-w-full max-[359px]:[&>span:last-child]:hidden" />
+            </a>
+          </div>
+
+          {/* --- Desktop : navigation de sections --- */}
+          <nav aria-label={t.nav.navigate} className="hidden flex-1 justify-center lg:flex">
+            <ul className="flex list-none items-center gap-1">
+              {primarySectionIds.map((id) => (
+                <li key={id}>
+                  <a
+                    href={`#${id}`}
+                    className="inline-flex min-h-9 items-center rounded-lg px-3 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-ink"
+                  >
+                    {t.nav.sections[id]}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          {/* --- Mobile : langue + thème au centre --- */}
+          <div className="flex shrink-0 items-center gap-2 lg:hidden">
+            <LanguageMenu />
+            <ThemeToggle />
+          </div>
+
+          {/* --- Bord de fin --- */}
+          <div className="flex min-w-0 flex-1 shrink-0 items-center justify-end gap-2 lg:flex-none">
+            <div className="hidden items-center gap-2 lg:flex">
+              <LanguageMenu align="end" />
+              <ThemeToggle />
+              {!isAuthenticated && (
+                <a href={signInHref} className={btnGhost}>
+                  {t.nav.signIn}
+                </a>
+              )}
+              <a href={accountHref} className={btnPrimary}>
+                {accountLabel}
+                <span className="rtl:rotate-180">
+                  <Icon name="arrow" size={16} />
+                </span>
+              </a>
+            </div>
+
+            <button
+              type="button"
+              className={`${iconBtn} shrink-0 lg:hidden`}
+              aria-label={t.nav.openMenu}
+              aria-expanded={drawerOpen}
+              aria-haspopup="dialog"
+              onClick={() => setDrawerOpen(true)}
+            >
+              <Icon name="menu" size={19} />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <Drawer open={drawerOpen} onClose={closeDrawer} title={t.nav.navigate}>
+        <div className="grid gap-2">
+          <a href={accountHref} className={btnPrimary} onClick={closeDrawer}>
+            {accountLabel}
+            <span className="rtl:rotate-180"><Icon name="arrow" size={16} /></span>
           </a>
-        </div>
-
-        {/* Centre — langue + thème */}
-        <div className="flex items-center gap-2">
-          <div className="relative" ref={langRef}>
-            <button
-              type="button"
-              className={`${iconBtn} w-auto gap-1.5 px-2.5 text-[13px] font-semibold`}
-              aria-label={t.nav.language}
-              aria-expanded={langOpen}
-              aria-haspopup="true"
-              onClick={() => {
-                setLangOpen((open) => !open)
-                setMenuOpen(false)
-              }}
-            >
-              <Icon name="globe" size={18} />
-              <span aria-hidden="true">{dictionaries[locale].meta.short}</span>
+          {!isAuthenticated ? (
+            <a href={signInHref} className={btnGhost} onClick={closeDrawer}>
+              {t.nav.login}
+            </a>
+          ) : (
+            <button type="button" className={`${btnGhost} w-full`} disabled={signingOut} onClick={() => void handleSignOut()}>
+              {signingOut ? t.nav.signingOut : t.nav.signOut}
             </button>
-
-            <AnimatePresence>
-              {langOpen && (
-                <m.ul
-                  {...panel}
-                  className="absolute start-0 top-[calc(100%+8px)] z-50 w-40 list-none rounded-xl border border-line bg-surface p-1.5 shadow-lg shadow-black/5"
-                >
-                  {locales.map((item) => (
-                    <li key={item}>
-                      <button
-                        type="button"
-                        lang={item}
-                        aria-current={item === locale}
-                        className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-start text-sm transition-colors ${
-                          item === locale ? 'bg-surface-2 font-semibold text-ink' : 'text-muted hover:bg-surface-2'
-                        }`}
-                        onClick={() => {
-                          setLocale(item)
-                          setLangOpen(false)
-                        }}
-                      >
-                        {dictionaries[item].meta.label}
-                        {item === locale && <Icon name="check" size={15} />}
-                      </button>
-                    </li>
-                  ))}
-                </m.ul>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <button
-            type="button"
-            className={iconBtn}
-            onClick={toggleTheme}
-            aria-label={theme === 'light' ? t.nav.toDark : t.nav.toLight}
-          >
-            <Icon name={theme === 'light' ? 'moon' : 'sun'} size={18} />
-          </button>
+          )}
         </div>
 
-        {/* Droite — menu des sections */}
-        <div className="flex flex-1 justify-end">
-          <div className="relative" ref={menuRef}>
-            <button
-              type="button"
-              className={`${iconBtn} w-auto gap-2 px-3 text-sm font-semibold`}
-              aria-label={menuOpen ? t.nav.closeMenu : t.nav.openMenu}
-              aria-expanded={menuOpen}
-              aria-haspopup="true"
-              aria-controls="lewad-menu"
-              onClick={() => {
-                setMenuOpen((open) => !open)
-                setLangOpen(false)
-              }}
-            >
-              <Icon name={menuOpen ? 'close' : 'menu'} size={18} />
-              <span className="hidden sm:inline">{t.nav.menu}</span>
-            </button>
-
-            <AnimatePresence>
-              {menuOpen && (
-                <m.nav
-                  {...panel}
-                  id="lewad-menu"
-                  aria-label={t.nav.menu}
-                  className="absolute end-0 top-[calc(100%+8px)] z-50 w-60 rounded-2xl border border-line bg-surface p-1.5 shadow-xl shadow-black/5"
+        <nav aria-label={t.nav.navigate}>
+          <ul className="mt-6 list-none space-y-1">
+            {sectionIds.map((id) => (
+              <li key={id}>
+                <a
+                  href={`#${id}`}
+                  onClick={closeDrawer}
+                  className="flex min-h-12 items-center justify-between gap-3 rounded-xl px-3 text-[15px] font-medium text-ink-soft transition-colors hover:bg-surface-2 hover:text-ink"
                 >
-                  <ul className="list-none">
-                    {sectionIds.map((id) => (
-                      <li key={id}>
-                        <a
-                          href={`#${id}`}
-                          onClick={closeMenu}
-                          className="flex items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-sm text-ink-soft transition-colors hover:bg-surface-2 hover:text-ink"
-                        >
-                          {t.nav.sections[id]}
-                          <span className="text-muted rtl:rotate-180">
-                            <Icon name="arrow" size={15} />
-                          </span>
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </m.nav>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-      </div>
-    </header>
+                  {t.nav.sections[id]}
+                  <span className="text-muted rtl:rotate-180">
+                    <Icon name="arrow" size={16} />
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </Drawer>
+    </>
   )
 }
