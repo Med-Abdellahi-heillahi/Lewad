@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -o 'marquee-wrap.\\\\{0,900\\\\}' src/App.tsx)",
+      "Bash(grep -o 'logo-mark.\\\\{0,400\\\\}' src/App.tsx)",
+      "Bash(grep -o 'data-reveal.\\\\{0,200\\\\}' src/App.tsx)",
+      "Bash(npx vite *)",
+      "Bash(node -e ' *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" -A \"Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36 Chrome/126 Safari/537.36\" \"https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap\")",
+      "Bash(curl -s -A \"Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36 Chrome/126 Safari/537.36\" \"https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap\")",
+      "Bash(curl -s -A \"Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36 Chrome/126 Safari/537.36\" \"https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400&display=swap\")",
+      "Bash(grep -E \"/\\\\*|unicode-range\")",
+      "Bash(grep -nE \"left|right|margin-left|margin-right|padding-left|padding-right|text-align: \\(left|right\\)|#[0-9a-fA-F]{3,8}|rgb\\\\\\(|rgba\\\\\\(\" src/styles/base.css)",
+      "Bash(npx tsc *)",
+      "Bash(npx esbuild *)",
+      "Bash(node C:/Users/hp/AppData/Local/Temp/claude/c--dev-Lewad/9bd9822e-dc6e-4f64-9da0-101390763258/scratchpad/preview.mjs)",
+      "Bash(grep -nE \"#[0-9a-fA-F]{3,8}\\\\b|rgba?\\\\\\(\" src/styles/system.css src/styles/motion.css)",
+      "Bash(npm i *)",
+      "Bash(node -p \"require\\('tailwindcss/package.json'\\).version + ' | fm ' + require\\('framer-motion/package.json'\\).version\")",
+      "Bash(node -e \"const p=require\\('framer-motion/package.json'\\); console.log\\(p.main, p.module, JSON.stringify\\(p.exports&&Object.keys\\(p.exports\\)\\)\\)\")",
+      "Bash(grep -oE 'className=\"[^\"]{0,80}' src/components/AppDemo.tsx)",
+      "Bash(npx chromium-cli *)",
+      "Read(//c/Program Files \\\\\\(x86\\\\\\)/Microsoft/Edge/Application/**)",
+      "Bash(cp -r \"c:/dev/Lewad/node_modules\" .)",
+      "Bash(APP_URL=http://localhost:5174/ OUT_DIR=. node drive.mjs)",
+      "Bash(node full.mjs)",
+      "Bash(node nav.mjs)",
+      "Bash(node -p \"JSON.stringify\\(require\\('./package.json'\\).dependencies\\)+' | dev:'+JSON.stringify\\(require\\('./package.json'\\).devDependencies\\)\")",
+      "Bash(npm uninstall *)",
+      "Bash(node -p \"JSON.stringify\\(require\\('./package.json'\\).devDependencies\\)\")"
+    ]
+  }
+}

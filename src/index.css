@@ -1,0 +1,227 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Geist:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@300;400;600&display=swap');
+@import 'tailwindcss';
+
+/* Le thème est piloté par data-theme sur <html> (voir ThemeProvider + script inline). */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* =====================================================================
+   Palette Lewad — sable chaud, panneaux vert forêt, accent citron vert.
+   Les valeurs vivent ici ; @theme inline les expose en utilitaires
+   Tailwind (bg-page, text-ink…) qui basculent seuls en mode sombre.
+   ===================================================================== */
+:root {
+  --page: #f7f7f4;
+  --page-alt: #f1f1ec;
+  --surface: #fffdf8;
+  --surface-2: #efefe9;
+  --ink: #191d18;
+  --ink-soft: #3d423b;
+  --muted: #5c6159;
+  --line: rgb(25 29 24 / 0.13);
+  --line-strong: rgb(25 29 24 / 0.24);
+
+  --brand: #c8ef58;
+  --brand-soft: #e8f8bd;
+  --brand-ink: #1b2a12;
+  --brand-deep: #2b4a3c;
+
+  --panel: #1b3329;
+  --panel-ink: #f0f6e9;
+  --panel-muted: rgb(240 246 233 / 0.74);
+  --panel-line: rgb(240 246 233 / 0.16);
+
+  --ask: #b3261e;
+  --ask-bg: #fbe6e4;
+  --answer: #2f7d32;
+  --answer-bg: #e3f3e1;
+
+  /* Teintes des cartes illustratives (bandeau, offres). */
+  --tint-1: #dde8f3; --tint-ink-1: #2d4f6e;
+  --tint-2: #e3efd6; --tint-ink-2: #39633b;
+  --tint-3: #f6e5cd; --tint-ink-3: #74501f;
+  --tint-4: #e2e1f8; --tint-ink-4: #4f4c8a;
+  --tint-5: #d7ede4; --tint-ink-5: #2c614c;
+
+  --focus: #4d6b0e;
+}
+
+[data-theme='dark'] {
+  --page: #0f100f;
+  --page-alt: #141614;
+  --surface: #171a17;
+  --surface-2: #1e221d;
+  --ink: #edefe9;
+  --ink-soft: #cbd0c6;
+  --muted: #9ea69a;
+  --line: rgb(233 240 224 / 0.14);
+  --line-strong: rgb(233 240 224 / 0.28);
+
+  --brand: #cdf267;
+  --brand-soft: #2c3a19;
+  --brand-ink: #16210f;
+  --brand-deep: #cdf267;
+
+  --panel: #182a22;
+  --panel-ink: #eef5e7;
+  --panel-muted: rgb(238 245 231 / 0.72);
+  --panel-line: rgb(238 245 231 / 0.14);
+
+  --ask: #f5918a;
+  --ask-bg: #34191a;
+  --answer: #8ccd7c;
+  --answer-bg: #1a2a1a;
+
+  --tint-1: #16263a; --tint-ink-1: #a8cbe8;
+  --tint-2: #1b2c1a; --tint-ink-2: #b9d99f;
+  --tint-3: #33260f; --tint-ink-3: #e8c48b;
+  --tint-4: #211f3d; --tint-ink-4: #b9b6f0;
+  --tint-5: #102a24; --tint-ink-5: #96d3ba;
+
+  --focus: #cef36a;
+}
+
+@theme inline {
+  --font-sans: 'Geist', 'IBM Plex Sans Arabic', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Inter', 'IBM Plex Sans Arabic', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --color-page: var(--page);
+  --color-page-alt: var(--page-alt);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-deep: var(--brand-deep);
+
+  --color-panel: var(--panel);
+  --color-panel-ink: var(--panel-ink);
+  --color-panel-muted: var(--panel-muted);
+  --color-panel-line: var(--panel-line);
+
+  --color-ask: var(--ask);
+  --color-ask-bg: var(--ask-bg);
+  --color-answer: var(--answer);
+  --color-answer-bg: var(--answer-bg);
+
+  --color-focus: var(--focus);
+
+  --color-tint-1: var(--tint-1);
+  --color-tint-2: var(--tint-2);
+  --color-tint-3: var(--tint-3);
+  --color-tint-4: var(--tint-4);
+  --color-tint-5: var(--tint-5);
+  --color-tint-ink-1: var(--tint-ink-1);
+  --color-tint-ink-2: var(--tint-ink-2);
+  --color-tint-ink-3: var(--tint-ink-3);
+  --color-tint-ink-4: var(--tint-ink-4);
+  --color-tint-ink-5: var(--tint-ink-5);
+}
+
+/* Bandeau publicitaire : défilement continu de droite à gauche. */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    /* Compense la navbar fixe quand on saute vers une ancre. */
+    scroll-padding-top: 5.5rem;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    min-width: 320px;
+    background-color: var(--page);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Titres en Inter, corps en Geist. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--brand);
+    color: var(--brand-ink);
+  }
+
+  /* ---- Arabe : plus aéré, sans interlettrage négatif, graisses légères ---- */
+  [dir='rtl'] body,
+  [lang='ar'] body {
+    font-family: 'IBM Plex Sans Arabic', var(--font-sans);
+    font-weight: 400;
+  }
+
+  [dir='rtl'] h1,
+  [dir='rtl'] h2,
+  [dir='rtl'] h3,
+  [dir='rtl'] h4 {
+    font-family: 'IBM Plex Sans Arabic', var(--font-display);
+    font-weight: 600;
+    letter-spacing: 0 !important;
+    line-height: 1.35;
+    text-wrap: pretty;
+  }
+
+  [dir='rtl'] p,
+  [dir='rtl'] li,
+  [dir='rtl'] span,
+  [dir='rtl'] a,
+  [dir='rtl'] button {
+    letter-spacing: 0 !important;
+  }
+
+  [dir='rtl'] p,
+  [dir='rtl'] li {
+    line-height: 1.9;
+  }
+}
+
+@layer utilities {
+  /* Isole un numéro de téléphone / une URL dans une page arabe. */
+  .ltr-isolate {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  /* Bandeau défilant : masque doux sur les deux bords. */
+  .edge-fade {
+    mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

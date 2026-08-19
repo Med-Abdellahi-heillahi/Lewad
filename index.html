@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fr" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!--
+      Theme colour: the first tag has no media query, so it always matches and stays the one
+      ThemeProvider keeps in sync. The dark variant covers the instant before the script below runs.
+    -->
+    <meta name="theme-color" content="#f7f7f4" />
+    <meta name="theme-color" content="#0f100f" media="(prefers-color-scheme: dark)" />
+
+    <title>Lewad — Trouvez les services autour de vous</title>
+    <meta
+      name="description"
+      content="Lewad vous aide à trouver les établissements, agences et services locaux en Mauritanie : téléphone, WhatsApp, localisation et itinéraire."
+    />
+
+    <!--
+      Blocking, dependency-free: paints the right theme and text direction before the first frame.
+      Without it the page flashes light before React boots, and Arabic visitors see an LTR layout jump.
+    -->
+    <script>
+      ;(function () {
+        try {
+          var root = document.documentElement
+          var theme = null
+          var locale = null
+          try {
+            theme = localStorage.getItem('lewad-theme')
+            locale = localStorage.getItem('lewad-locale')
+          } catch (e) {
+            /* storage blocked (private mode) — fall back to the system preference */
+          }
+          if (theme !== 'light' && theme !== 'dark') {
+            theme =
+              window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+          }
+          if (locale !== 'fr' && locale !== 'ar' && locale !== 'en') locale = 'fr'
+
+          root.setAttribute('data-theme', theme)
+          root.setAttribute('data-locale', locale)
+          root.style.colorScheme = theme
+          root.lang = locale
+          root.dir = locale === 'ar' ? 'rtl' : 'ltr'
+
+          var color = theme === 'dark' ? '#0f100f' : '#f7f7f4'
+          var tags = document.querySelectorAll('meta[name="theme-color"]')
+          for (var i = 0; i < tags.length; i++) tags[i].setAttribute('content', color)
+        } catch (e) {
+          /* never block the page for a cosmetic detail */
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

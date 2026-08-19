@@ -1,0 +1,26 @@
+{
+  "name": "lewad-landing",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
+    "@vitejs/plugin-react": "latest",
+    "framer-motion": "^13.1.0",
+    "react": "latest",
+    "react-dom": "latest",
+    "typescript": "latest",
+    "vite": "latest"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "tailwindcss": "^4.3.3"
+  }
+}
