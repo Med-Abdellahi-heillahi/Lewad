@@ -38,6 +38,35 @@ A local search web app for Mauritania. The V1 loop:
 
 `Search → Find → Contact / Go` · `Chercher → Trouver → Contacter / Aller` · `ابحث → اعثر → تواصل / اذهب`
 
+## Current V1 status — 2026-08-20
+
+Lewad V1 is in late stabilization / QA preparation. The React + TypeScript +
+Vite application uses Supabase Auth/PostgreSQL/RPC/RLS, supports FR/AR/EN with
+Arabic RTL, dark/light mode, mobile-first layouts, and ships a minimal PWA
+manifest plus production-only service worker.
+
+- Landing, install guidance, compact repeated install card, authentication,
+  DB1/DB2/DB3 search, missing-service requests, request-to-service conversion,
+  admin establishment creation, recharges, `/admin`, and `/super-admin` are
+  implemented.
+- Default post-login routes are `user → /app`, `admin → /admin`, and
+  `super_admin → /super-admin`. `/super-admin` is guarded by
+  `RequireSuperAdmin`; client guards are UX only and RPC/RLS remain decisive.
+  Profile resolution must finish before a role is chosen; an unavailable profile
+  shows retry/error UI rather than defaulting to `user`.
+- The PWA never caches Supabase/auth/admin/wallet/recharge/search responses.
+  `beforeinstallprompt` is conditional; iOS guidance is Share → Add to Home
+  Screen. Never claim App Store or Play Store availability.
+- Security 2A/2B are complete. SEC-002 (remote migration-history
+  reconciliation for the historical duplicate `20260819000005` prefix) remains
+  open. Never rename old migrations before checking remote history.
+
+Important current migrations are `20260820000000_admin_create_establishment_rpc.sql`,
+`20260820000001_recharge_requests_admin_approval.sql`,
+`20260820000002_security_2a_recharge_constraints.sql`,
+`20260820000003_create_recharge_request_rpc.sql`, and
+`20260820000004_security_2b_medium_hardening.sql`.
+
 ## 3. Preserve the stack
 
 React · TypeScript (strict) · Vite · Tailwind CSS v4 · Supabase
@@ -70,6 +99,7 @@ all three dictionaries at once.
 - Insert into the credit ledger from the frontend
 - Change authentication behaviour
 - Rewrite parts of the app the task did not ask about
+- Commit or push automatically
 
 Money and permissions are decided server-side. The client displays; it does not
 decide.
@@ -88,6 +118,15 @@ decide.
 - These approvals do not permit a payment gateway, arbitrary credit amounts,
   direct React wallet/ledger writes, normal-user admin actions, or a
   service-role key in the frontend.
+
+## Current release checks and next steps
+
+`npx tsc --noEmit -p tsconfig.app.json` and `npm run build` currently pass; the
+Vite chunk-size advisory is non-blocking. Before the first public push, review
+or remove tracked `Supabase.docx`, confirm env tracking, apply/confirm the
+migrations, resolve SEC-002, then manually QA roles/routes, search debit,
+requests/conversion, establishment creation, recharges, PWA Android/iOS,
+FR/AR/EN RTL, themes, and 390px mobile.
 
 ## 6. Verify before reporting
 

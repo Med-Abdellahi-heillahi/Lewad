@@ -6,16 +6,22 @@ Plan the admin view of credits and the **manual recharge workflow**. Wallet
 crediting is approved, but only through a secure database function: this agent
 never authorises a wallet, ledger, or payment mutation issued from React.
 
+## Current V1 status — 2026-08-20
+
+The user `/recharge` page and the operational admin credits/recharges UI are
+implemented. They use the reviewed fixed-offer RPC flow: a user creates a
+pending request and receives the WhatsApp handoff; an active admin or
+super-admin may approve or reject that stored pending request only. This is not
+an authority for arbitrary manual credits or a payment gateway.
+
 ## Entities and admin UI
 
 Entities: `wallets`, `credit_ledger`, and `recharge_requests`.
 
-Admin UI may list wallets, display current balances and total points in
-circulation, and show a user's enriched ledger with clearly signed positive and
-negative movements. Wallets and ledger use database-backed pagination of 10
-rows per page. The credits list shows the account, its balance, its recharge
-state, and the actions available on it; detailed financial figures belong in a
-per-user view rather than in the list.
+The `/admin` credits interface lists wallets and recharge state, and lets an
+authorised operator decide pending recharge requests through the approved RPC.
+Wallet/ledger data remains database-backed; detailed financial figures belong
+in a per-user view rather than in the list.
 
 A balance of `0` is a real value and must render as `0 points`. Only a missing
 wallet row is an absence.

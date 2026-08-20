@@ -25,13 +25,18 @@ owner has explicitly approved it, and the approved scope is recorded below.
 - `.gitignore` covers `.env`, `.env.local`, `.env.*.local`, `dist`, and
   `node_modules`.
 - `/app`, `/profile`, `/credits`, `/recharge`, and `/settings` use a client-side
-  session guard. `/`, `/auth`, `/contact`, and `/errors/*` remain public.
+  session guard; `/admin` and `/super-admin` add their role-specific guards.
+  `/`, `/auth`, `/contact`, and `/errors/*` remain public.
 - DB1 (`profiles`, `wallets`, and `credit_ledger`) and its RLS policies are the
   current data-security baseline. Their live configuration must still be
   reviewed in Supabase before production release.
 - `recharge_requests` and its admin approval/rejection functions are the
   owner-approved manual recharge workflow. See
   [`credits-agent.md`](./credits-agent.md) for the invariants they must keep.
+- Security 2A and 2B are complete. Current count: Critical 0, High 0, Medium
+  1, Low 0. The remaining item is SEC-002: confirm remote migration history
+  before reconciling the historical duplicate `20260819000005` prefix. Do not
+  rename existing migrations without that verification.
 
 ### Historical context only
 
@@ -85,9 +90,20 @@ target is normalized to the current origin before navigation.
   `auth.uid()` and privileged admin functions must not be callable by normal
   users.
 - `/admin` is wrapped in `RequireAuthentication` and its lazy admin route also
-  applies `RequireAdmin`. These are UX controls only; the admin data and RPCs
-  still require their server-side active-role and RLS checks. Any new privileged
-  route must follow the same pairing of UI guard and server authority.
+  applies `RequireAdmin`; `/super-admin` additionally applies
+  `RequireSuperAdmin` and is active-`super_admin` only. These are UX controls
+  only; the data and RPCs still require their server-side active-role and RLS
+  checks. Default post-login destinations are `user → /app`, `admin → /admin`,
+  and `super_admin → /super-admin`. Profile resolution must finish before this
+  decision; an unavailable profile is retry/error UI, never an assumed user.
+
+## PWA boundary
+
+The production-only service worker is intentionally minimal. It may support
+the application shell but must not cache Supabase, authentication, admin,
+wallet, recharge, or search responses. `beforeinstallprompt` is conditional;
+the iOS experience is manual Share → Add to Home Screen. Never claim App Store
+or Play Store availability.
 
 ## DB1 and RLS awareness
 

@@ -5,6 +5,24 @@
 
 ---
 
+## Current V1 status — 2026-08-20
+
+Lewad is in late stabilization / QA preparation. The landing, minimal PWA,
+secure member search, `/admin`, `/super-admin`, fixed-offer recharges, and
+request-to-service conversion are implemented. Default role destinations are
+`user → /app`, `admin → /admin`, and `super_admin → /super-admin`; frontend
+guards are UX only and RLS/RPC remain decisive. Security 2A/2B are complete;
+SEC-002 (remote migration-history reconciliation for the duplicate historical
+`20260819000005` prefix) remains open. Do not rename old migrations before
+remote verification.
+
+The current stack is React, TypeScript, Vite, Supabase Auth/PostgreSQL/RPC/RLS,
+manifest plus production-only service worker, FR/AR/EN with RTL, dark/light
+mode, and mobile-first UI. The service worker must never cache authenticated
+Supabase, admin, wallet, recharge, or search responses.
+
+---
+
 ## 🇬🇧 English
 
 ### What this folder is

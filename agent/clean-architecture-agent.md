@@ -8,6 +8,15 @@ without forcing a rewrite of the UI. Approved server-side RPC workflows are
 part of the current architecture; payment, business submission, arbitrary credit
 creation, and unreviewed admin validation are not.
 
+## Current V1 status — 2026-08-20
+
+Lewad is in late stabilization / QA preparation. `/admin` is the operational
+space and `/super-admin` is a distinct, lazy-loaded super-admin space guarded
+by `RequireSuperAdmin`. Role defaults are `user → /app`, `admin → /admin`, and
+`super_admin → /super-admin`; a profile load failure remains retry/error UI.
+The minimal PWA is limited to a manifest and production-only service worker,
+which must never cache authenticated Supabase responses.
+
 ## When to use this agent
 
 - Adding a page, a route or a feature area.
@@ -20,8 +29,8 @@ creation, and unreviewed admin validation are not.
 
 ```
 src/
-  main.tsx              entry point
-  App.tsx               providers + routing
+  main.tsx              entry point + production service-worker registration
+  App.tsx               providers + pathname routing and lazy admin routes
   index.css             Tailwind entry, design tokens, base layer
 
   i18n/                 fr.ts · ar.ts · en.ts · index.tsx (provider + useI18n)
@@ -36,6 +45,8 @@ src/
     db3b.ts             missing-service request access
     recharge.ts         fixed-offer recharge-request RPC wrapper
     admin.ts             typed admin reads and reviewed admin RPC wrappers
+    routeAuth.ts         safe post-auth role destination resolution
+    registerServiceWorker.ts  production-only PWA registration
     format.ts           locale-aware display helpers for DB1 values
     theme.tsx           ThemeProvider / useTheme
     content.ts          non-translated content, section ids, demo fixtures
@@ -53,7 +64,9 @@ src/
     shell/              cross-page chrome: LanguageMenu, ThemeToggle,
                         Drawer, UserArea, AppFooter
     sections/           landing sections, one file each
-    system/             ErrorPage, OfflineScreen
+    admin/              operational admin UI and RequireAdmin / RequireSuperAdmin
+    super-admin/        dedicated super-admin navigation and overview UI
+    system/             ErrorPage, OfflineScreen, admin/chunk loading states
     *.tsx               Navbar, Footer, Icon, Logo, Alert, Reveal,
                         SectionHeading, AppDemo, AuthPage
 ```

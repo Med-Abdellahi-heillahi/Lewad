@@ -44,6 +44,115 @@ area agent below, `security-agent.md`, `design-agent.md`,
 - Reports stay short and useful: completed work, files, checks actually run,
   and deliberate boundaries.
 
+## Authoritative V1 status — 2026-08-20
+
+Lewad V1 is in **late stabilization / QA preparation**. The core frontend,
+operational admin and super-admin spaces, secure Supabase flows, recharge
+workflow, request-to-service workflow, and minimal PWA are implemented.
+
+### Stack and product baseline
+
+- React, TypeScript, Vite, Supabase Auth, Supabase PostgreSQL, RPC and RLS.
+- PWA manifest plus production-only service worker.
+- FR / AR / EN, full Arabic RTL, dark/light mode, and mobile-first UI.
+
+### Routes, roles, and redirect rules
+
+| Route | Purpose |
+|---|---|
+| `/` | Public landing |
+| `/auth` | Authentication |
+| `/app` | Member search/dashboard |
+| `/profile`, `/credits`, `/recharge`, `/settings` | Member account features |
+| `/admin` | Operational admin space |
+| `/super-admin` | Super-admin platform space |
+| `/add-business` | Placeholder/future business submission |
+
+- Default post-login destinations are `user → /app`, `admin → /admin`, and
+  `super_admin → /super-admin`.
+- `/admin` is operational work; `/super-admin` uses `RequireSuperAdmin` and is
+  for active `super_admin` accounts only. Normal users must never enter either
+  admin space.
+- Frontend guards are UX only. Active-role checks in RPCs and RLS remain the
+  security boundary. A missing profile is an error/retry state, never an
+  implicit `user` decision.
+
+### Implemented capability summary
+
+- **Landing/PWA:** premium multilingual landing, install guidance, and a compact
+  animated 1→2→3 install card on every landing refresh. The PWA has its
+  manifest, 192/512/maskable icons, and a production-only service worker. There
+  is no App Store or Play Store claim. `beforeinstallprompt` remains conditional;
+  iOS uses Share → Add to Home Screen. The service worker does not cache
+  Supabase, authentication, admin, wallet, recharge, or search responses.
+- **Auth and DB1:** email/password auth, automatic profiles and wallets, and a
+  +5 welcome-bonus ledger entry; safe profile, wallet, and ledger reads.
+- **DB2/DB3:** categories, establishments, branches, Bankily demo seed,
+  approved/active public search, secure search debit/logging, and unlimited
+  active-admin search without wallet debit. DB3B missing requests, duplicate
+  handling, secure status/note updates, and request-to-service conversion are
+  connected.
+- **Administration:** `/admin` provides analytics, requests, establishment
+  creation, services, operational user view, and credits/recharges. Its system
+  tab and role-changing UI have been removed where inappropriate; a super admin
+  can move to `/super-admin`.
+- **Super administration:** separate navigation and identity, platform
+  overview, user/admin management through existing secure RPCs, audit
+  placeholder/view where available, and security/system reminders. No direct
+  frontend role or status mutation is authorised.
+- **Users:** simplified lists show name, email, role, status, and actions. The
+  visit modal has the available full/Arabic name, phone, email, avatar fallback,
+  role, status, creation date, and last-login fallback. Actions are visit,
+  allowed role change, and suspend/reactivate through secure RPCs—never delete.
+- **Recharges:** fixed server-authorised offers only: 10 points/50 MRO,
+  30/100, 100/500. The user creates a pending request then receives the
+  WhatsApp handoff; an active admin/super-admin approves or rejects only a
+  pending request. Approval alone credits the wallet atomically and ledger
+  history is append-only.
+
+### Security, migrations, and checks
+
+- Security 2A and 2B are complete: fixed recharge offer values, type fixes,
+  bounded/throttled search/request paths, active-only unlimited admin search,
+  RPC-only request updates, and compact admin audit events. Current count:
+  Critical 0, High 0, Medium 1, Low 0.
+- Remaining finding: **SEC-002** — reconcile the remote migration history.
+  The historical duplicate `20260819000005` prefix remains deferred; never
+  rename old migrations until the remote history is confirmed.
+- Important migration sequence: `20260820000000_admin_create_establishment_rpc.sql`,
+  `20260820000001_recharge_requests_admin_approval.sql`,
+  `20260820000002_security_2a_recharge_constraints.sql`,
+  `20260820000003_create_recharge_request_rpc.sql`, and
+  `20260820000004_security_2b_medium_hardening.sql`.
+- `npx tsc --noEmit -p tsconfig.app.json` and `npm run build` pass. The Vite
+  chunk-size advisory is non-blocking.
+- Repository hygiene: `.gitignore` is hardened, `.env.example` exists,
+  `.env.local` is untracked, and secret scans passed. `Supabase.docx` is
+  tracked and must be reviewed or removed before a public push.
+
+## Rules for Future AI Agents
+
+- Do not treat `recharge_requests` as forbidden: it is approved and implemented.
+- Do not treat admin establishment creation as UI-only: it is RPC-connected.
+- Do not redirect `super_admin` to `/admin` by default; use `/super-admin`.
+- Do not add arbitrary credit inputs, mutate wallets/`credit_ledger` from
+  React, or use a frontend service-role key.
+- Do not create broad RLS policies or cache authenticated Supabase responses in
+  the service worker.
+- Do not claim App Store or Play Store availability.
+- Do not rename historical migrations without remote-history verification.
+- Do not commit, push, or expose secrets automatically.
+
+## Recommended next steps
+
+1. Review/remove `Supabase.docx` before GitHub push and recheck tracked env files.
+2. Apply or confirm all migrations in Supabase, then resolve SEC-002 from the
+   remote migration history.
+3. Run manual QA for user/admin/super-admin auth and routes; search debit;
+   request creation/conversion; admin establishment creation; recharge creation
+   and approval; Android/iOS PWA install; FR/AR/EN RTL; dark/light; and 390px.
+4. Prepare the first clean GitHub commit/push only after that QA.
+
 ## Available agents
 
 | Agent | File | Use it for |

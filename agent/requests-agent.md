@@ -6,6 +6,13 @@ Document the two current request workflows used by Lewad. This contract does
 not authorise new tables, policies, payment flows, or financial actions beyond
 the reviewed RPCs recorded below.
 
+## Current V1 status — 2026-08-20
+
+Both request workflows are implemented. Users can create missing-service
+requests and fixed-offer recharge requests; the operational admin space handles
+request review and request-to-service conversion through reviewed RPCs. This
+status does not authorise new request types or direct browser writes.
+
 ## Type 1 — Missing service requests
 
 Current entity: `missing_service_requests`.
@@ -13,10 +20,10 @@ Current entity: `missing_service_requests`.
 User flow: a user searches, gets no result, chooses `Demander l’ajout`, and an
 admin reviews the created request.
 
-Admin UI may list requests and show query, user, status, date, linked search,
-admin note, and resolved establishment with 10-row pagination, mobile cards,
-and desktop tables. Allowed workflow states are `pending`, `reviewed`, `added`,
-`rejected`, and `duplicate`.
+The `/admin` requests UI lists query, user, status, date, linked search, admin
+note, and resolved establishment with pagination, mobile cards, and desktop
+tables. Allowed workflow states are `pending`, `reviewed`, `added`, `rejected`,
+and `duplicate`.
 
 Admin may update an allowed status or note through
 `admin_update_missing_service_request`, or convert a request to a real service

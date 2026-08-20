@@ -6,15 +6,22 @@ Document the current administration of establishments and branches while
 preserving the separation between public discovery data and privileged approval
 work.
 
+## Current V1 status — 2026-08-20
+
+`/admin` provides operational establishment creation and services views. The
+implemented `admin_create_establishment` RPC may also resolve a missing-service
+request; the created approved establishment and active main branch are
+searchable in `/app` immediately. This does not authorise generic editing,
+deletion, or normal-user creation.
+
 ## Entities and admin UI
 
 Entities: `establishments`, `branches`, and future `business_submissions`.
 
-Admin UI may list establishments, view service details, and view/manage their
-branches. It should show category, status, verification, phone, WhatsApp, and
-website where those approved fields exist. Establishments and branches use
-database-backed pagination of 10 rows per page, filters for status/category/
-verified state, mobile cards below `lg`, and desktop tables from `lg` upward.
+The `/admin` services interface lists establishments and service details with
+their available branch data. It preserves category, status, verification, phone,
+WhatsApp, and website fields where present, with database-backed pagination,
+filters, mobile cards below `lg`, and desktop tables from `lg` upward.
 
 ## Approved creation scope
 
