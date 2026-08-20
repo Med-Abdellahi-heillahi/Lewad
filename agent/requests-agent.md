@@ -2,8 +2,9 @@
 
 ## Purpose
 
-Plan the two distinct request workflows used by Lewad. This file documents
-future capability; it does not create tables, workflows, or financial actions.
+Document the two current request workflows used by Lewad. This contract does
+not authorise new tables, policies, payment flows, or financial actions beyond
+the reviewed RPCs recorded below.
 
 ## Type 1 — Missing service requests
 
@@ -13,42 +14,57 @@ User flow: a user searches, gets no result, chooses `Demander l’ajout`, and an
 admin reviews the created request.
 
 Admin UI may list requests and show query, user, status, date, linked search,
-and admin note with 10-row pagination, mobile cards, and desktop tables. Allowed
-workflow states are `pending`, `reviewed`, `added`, `rejected`, and `duplicate`.
-Future review may add an internal note and link a request to an establishment
-when it has actually been added.
+admin note, and resolved establishment with 10-row pagination, mobile cards,
+and desktop tables. Allowed workflow states are `pending`, `reviewed`, `added`,
+`rejected`, and `duplicate`.
 
-Any current status/note update must stay limited to the database columns and
-admin RLS already reviewed for it. Do not broaden that authority from React.
+Admin may update an allowed status or note through
+`admin_update_missing_service_request`, or convert a request to a real service
+through `admin_create_establishment`. That secure RPC, for an active admin or
+super-admin, creates an establishment with `status = approved` and
+`is_verified = true`, creates its main branch with `status = active`, marks the
+source request `added`, and links its `resolved_establishment_id`. These values
+are intentional: admin-created services must be searchable in `/app`
+immediately. Normal users cannot create establishments directly, and React must
+not broaden this authority with direct table writes.
 
 ## Type 2 — Recharge requests
 
-Future entity: `recharge_requests`. Do not create it now.
+Current entity: `recharge_requests`.
 
-User flow: a user chooses an offer or custom points, contacts Lewad by
-WhatsApp, a future system records a request, an admin verifies payment, then
-confirms or rejects it before points are credited safely.
+User flow: from `/recharge`, a user chooses a fixed offer. The UI sends only an
+offer code to `create_recharge_request`; PostgreSQL resolves the authorised
+points/price pair, creates one `pending` request (or returns the existing
+pending request), then the UI opens WhatsApp with the request id. No free-form
+points, price, status, or user id comes from the user client.
 
-Suggested future fields:
+Current fields:
 
 ```txt
-id, user_id, points, amount_mro, status, payment_method, payment_reference,
-proof_url, admin_note, confirmed_by, confirmed_at, created_at, updated_at
+id, user_id, offer_label, requested_points, amount_mro, status, admin_note,
+approved_by, approved_at, rejected_by, rejected_at, ledger_id,
+created_at, updated_at
 ```
 
-Expected statuses: `pending`, `confirmed`, `rejected`, `cancelled`.
+Statuses: `pending`, `approved`, `rejected`, `cancelled`.
 
-Future admin UI may list these requests, show the user, requested points, MRO
-amount, proof/reference, status, and note, and offer a reviewed confirm/reject
-workflow with 10-row pagination.
+An active admin or super-admin can approve or reject a pending request through
+the reviewed admin RPCs. Approval locks the request and wallet rows, reads the
+stored offer values, credits the wallet, appends one `recharge_credit` ledger
+entry, and marks the request approved in one transaction. Rejection changes
+neither wallet nor ledger. The same request cannot be approved twice.
 
 ## Recharge security requirements
 
-- Confirmation must not edit a wallet from frontend code.
-- A trusted secure RPC/database function must update wallet and append one
+- User creation accepts only server-authorised fixed offers; no custom value or
+  direct client insert is allowed.
+- Approval must not edit a wallet from frontend code. The trusted secure RPC
+  locks the request and wallet, then updates the wallet and appends one
   `credit_ledger` entry atomically.
-- Validate payment server-side, restrict access with reviewed policies, and
-  audit who confirmed or rejected the request and when.
+- Approval/rejection is restricted to an active admin or super-admin inside the
+  function; normal users cannot take admin actions.
+- There is no payment gateway or automated payment confirmation. Human payment
+  validation happens outside the product before approval.
 - Never expose payment proof broadly, service-role keys, or payment secrets.
 
 ## Shared implementation direction
@@ -59,6 +75,5 @@ cards/tables, and clear loading, empty, error, and disabled-future-action states
 
 ## Report
 
-State which request type was addressed, whether it is current or future, and
-which server-side authority remains required. Confirm no wallet or ledger
-mutation was introduced when documentation-only work is complete.
+State which request type was addressed and which reviewed RPC authorises it.
+Confirm that no direct wallet or ledger mutation was added to React.

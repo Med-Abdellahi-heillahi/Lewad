@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { LazyMotion, domAnimation } from 'framer-motion'
 import { I18nProvider, useI18n } from './i18n'
 import { ThemeProvider } from './lib/theme'
@@ -6,8 +6,8 @@ import { useOnlineStatus } from './lib/useOnlineStatus'
 import { Navbar } from './components/Navbar'
 import { Footer } from './components/Footer'
 import { BackToTop } from './components/BackToTop'
+import { InstallPromptModal } from './components/InstallPromptModal'
 import { PublicSearchDemo } from './components/AppDemo'
-import { AdminPage, RequireAdmin } from './components/AdminPage'
 import { AuthPage } from './components/AuthPage'
 import { AddBusinessPage, ContactPage, ProtectedAppPage, type PrivatePageName } from './components/AppPages'
 import { Hero } from './components/sections/Hero'
@@ -15,17 +15,54 @@ import { WhatWeDo } from './components/sections/WhatWeDo'
 import { AnimationStrip } from './components/sections/AnimationStrip'
 import { Services } from './components/sections/Services'
 import { Demo } from './components/sections/Demo'
+import { InstallApp } from './components/sections/InstallApp'
 import { Faq } from './components/sections/Faq'
 import { Offers } from './components/sections/Offers'
 import { Contact } from './components/sections/Contact'
 import { ErrorPage, errorCodes, type ErrorCode } from './components/system/ErrorPage'
 import { OfflineScreen } from './components/system/OfflineScreen'
 import { SessionLoading } from './components/system/SessionLoading'
+import { AdminLoading } from './components/system/AdminLoading'
+import { ChunkErrorBoundary } from './components/system/ChunkErrorBoundary'
 import { useAuthSession } from './hooks/useAuthSession'
 import { AccountProvider } from './hooks/useAccount'
 import { authUrlForCurrentRoute } from './lib/routeAuth'
 
-type Route = ErrorCode | 'admin' | 'app' | 'auth' | 'contact' | 'add-business' | PrivatePageName | null
+/**
+ * L'espace d'administration part dans son propre lot : tableaux, graphiques et
+ * dictionnaire admin ne concernent qu'une poignée de comptes, il serait
+ * absurde de les faire télécharger à chaque visiteur de la landing.
+ *
+ * Le garde `RequireAdmin` voyage avec le lot — il vit dans le même module que
+ * la page. Conséquence assumée : un compte non-admin qui saisit `/admin` à la
+ * main récupère le lot avant de voir le refus. L'accès aux données, lui, reste
+ * décidé côté serveur par la RLS, pas par ce chargement.
+ */
+const LazyAdminRoute = lazy(() =>
+  import('./components/AdminPage').then(({ AdminPage, RequireAdmin }) => ({
+    default: function AdminRoute() {
+      return (
+        <RequireAdmin>
+          <AdminPage />
+        </RequireAdmin>
+      )
+    },
+  })),
+)
+
+const LazySuperAdminRoute = lazy(() =>
+  import('./components/SuperAdminPage').then(({ SuperAdminPage, RequireSuperAdmin }) => ({
+    default: function SuperAdminRoute() {
+      return (
+        <RequireSuperAdmin>
+          <SuperAdminPage />
+        </RequireSuperAdmin>
+      )
+    },
+  })),
+)
+
+type Route = ErrorCode | 'admin' | 'super-admin' | 'app' | 'auth' | 'contact' | 'add-business' | PrivatePageName | null
 
 function RequireAuthentication({ children }: { children: ReactNode }) {
   const { loading, isAuthenticated } = useAuthSession()
@@ -63,6 +100,7 @@ function useRoute(): Route {
   return useMemo(() => {
     const path = window.location.pathname.replace(/\/+$/, '')
     if (path === '' || path === '/index.html') return null
+    if (path === '/super-admin' || path.startsWith('/super-admin/')) return 'super-admin'
     if (path === '/admin' || path.startsWith('/admin/')) return 'admin'
     if (path === '/app') return 'app'
     if (path === '/auth') return 'auth'
@@ -97,6 +135,7 @@ function Landing() {
         <AnimationStrip />
         <Services />
         <Demo />
+        <InstallApp />
         <Faq />
         <Offers />
         <Contact />
@@ -104,6 +143,7 @@ function Landing() {
 
       <Footer />
       <BackToTop />
+      <InstallPromptModal />
     </>
   )
 }
@@ -116,7 +156,8 @@ function Shell() {
   // `AccountProvider` coiffe les pages applicatives : le bandeau et la page
   // qu'il surmonte lisent le même profil et le même portefeuille.
   if (route === 'app') return <RequireAuthentication><AccountProvider><PublicSearchDemo /></AccountProvider></RequireAuthentication>
-  if (route === 'admin') return <RequireAuthentication><AccountProvider><RequireAdmin><AdminPage /></RequireAdmin></AccountProvider></RequireAuthentication>
+  if (route === 'admin') return <RequireAuthentication><AccountProvider><ChunkErrorBoundary><Suspense fallback={<AdminLoading />}><LazyAdminRoute /></Suspense></ChunkErrorBoundary></AccountProvider></RequireAuthentication>
+  if (route === 'super-admin') return <RequireAuthentication><AccountProvider><ChunkErrorBoundary><Suspense fallback={<AdminLoading />}><LazySuperAdminRoute /></Suspense></ChunkErrorBoundary></AccountProvider></RequireAuthentication>
   if (route === 'auth') return <AuthPage />
   if (route === 'contact') return <AccountProvider><ContactPage /></AccountProvider>
   if (route === 'add-business') return <RequireAuthentication><AccountProvider><AddBusinessPage /></AccountProvider></RequireAuthentication>

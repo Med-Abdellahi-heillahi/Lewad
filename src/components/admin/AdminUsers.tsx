@@ -2,8 +2,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { AlertTriangle, Ban, CalendarDays, Check, CheckCircle, Eye, Filter, Info, Mail, Phone, Search, Shield, ShieldAlert, ShieldCheck, UserCog, UserRound, UsersRound, X, type LucideIcon } from 'lucide-react'
 import { useI18n } from '../../i18n'
 import type { AdminUser, AdminUserRoleFilter, AdminUserStatusFilter } from '../../lib/admin'
-import { formatDate, formatNumber } from '../../lib/format'
-import { btnGhost, card, cardMuted, field, fieldLabel, iconBtn } from '../../lib/ui'
+import { formatDate, formatNumber, initialOf } from '../../lib/format'
+import { btnGhost, btnPrimary, card, cardMuted, field, fieldLabel, iconBtn } from '../../lib/ui'
 import type { PaginatedResult } from '../../lib/pagination'
 import { LoadingCard } from '../system/States'
 import { PaginationControls } from '../ui/PaginationControls'
@@ -100,28 +100,40 @@ function UserModal({
   )
 }
 
-function UserAvatar({ avatarUrl }: { avatarUrl: AdminUser['avatar_url'] }) {
+/** Initiale de repli quand le compte n'a pas d'image. `U` si aucun nom. */
+function avatarInitial(name: string) {
+  const trimmed = name.trim()
+  return trimmed ? initialOf(trimmed) : 'U'
+}
+
+function UserAvatar({ avatarUrl, name, size = 'sm' }: { avatarUrl: AdminUser['avatar_url']; name: string; size?: 'sm' | 'lg' }) {
   const [imageFailed, setImageFailed] = useState(false)
 
   useEffect(() => {
     setImageFailed(false)
   }, [avatarUrl])
 
+  const box = size === 'lg' ? 'size-16 rounded-2xl text-xl' : 'size-9 rounded-xl text-sm'
+
   return (
-    <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-brand-soft text-brand-deep">
-      {avatarUrl && !imageFailed ? <img src={avatarUrl} alt="" className="size-full object-cover" loading="lazy" onError={() => setImageFailed(true)} /> : <UserRound size={18} aria-hidden />}
+    <span className={`grid ${box} shrink-0 place-items-center overflow-hidden bg-brand-soft font-bold text-brand-deep`}>
+      {avatarUrl && !imageFailed ? <img src={avatarUrl} alt="" className="size-full object-cover" loading="lazy" onError={() => setImageFailed(true)} /> : <span aria-hidden>{avatarInitial(name)}</span>}
     </span>
   )
 }
 
-function UserIdentity({ user, displayName, compact = false }: { user: AdminUser; displayName: (user: AdminUser) => string; compact?: boolean }) {
+/**
+ * Identité d'un compte. `showEmail` est coupé dans le tableau, où l'e-mail
+ * occupe désormais sa propre colonne.
+ */
+function UserIdentity({ user, displayName, compact = false, showEmail = true }: { user: AdminUser; displayName: (user: AdminUser) => string; compact?: boolean; showEmail?: boolean }) {
   return (
     <div className="flex min-w-0 items-start gap-3">
-      <UserAvatar avatarUrl={user.avatar_url} />
+      <UserAvatar avatarUrl={user.avatar_url} name={displayName(user)} />
       <div className="min-w-0">
         <p dir="auto" className={`${compact ? 'text-xs' : 'text-sm'} font-semibold leading-tight text-ink`}>{displayName(user)}</p>
         {user.full_name_ar?.trim() && user.full_name_ar.trim() !== user.full_name?.trim() && <p dir="rtl" className={`${compact ? 'text-[11px]' : 'text-xs'} mt-1 leading-tight text-muted`}>{user.full_name_ar.trim()}</p>}
-        <p className={`ltr-isolate mt-1 flex items-center gap-1.5 break-all ${compact ? 'text-[11px]' : 'text-xs'} leading-tight text-muted`}><Mail size={13} aria-hidden />{user.email ?? '—'}</p>
+        {showEmail && <p className={`ltr-isolate mt-1 flex items-center gap-1.5 break-all ${compact ? 'text-[11px]' : 'text-xs'} leading-tight text-muted`}><Mail size={13} aria-hidden />{user.email ?? '—'}</p>}
       </div>
     </div>
   )
@@ -257,18 +269,27 @@ export function AdminUsers({
     setDialog(null)
   }
 
+  /**
+   * Trois actions, toujours dans le même ordre : consulter, changer de rôle,
+   * suspendre. Les règles de permission restent celles des RPC — `admin` ne
+   * touche qu'aux comptes `user`, seul `super_admin` change un rôle.
+   *
+   * Sur mobile « Visiter » garde son libellé (c'est l'action principale) ; les
+   * deux autres passent en icône seule, avec `aria-label` et `title`.
+   */
   const userActions = (user: AdminUser, mobile = false) => {
     const statusAllowed = canChangeStatus(currentRole, user)
+    const roleAllowed = currentRole === 'super_admin' && user.status !== 'deleted'
     const status = user.status === 'active' ? 'suspended' : 'active'
     const statusAction = user.status === 'active'
-      ? { icon: Ban, label: copy.users.suspendAccount, tone: 'danger' as const }
-      : { icon: CheckCircle, label: copy.users.reactivateAccount, tone: 'success' as const }
+      ? { icon: Ban, label: copy.users.suspend, tone: 'danger' as const }
+      : { icon: CheckCircle, label: copy.users.reactivate, tone: 'success' as const }
 
     return (
-      <div className={mobile ? 'mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3' : 'flex flex-wrap items-center gap-1.5'}>
-        <AdminActionButton icon={Eye} label={copy.users.viewDetails} title={copy.users.viewDetails} onClick={() => setDialog({ kind: 'details', user })} tone="primary" iconOnly />
+      <div className={mobile ? 'mt-3 flex items-center gap-2 border-t border-line pt-3' : 'flex flex-wrap items-center justify-end gap-1.5'}>
+        <AdminActionButton icon={Eye} label={copy.users.visit} title={copy.users.visit} onClick={() => setDialog({ kind: 'details', user })} tone="primary" iconOnly={!mobile} className={mobile ? 'flex-1 justify-center' : ''} />
+        {roleAllowed && <AdminActionButton icon={UserCog} label={copy.users.changeRole} title={copy.users.changeRole} onClick={() => setDialog({ kind: 'role', user })} tone="warning" iconOnly />}
         {statusAllowed && <AdminActionButton icon={statusAction.icon} label={statusAction.label} title={statusAction.label} onClick={() => setDialog({ kind: 'status', user, status })} tone={statusAction.tone} iconOnly />}
-        {currentRole === 'super_admin' && user.status !== 'deleted' && <AdminActionButton icon={UserCog} label={copy.users.changeRole} title={copy.users.changeRole} onClick={() => setDialog({ kind: 'role', user })} tone="warning" iconOnly />}
       </div>
     )
   }
@@ -320,17 +341,41 @@ export function AdminUsers({
           </form>
 
         {loading ? <LoadingCard label={copy.content.loading.users} lines={5} /> : users.length === 0 ? <div className={`${card} p-6 text-center text-sm text-muted`}>{copy.content.empty.usersTitle}</div> : <>
+            {/* Mobile : carte compacte — nom, e-mail, badges, actions.
+                Téléphone, date et avatar restent réservés au modal Visiter. */}
             <ul className="grid list-none gap-3 lg:hidden">
               {users.map((user) => <li key={user.id} className={`${card} min-w-0 p-3`}>
-                <div className="flex items-start justify-between gap-3"><UserIdentity user={user} displayName={displayName} /><div className="flex shrink-0 flex-wrap justify-end gap-2"><AdminUserRoleBadge role={user.role} /><AdminUserStatusBadge status={user.status} /></div></div>
-                <dl className="mt-3 grid gap-1.5 border-t border-line pt-2.5 text-xs">
-                  <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-3"><dt className="text-muted">{copy.mobile.phone}</dt><dd className="ltr-isolate inline-flex items-center justify-self-end gap-1.5 break-words text-end text-ink-soft"><Phone size={14} aria-hidden />{user.phone ?? '—'}</dd></div>
-                  <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-3"><dt className="text-muted">{copy.mobile.createdAt}</dt><dd className="inline-flex items-center justify-self-end gap-1.5 text-end text-ink-soft"><CalendarDays size={14} aria-hidden /><time dateTime={user.created_at}>{formatDate(user.created_at, locale)}</time></dd></div>
-                </dl>
+                <div className="flex items-start justify-between gap-3">
+                  <UserIdentity user={user} displayName={displayName} />
+                  <div className="flex shrink-0 flex-col items-end gap-1.5"><AdminUserRoleBadge role={user.role} /><AdminUserStatusBadge status={user.status} /></div>
+                </div>
                 {userActions(user, true)}
               </li>)}
             </ul>
-            <div className="hidden overflow-hidden rounded-2xl border border-line bg-surface lg:block"><table className="w-full table-fixed border-collapse"><thead className="border-b border-line bg-page-alt text-start text-[11px] font-bold tracking-[0.08em] text-muted uppercase rtl:tracking-normal rtl:normal-case"><tr><th className="w-[31%] px-3 py-2 text-start">{copy.content.table.user}</th><th className="w-[15%] px-3 py-2 text-start">{copy.content.table.phone}</th><th className="w-[13%] px-3 py-2 text-start">{copy.content.table.role}</th><th className="w-[13%] px-3 py-2 text-start">{copy.content.table.status}</th><th className="w-[16%] px-3 py-2 text-start">{copy.content.table.createdAt}</th><th className="w-[12%] px-3 py-2 text-start">{copy.content.table.action}</th></tr></thead><tbody className="divide-y divide-line">{users.map((user) => <tr key={user.id} className="transition-colors hover:bg-surface-2/70 focus-within:bg-surface-2"><td className="px-3 py-2 align-top"><UserIdentity user={user} displayName={displayName} compact /></td><td className="ltr-isolate px-3 py-2 align-top text-xs leading-tight text-ink-soft"><span className="inline-flex break-words"><Phone className="me-1.5 shrink-0" size={13} aria-hidden />{user.phone ?? '—'}</span></td><td className="px-3 py-2 align-top"><AdminUserRoleBadge role={user.role} /></td><td className="px-3 py-2 align-top"><AdminUserStatusBadge status={user.status} /></td><td className="px-3 py-2 align-top text-xs leading-tight text-ink-soft"><time className="inline-flex items-start gap-1.5" dateTime={user.created_at}><CalendarDays className="mt-0.5 shrink-0" size={13} aria-hidden />{formatDate(user.created_at, locale)}</time></td><td className="px-3 py-2 align-top">{userActions(user)}</td></tr>)}</tbody></table></div>
+
+            {/* Desktop : Nom · E-mail · Rôle · Statut · Actions. */}
+            <div className="hidden overflow-hidden rounded-2xl border border-line bg-surface lg:block">
+              <table className="w-full table-fixed border-collapse">
+                <thead className="border-b border-line bg-page-alt text-start text-[11px] font-bold tracking-[0.08em] text-muted uppercase rtl:tracking-normal rtl:normal-case">
+                  <tr>
+                    <th className="w-[30%] px-3 py-2 text-start">{copy.users.name}</th>
+                    <th className="w-[24%] px-3 py-2 text-start">{copy.content.table.email}</th>
+                    <th className="w-[14%] px-3 py-2 text-start">{copy.users.role}</th>
+                    <th className="w-[14%] px-3 py-2 text-start">{copy.users.status}</th>
+                    <th className="w-[18%] px-3 py-2 text-end">{copy.users.actions}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {users.map((user) => <tr key={user.id} className="transition-colors hover:bg-surface-2/70 focus-within:bg-surface-2">
+                    <td className="px-3 py-2 align-middle"><UserIdentity user={user} displayName={displayName} compact showEmail={false} /></td>
+                    <td className="ltr-isolate px-3 py-2 align-middle text-xs leading-tight break-all text-ink-soft">{user.email ?? '—'}</td>
+                    <td className="px-3 py-2 align-middle"><AdminUserRoleBadge role={user.role} /></td>
+                    <td className="px-3 py-2 align-middle"><AdminUserStatusBadge status={user.status} /></td>
+                    <td className="px-3 py-2 align-middle">{userActions(user)}</td>
+                  </tr>)}
+                </tbody>
+              </table>
+            </div>
         </>}
 
         <PaginationControls {...pagination} labels={copy.pagination} disabled={loading} onPageChange={onPageChange} />
@@ -338,20 +383,32 @@ export function AdminUsers({
 
       {dialog?.kind === 'details' && <UserModal title={copy.users.detailsTitle} onClose={closeDialog}>
         <div className="mt-5 space-y-4">
-          <div className={`${cardMuted} p-4`}><UserIdentity user={dialog.user} displayName={displayName} /></div>
-          <div className="flex flex-wrap gap-2"><AdminUserRoleBadge role={dialog.user.role} /><AdminUserStatusBadge status={dialog.user.status} /></div>
+          {/* En-tête : l'image du compte, ou son initiale à défaut. */}
+          <div className={`${cardMuted} flex items-center gap-4 p-4`}>
+            <UserAvatar avatarUrl={dialog.user.avatar_url} name={displayName(dialog.user)} size="lg" />
+            <div className="min-w-0">
+              <p dir="auto" className="text-base font-bold leading-tight text-ink">{displayName(dialog.user)}</p>
+              <p className="ltr-isolate mt-1 flex items-center gap-1.5 break-all text-xs text-muted"><Mail size={13} aria-hidden />{dialog.user.email ?? '—'}</p>
+              {!dialog.user.avatar_url && <p className="mt-1.5 text-[11px] text-muted">{copy.users.noAvatar}</p>}
+            </div>
+          </div>
+
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
             <div><dt className={fieldLabel}>{copy.users.fullName}</dt><dd dir="auto" className="break-words text-ink-soft">{dialog.user.full_name ?? '—'}</dd></div>
             <div><dt className={fieldLabel}>{copy.users.arabicFullName}</dt><dd dir="rtl" className="break-words text-ink-soft">{dialog.user.full_name_ar ?? '—'}</dd></div>
             <div><dt className={fieldLabel}>{copy.users.email}</dt><dd className="ltr-isolate break-all text-ink-soft">{dialog.user.email ?? '—'}</dd></div>
-            <div><dt className={fieldLabel}>{copy.users.phone}</dt><dd className="ltr-isolate break-words text-ink-soft">{dialog.user.phone ?? '—'}</dd></div>
-            <div><dt className={fieldLabel}>{copy.users.createdAt}</dt><dd className="text-ink-soft"><time dateTime={dialog.user.created_at}>{formatDate(dialog.user.created_at, locale)}</time></dd></div>
-            <div><dt className={fieldLabel}>{copy.users.updatedAt}</dt><dd className="text-ink-soft"><time dateTime={dialog.user.updated_at}>{formatDate(dialog.user.updated_at, locale)}</time></dd></div>
+            <div><dt className={fieldLabel}>{copy.users.phone}</dt><dd className="ltr-isolate inline-flex items-center gap-1.5 break-words text-ink-soft"><Phone size={14} aria-hidden />{dialog.user.phone ?? '—'}</dd></div>
+            <div><dt className={fieldLabel}>{copy.users.role}</dt><dd><AdminUserRoleBadge role={dialog.user.role} /></dd></div>
+            <div><dt className={fieldLabel}>{copy.users.status}</dt><dd><AdminUserStatusBadge status={dialog.user.status} /></dd></div>
+            <div><dt className={fieldLabel}>{copy.users.createdAt}</dt><dd className="inline-flex items-center gap-1.5 text-ink-soft"><CalendarDays size={14} aria-hidden /><time dateTime={dialog.user.created_at}>{formatDate(dialog.user.created_at, locale)}</time></dd></div>
+            {/* `last_sign_in_at` vit dans `auth.users`, hors de portée du client
+                sans clé de service : on l'annonce comme indisponible. */}
+            <div><dt className={fieldLabel}>{copy.users.lastLogin}</dt><dd className="text-muted">{copy.users.notAvailable}</dd></div>
           </dl>
-          <div><p className={fieldLabel}>{copy.users.avatarUrl}</p>{dialog.user.avatar_url ? <a href={dialog.user.avatar_url} target="_blank" rel="noreferrer" className="ltr-isolate break-all text-sm text-brand-deep underline underline-offset-2">{dialog.user.avatar_url}</a> : <p className="text-sm text-muted">{copy.users.noAvatar}</p>}</div>
+
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-            {canChangeStatus(currentRole, dialog.user) && <AdminActionButton icon={dialog.user.status === 'active' ? Ban : CheckCircle} label={dialog.user.status === 'active' ? copy.users.suspendAccount : copy.users.reactivateAccount} title={dialog.user.status === 'active' ? copy.users.suspendAccount : copy.users.reactivateAccount} onClick={() => setDialog({ kind: 'status', user: dialog.user, status: dialog.user.status === 'active' ? 'suspended' : 'active' })} tone={dialog.user.status === 'active' ? 'danger' : 'success'} />}
-            <button type="button" className={btnGhost} onClick={closeDialog}>{copy.users.close}</button>
+            {canChangeStatus(currentRole, dialog.user) ? <AdminActionButton icon={dialog.user.status === 'active' ? Ban : CheckCircle} label={dialog.user.status === 'active' ? copy.users.suspend : copy.users.reactivate} title={dialog.user.status === 'active' ? copy.users.suspendAccount : copy.users.reactivateAccount} onClick={() => setDialog({ kind: 'status', user: dialog.user, status: dialog.user.status === 'active' ? 'suspended' : 'active' })} tone={dialog.user.status === 'active' ? 'danger' : 'success'} /> : <span />}
+            <button type="button" className={btnPrimary} onClick={closeDialog}>{copy.users.close}</button>
           </div>
         </div>
       </UserModal>}

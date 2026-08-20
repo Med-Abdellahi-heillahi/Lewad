@@ -28,7 +28,9 @@ request conflicts with an agent's forbidden list, stop and ask rather than guess
 
 **Do not work randomly.** Survey the existing code first — this repository is
 edited by several agents and by hand, so assume the code has moved since you last
-saw it.
+saw it. Before adding server-authorised or state-changing logic, read the
+matching current migrations and agent contracts; stale instructions do not
+override an approved workflow recorded there.
 
 ## 2. What Lewad is
 
@@ -50,6 +52,9 @@ Do not change the framework, the bundler, or the styling system.
 - Protected routes and their redirect rules
 - Supabase Auth
 - DB integration (profiles, wallets, credit ledger, establishments)
+- Secure DB3 search and missing-service requests
+- Admin dashboard, including the approved establishment-creation RPC
+- Approved manual recharge requests and their admin-only approval/rejection
 
 The i18n key contract is enforced by `Dictionary = typeof fr`: values may change
 and keys may be added, but **never rename or remove a key**, and always add to
@@ -68,6 +73,21 @@ all three dictionaries at once.
 
 Money and permissions are decided server-side. The client displays; it does not
 decide.
+
+## Approved server workflows
+
+- `recharge_requests` is current backend functionality, not a UI-only or
+  future feature. `/recharge` creates a pending request using a fixed
+  server-authorised offer, then opens WhatsApp. Only an active admin or
+  super-admin may approve or reject it through the reviewed RPC; that RPC alone
+  may credit a wallet and append the ledger entry.
+- `admin_create_establishment` is current, RPC-only admin functionality. It
+  creates an `approved`, verified establishment and an `active` main branch;
+  when sourced from a missing-service request, it marks the request `added` and
+  links `resolved_establishment_id`.
+- These approvals do not permit a payment gateway, arbitrary credit amounts,
+  direct React wallet/ledger writes, normal-user admin actions, or a
+  service-role key in the frontend.
 
 ## 6. Verify before reporting
 

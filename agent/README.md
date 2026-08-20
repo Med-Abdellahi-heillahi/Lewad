@@ -23,9 +23,12 @@ market, a gym, a pharmacy, a bank agency or any local service, and immediately
 gets what they need to act: name, phone, WhatsApp, location, website, nearest
 branch and directions.
 
-The product is at **V1**. The landing page, the public demo (`/app`) and
-email/password authentication (`/auth`) exist. Credits, payments, business
-submission and admin validation are **described but not implemented**.
+The product is at **V1**. The landing page, member search (`/app`),
+email/password authentication (`/auth`), roles, DB1/DB2/DB3, and the admin
+dashboard exist. Missing-service requests, approved admin establishment
+creation, and the manual recharge-request workflow are implemented through
+reviewed RPCs. A payment gateway and business-submission workflow are not yet
+implemented.
 
 ### Current stack
 
@@ -34,7 +37,7 @@ submission and admin validation are **described but not implemented**.
 | Framework | React 19 + TypeScript (strict), Vite |
 | Styling | Tailwind CSS v4, tokens in `src/index.css` |
 | Animation | framer-motion (`LazyMotion` + `m` components) |
-| Backend | Supabase JS client — **Auth only** |
+| Backend | Supabase JS client — Auth, authorised reads, and reviewed RPCs |
 | i18n | Home-grown, `src/i18n/` (FR default, AR RTL, EN) |
 | Theme | `data-theme` on `<html>`, `src/lib/theme.tsx` |
 
@@ -49,17 +52,18 @@ submission and admin validation are **described but not implemented**.
 
 ### Admin CRUD Agents
 
-These are planning and safety guardrails for future implementation. They do not
-authorise a database write, schema change, payment flow, or role change.
+These are implementation and safety contracts. They do not authorise new
+database writes, schema changes, payment flows, or role changes beyond the
+approved RPC workflows documented in the matching agent file.
 
 | File | Use it for |
 |---|---|
 | [`users-agent.md`](./users-agent.md) | Profiles and user administration |
-| [`credits-agent.md`](./credits-agent.md) | Wallets, ledger, and future recharges |
+| [`credits-agent.md`](./credits-agent.md) | Wallets, ledger, and approved recharges |
 | [`search-agent.md`](./search-agent.md) | Search logs and secure search behaviour |
 | [`services-agent.md`](./services-agent.md) | Establishments and branches |
 | [`categories-agent.md`](./categories-agent.md) | Service categories |
-| [`requests-agent.md`](./requests-agent.md) | Missing-service and future recharge requests |
+| [`requests-agent.md`](./requests-agent.md) | Missing-service and recharge requests |
 
 ### How an agent should work here
 
@@ -80,7 +84,8 @@ authorise a database write, schema change, payment flow, or role change.
 - Dark/light mode and the RTL behaviour.
 - Existing landing sections and the `/app` demo.
 - The framework, the bundler, the styling system.
-- No real credits, wallet, payment or admin validation.
+- No direct React wallet or ledger mutation, arbitrary credit creation, payment
+  gateway, or normal-user admin action.
 - Do not delete files. Improve in place.
 
 ---
@@ -106,10 +111,12 @@ une agence bancaire ou n'importe quel service local, et obtient immédiatement d
 quoi agir : nom, téléphone, WhatsApp, localisation, site web, agence la plus
 proche et itinéraire.
 
-Le produit est en **V1**. La landing, la démo publique (`/app`) et
-l'authentification e-mail/mot de passe (`/auth`) existent. Les points, les
-paiements, l'ajout d'établissement et la validation par l'équipe sont **décrits
-mais pas implémentés**.
+Le produit est en **V1**. La landing, la recherche membre (`/app`),
+l'authentification e-mail/mot de passe (`/auth`), les rôles, DB1/DB2/DB3 et le
+tableau de bord admin existent. Les demandes de service manquant, la création
+d'établissement par admin et le flux manuel de demande de recharge sont mis en
+œuvre par des RPC validées. La passerelle de paiement et les propositions
+d'établissement restent hors périmètre.
 
 ### Stack actuelle
 
@@ -118,7 +125,7 @@ mais pas implémentés**.
 | Framework | React 19 + TypeScript (strict), Vite |
 | Styles | Tailwind CSS v4, tokens dans `src/index.css` |
 | Animation | framer-motion (`LazyMotion` + composants `m`) |
-| Backend | client Supabase JS — **Auth uniquement** |
+| Backend | client Supabase JS — Auth, lectures autorisées et RPC validées |
 | i18n | maison, `src/i18n/` (FR par défaut, AR en RTL, EN) |
 | Thème | `data-theme` sur `<html>`, `src/lib/theme.tsx` |
 
@@ -133,18 +140,18 @@ mais pas implémentés**.
 
 ### Agents CRUD d’administration
 
-Ces documents sont des garde-fous et des guides de préparation pour les futures
-implémentations. Ils n’autorisent ni écriture en base, ni modification de
-schéma, ni paiement, ni changement de rôle.
+Ces documents sont des contrats d’implémentation et de sécurité. Ils n’autorisent
+aucune nouvelle écriture en base, modification de schéma, paiement ou changement
+de rôle en dehors des flux RPC déjà validés dans le document d’agent concerné.
 
 | Fichier | À utiliser pour |
 |---|---|
 | [`users-agent.md`](./users-agent.md) | Profils et administration des utilisateurs |
-| [`credits-agent.md`](./credits-agent.md) | Portefeuilles, journal de crédits et futures recharges |
+| [`credits-agent.md`](./credits-agent.md) | Portefeuilles, journal de crédits et recharges validées |
 | [`search-agent.md`](./search-agent.md) | Journaux et comportement de recherche sécurisée |
 | [`services-agent.md`](./services-agent.md) | Établissements et succursales |
 | [`categories-agent.md`](./categories-agent.md) | Catégories de services |
-| [`requests-agent.md`](./requests-agent.md) | Demandes de service manquant et futures recharges |
+| [`requests-agent.md`](./requests-agent.md) | Demandes de service manquant et de recharge |
 
 ### Méthode de travail attendue
 
@@ -166,7 +173,9 @@ schéma, ni paiement, ni changement de rôle.
 - Le mode clair/sombre et le comportement RTL.
 - Les sections existantes de la landing et la démo `/app`.
 - Le framework, le bundler, le système de styles.
-- Aucun système réel de points, portefeuille, paiement ou validation admin.
+- Aucune mutation directe du portefeuille ou du journal depuis React, aucun
+  crédit arbitraire, aucune passerelle de paiement ni action admin par un
+  utilisateur normal.
 - Ne pas supprimer de fichiers. Améliorer sur place.
 
 ---
@@ -188,9 +197,10 @@ schéma, ni paiement, ni changement de rôle.
 رياضة أو صيدلية أو وكالة بنكية أو أي خدمة محلية، فيحصل فورًا على ما يلزمه للتصرف:
 الاسم، والهاتف، وواتساب، والموقع، والموقع الإلكتروني، وأقرب وكالة، والطريق إليها.
 
-المنتج في **الإصدار الأول**. صفحة الهبوط والعرض العام (`/app`) والمصادقة بالبريد
-وكلمة المرور (`/auth`) موجودة. أما النقاط والمدفوعات وإضافة المؤسسات والمصادقة من
-الفريق فهي **موصوفة وغير منجزة بعد**.
+المنتج في **الإصدار الأول**. صفحة الهبوط والبحث للمستخدم (`/app`) والمصادقة بالبريد
+وكلمة المرور (`/auth`) والأدوار وDB1/DB2/DB3 ولوحة الإدارة موجودة. كما نُفذت طلبات
+الخدمات الناقصة وإنشاء المؤسسات من الإدارة وطلبات الشحن اليدوية عبر RPC معتمدة. بوابة
+الدفع واقتراحات المؤسسات ما زالت خارج النطاق.
 
 ### التقنيات الحالية
 
@@ -199,7 +209,7 @@ schéma, ni paiement, ni changement de rôle.
 | الإطار | React 19 و TypeScript (صارم) و Vite |
 | التنسيق | Tailwind CSS v4، والمتغيرات في `src/index.css` |
 | الحركة | framer-motion (عبر `LazyMotion` ومكوّنات `m`) |
-| الخلفية | عميل Supabase JS — **للمصادقة فقط** |
+| الخلفية | عميل Supabase JS — للمصادقة والقراءات المصرح بها وRPC المعتمدة |
 | التعدد اللغوي | نظام داخلي في `src/i18n/` (الفرنسية افتراضيًا، العربية RTL، الإنجليزية) |
 | السمة | `data-theme` على `<html>` عبر `src/lib/theme.tsx` |
 
@@ -214,17 +224,18 @@ schéma, ni paiement, ni changement de rôle.
 
 ### وكلاء CRUD للإدارة
 
-هذه الوثائق إرشادات تخطيط وحماية للتنفيذ المستقبلي. ولا تمنح صلاحية الكتابة في
-قاعدة البيانات أو تغيير المخطط أو الدفع أو تغيير الأدوار.
+هذه الوثائق عقود للتنفيذ والحماية. ولا تمنح صلاحية لإضافة كتابة جديدة في قاعدة
+البيانات أو تغيير المخطط أو الدفع أو تغيير الأدوار، خارج تدفقات RPC المعتمدة
+والموثقة في ملف الوكيل المناسب.
 
 | الملف | يُستعمل من أجل |
 |---|---|
 | [`users-agent.md`](./users-agent.md) | الملفات الشخصية وإدارة المستخدمين |
-| [`credits-agent.md`](./credits-agent.md) | المحافظ وسجل النقاط وعمليات الشحن المستقبلية |
+| [`credits-agent.md`](./credits-agent.md) | المحافظ وسجل النقاط وعمليات الشحن المعتمدة |
 | [`search-agent.md`](./search-agent.md) | سجلات البحث وسلوك البحث الآمن |
 | [`services-agent.md`](./services-agent.md) | المؤسسات والفروع |
 | [`categories-agent.md`](./categories-agent.md) | فئات الخدمات |
-| [`requests-agent.md`](./requests-agent.md) | طلبات الخدمة الناقصة وطلبات الشحن المستقبلية |
+| [`requests-agent.md`](./requests-agent.md) | طلبات الخدمة الناقصة وطلبات الشحن |
 
 ### طريقة العمل المطلوبة
 
@@ -243,5 +254,6 @@ schéma, ni paiement, ni changement de rôle.
 - الوضعان الفاتح والداكن وسلوك الاتجاه من اليمين إلى اليسار.
 - أقسام صفحة الهبوط الحالية وعرض `/app`.
 - الإطار وأداة البناء ونظام التنسيق.
-- لا نظام حقيقي للنقاط أو المحفظة أو الدفع أو مصادقة الإدارة.
+- لا تعديل مباشر للمحفظة أو سجل النقاط من React، ولا منح نقاط اعتباطي، ولا بوابة
+  دفع، ولا إجراء إداري من مستخدم عادي.
 - لا تحذف ملفات. حسِّن في مكانها.

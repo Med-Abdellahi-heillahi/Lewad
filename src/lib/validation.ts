@@ -1,6 +1,7 @@
 export const mauritanianPhonePattern = /^[234][0-9]{7}$/
 export const arabicNamePattern = /^[\u0600-\u06FF\s]+$/
 export const avatarPathPattern = /\.(png|jpg|jpeg|webp)$/i
+export const establishmentImagePattern = /\.(png|jpg|jpeg)$/i
 export const maxAvatarFileSizeBytes = 2 * 1024 * 1024
 
 const allowedAvatarMimeTypes = new Set(['image/png', 'image/jpeg', 'image/webp'])
@@ -21,6 +22,22 @@ export function isValidArabicName(value: string) {
 
 export function isAllowedAvatarPath(value: string) {
   return value === '' || avatarPathPattern.test(value)
+}
+
+/**
+ * Image d'établissement : chemin ou URL seulement. Tant qu'aucun bucket Storage
+ * n'est configuré pour les établissements, l'admin ne peut que référencer une
+ * image déjà hébergée — d'où l'absence de `webp`, non demandé pour ce champ.
+ */
+export function isAllowedEstablishmentImagePath(value: string) {
+  const trimmed = value.trim()
+  return trimmed === '' || establishmentImagePattern.test(trimmed)
+}
+
+/** Un nom arabe obligatoire doit être non vide *et* écrit en caractères arabes. */
+export function isRequiredArabicName(value: string) {
+  const trimmed = value.trim()
+  return trimmed !== '' && arabicNamePattern.test(trimmed)
 }
 
 export function isAllowedAvatarFile(file: File) {

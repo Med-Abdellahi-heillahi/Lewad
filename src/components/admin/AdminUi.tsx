@@ -1,8 +1,8 @@
-import type { ComponentType, ReactNode } from 'react'
-import { AlertTriangle, Info, type LucideProps } from 'lucide-react'
+import { useEffect, useId, useRef, type ComponentType, type ReactNode } from 'react'
+import { AlertTriangle, Info, X, type LucideProps } from 'lucide-react'
 import { useI18n } from '../../i18n'
 import { formatNumber } from '../../lib/format'
-import { card, pill } from '../../lib/ui'
+import { card, iconBtn, pill } from '../../lib/ui'
 import { adminCopy } from './adminCopy'
 
 export type AdminIcon = ComponentType<LucideProps>
@@ -152,6 +152,76 @@ export function AdminEmptyState({
           {badge}
         </span>
       )}
+    </div>
+  )
+}
+
+/**
+ * Feuille modale de l'espace admin. Sous `sm` elle s'ancre en bas et occupe la
+ * hauteur utile : sur un téléphone un formulaire long doit se comporter comme un
+ * tiroir plein écran, pas comme une boîte flottante.
+ */
+export function AdminModal({
+  title,
+  subtitle,
+  closeLabel,
+  onClose,
+  size = 'md',
+  children,
+}: {
+  title: string
+  subtitle?: string
+  closeLabel: string
+  onClose: () => void
+  size?: 'md' | 'lg'
+  children: ReactNode
+}) {
+  const titleId = useId()
+  const closeButton = useRef<HTMLButtonElement>(null)
+  const previousFocus = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    previousFocus.current = document.activeElement as HTMLElement | null
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    const focusTimer = window.setTimeout(() => closeButton.current?.focus(), 20)
+
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      window.clearTimeout(focusTimer)
+      document.body.style.overflow = previousOverflow
+      previousFocus.current?.focus?.()
+    }
+  }, [onClose])
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      className="fixed inset-0 z-60 grid place-items-end bg-ink/40 p-0 backdrop-blur-[2px] sm:place-items-center sm:p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
+      <section
+        className={`max-h-[calc(100dvh-1rem)] w-full ${size === 'lg' ? 'max-w-2xl' : 'max-w-xl'} overflow-y-auto rounded-t-3xl border border-line bg-surface p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl sm:p-5`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 id={titleId} className="text-lg font-bold tracking-tight text-ink">{title}</h2>
+            {subtitle && <p className="mt-1 text-xs leading-5 text-muted">{subtitle}</p>}
+          </div>
+          <button ref={closeButton} type="button" className={iconBtn} aria-label={closeLabel} title={closeLabel} onClick={onClose}>
+            <X size={19} aria-hidden />
+          </button>
+        </div>
+        {children}
+      </section>
     </div>
   )
 }

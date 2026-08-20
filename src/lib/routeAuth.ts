@@ -17,7 +17,10 @@ export function isAdminRole(role: string | null | undefined) {
 }
 
 export function defaultDestinationForRole(role: string | null | undefined) {
-  return isAdminRole(role) ? '/admin' : defaultDestination
+  const normalizedRole = normalizeLewadRole(role)
+  if (normalizedRole === 'super_admin') return '/super-admin'
+  if (normalizedRole === 'admin') return '/admin'
+  return defaultDestination
 }
 
 /**
@@ -26,6 +29,7 @@ export function defaultDestinationForRole(role: string | null | undefined) {
  */
 export function canRoleAccessPath(role: string | null | undefined, destination: string) {
   const path = new URL(destination, window.location.origin).pathname
+  if (path === '/super-admin' || path.startsWith('/super-admin/')) return normalizeLewadRole(role) === 'super_admin'
   if (path === '/admin' || path.startsWith('/admin/')) return isAdminRole(role)
   return true
 }
@@ -39,7 +43,11 @@ export function destinationForRole(role: string | null | undefined, requestedDes
 export type PostLoginResolution = {
   destination: string
   role: LewadRole
-  profileLoaded: boolean
+  profileLoaded: true
+} | {
+  destination: null
+  role: null
+  profileLoaded: false
 }
 
 /**
@@ -54,7 +62,7 @@ export async function resolvePostLoginDestination(options: { redirectTo?: string
 
   if (authError || !user) {
     if (import.meta.env.DEV) console.debug('[AuthRoute] no authenticated user while resolving role')
-    return { destination: '/auth', role: 'user', profileLoaded: false }
+    return { destination: null, role: null, profileLoaded: false }
   }
 
   if (import.meta.env.DEV) console.debug('[AuthRoute] resolving role', { userId: user.id })
@@ -63,7 +71,7 @@ export async function resolvePostLoginDestination(options: { redirectTo?: string
     const profileResult = await getProfileByIdWithRetry(user.id)
     if (!profileResult.data) {
       if (import.meta.env.DEV) console.debug('[AuthRoute] profile load failed', { userId: user.id, error: profileResult.error })
-      return { destination: defaultDestination, role: 'user', profileLoaded: false }
+      return { destination: null, role: null, profileLoaded: false }
     }
 
     const role = normalizeLewadRole(profileResult.data.role)
@@ -72,7 +80,7 @@ export async function resolvePostLoginDestination(options: { redirectTo?: string
     return { destination, role, profileLoaded: true }
   } catch {
     if (import.meta.env.DEV) console.debug('[AuthRoute] profile load threw an unexpected error', { userId: user.id })
-    return { destination: defaultDestination, role: 'user', profileLoaded: false }
+    return { destination: null, role: null, profileLoaded: false }
   }
 }
 
@@ -89,7 +97,9 @@ export function authUrlForCurrentRoute() {
 export function getAuthRedirectDestination() {
   const redirect = new URLSearchParams(window.location.search).get('redirect')
 
-  if (!redirect?.startsWith('/')) return defaultDestination
+  // Without a requested path, the role must choose the default destination.
+  // Returning `/app` here would make an admin appear to have chosen the user space.
+  if (!redirect?.startsWith('/')) return null
 
   try {
     const destination = new URL(redirect, window.location.origin)
@@ -97,8 +107,8 @@ export function getAuthRedirectDestination() {
       return `${destination.pathname}${destination.search}${destination.hash}`
     }
   } catch {
-    // Invalid input falls back to the default application route.
+    // Invalid input is treated as no requested path, so the role picks the destination.
   }
 
-  return defaultDestination
+  return null
 }

@@ -31,6 +31,7 @@ export const ar: Dictionary = {
       strip: 'لمحة',
       service: 'الخدمة',
       demo: 'شرح',
+      install: 'التطبيق',
       faq: 'أسئلة',
       offers: 'العروض',
       contact: 'التواصل',
@@ -123,6 +124,39 @@ export const ar: Dictionary = {
       confirm: 'حسنًا',
       suggestions: ['قاعة رياضة', 'صيدلية', 'متجر كبير'],
     },
+  },
+
+  install: {
+    eyebrow: 'على هاتفك',
+    title: 'أضف Lewad إلى هاتفك',
+    text: 'يعمل Lewad مباشرة من المتصفح، ويمكنك أيضاً إضافته إلى شاشة هاتفك الرئيسية لفتحه مثل تطبيق.',
+    stepsLabel: 'ثلاث خطوات',
+    steps: [
+      'افتح Lewad في المتصفح',
+      'اضغط على قائمة المتصفح',
+      'اختر «إضافة إلى الشاشة الرئيسية»',
+    ],
+    installCta: 'تثبيت Lewad',
+    guideCta: 'طريقة الإضافة',
+    browsers: 'على Android تظهر غالباً من قائمة المتصفح. على iPhone استخدم زر المشاركة ثم «إضافة إلى الشاشة الرئيسية».',
+    webAppNote: 'يُضاف Lewad إلى الشاشة الرئيسية كتطبيق ويب، دون أي تنزيل من متجر تطبيقات.',
+    mockup: {
+      menu: 'قائمة المتصفح',
+      addToHome: 'إضافة إلى الشاشة الرئيسية',
+      homeScreen: 'الشاشة الرئيسية',
+    },
+  },
+
+  installPrompt: {
+    title: 'أضف Lewad إلى هاتفك',
+    description: 'افتح Lewad بسرعة من شاشة هاتفك الرئيسية.',
+    storeNote: 'لا تحتاج إلى تحميله من أي متجر تطبيقات.',
+    seeSteps: 'عرض الخطوات',
+    gotIt: 'فهمت',
+    step1Label: 'افتح Lewad في المتصفح',
+    step2Label: 'اضغط على قائمة المتصفح',
+    step3Label: 'أضف Lewad إلى الشاشة الرئيسية',
+    closeLabel: 'إغلاق',
   },
 
   faq: {

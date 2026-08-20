@@ -2,18 +2,20 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { useI18n } from '../i18n'
 import { useAccount } from '../hooks/useAccount'
 import {
+  adminCreateEstablishment,
   adminUpdateUserStatus,
-  getAdminCreditLedger,
   getAdminMissingRequests,
+  getAdminAnalytics,
   getAdminOverview,
   getAdminSearchLogs,
   getAdminServices,
   getAdminUsers,
   getAdminWallets,
-  superAdminUpdateUserRole,
+  getAdminRechargeRequests,
   updateMissingRequestStatus,
-  type AdminCreditLedgerEntry,
+  type AdminCreateEstablishmentParams,
   type AdminMissingRequest,
+  type AdminAnalytics,
   type AdminOverview,
   type AdminSearchLog,
   type AdminServices,
@@ -21,23 +23,26 @@ import {
   type AdminUserRoleFilter,
   type AdminUserStatusFilter,
   type AdminWallet,
+  type AdminRechargeModule,
+  type AdminRechargeRequest,
 } from '../lib/admin'
 import type { MissingServiceRequestStatus } from '../lib/db3b'
 import { formatDate, formatNumber, formatSignedPoints } from '../lib/format'
-import { appPad, appWrap, btnGhost, btnPrimary, card, cardMuted, field, fieldLabel, pill } from '../lib/ui'
+import { appWrap, card, cardMuted, field, pill } from '../lib/ui'
 import { Icon, type IconName } from './Icon'
 import { AppShell } from './shell/AppShell'
 import { EmptyState, InlineAlert, LoadingCard, Skeleton } from './system/States'
-import { SessionLoading } from './system/SessionLoading'
 import { adminCopy, type AdminTabId } from './admin/adminCopy'
-import { SuperAdminPanel } from './admin/SuperAdminPanel'
+export { RequireAdmin } from './admin/AdminAccess'
 import { AdminDashboard } from './admin/AdminDashboard'
 import { AdminBottomNav } from './admin/AdminBottomNav'
 import { AdminActionButton, type AdminIcon } from './admin/AdminUi'
 import { AdminSidebar } from './admin/AdminSidebar'
 import { AdminUsers } from './admin/AdminUsers'
+import { AdminRequests } from './admin/AdminRequests'
+import { AdminCredits } from './admin/AdminCredits'
 import { PaginationControls } from './ui/PaginationControls'
-import { Building2, Eye, LayoutDashboard, ListChecks, Plus, Search, Shield, Users, Wallet } from 'lucide-react'
+import { Building2, Eye, LayoutDashboard, ListChecks, Plus, Search, Users, Wallet } from 'lucide-react'
 import { DEFAULT_PAGE_SIZE, paginatedResult, type PaginatedResult } from '../lib/pagination'
 
 type AdminTab = AdminTabId
@@ -56,10 +61,7 @@ const tabs: { id: AdminTab; icon: AdminIcon }[] = [
   { id: 'credits', icon: Wallet },
   { id: 'search-logs', icon: Search },
   { id: 'services', icon: Building2 },
-  { id: 'system', icon: Shield },
 ]
-
-const requestStatuses: MissingServiceRequestStatus[] = ['pending', 'reviewed', 'duplicate', 'rejected', 'added']
 
 function emptyPage<T>(): PaginatedResult<T> {
   return paginatedResult([], 0, { pageSize: DEFAULT_PAGE_SIZE })
@@ -82,43 +84,6 @@ function statusClass(status: string) {
 function StatusBadge({ value }: { value: string }) {
   const { locale } = useI18n()
   return <span className={`${pill} ${statusClass(value)}`}>{adminCopy[locale].content.status[value] ?? value.replaceAll('_', ' ')}</span>
-}
-
-function AdminAccessPage({ unavailable = false, onRetry }: { unavailable?: boolean; onRetry?: () => void }) {
-  const { locale } = useI18n()
-  const copy = adminCopy[locale].access
-  const title = unavailable ? copy.unavailableTitle : copy.deniedTitle
-  const text = unavailable ? copy.unavailableText : copy.deniedText
-
-  return (
-    <AppShell documentTitle={title}>
-      <main id="app-main" className={`${appWrap} ${appPad}`}>
-        <section className={`${card} mx-auto max-w-xl p-6 text-center sm:p-8`}>
-          <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-ask-bg text-ask">
-            <Icon name={unavailable ? 'alert' : 'shield'} size={23} />
-          </span>
-          <h1 className="mt-5 text-2xl font-bold text-ink">{title}</h1>
-          <p className="mt-3 text-sm leading-6 text-muted">{text}</p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            {unavailable && onRetry && <button type="button" className={btnPrimary} onClick={onRetry}>{copy.retry}</button>}
-            <a href={unavailable ? '/' : '/app'} className={unavailable ? btnGhost : btnPrimary}>{unavailable ? copy.backHome : copy.backToApp}</a>
-          </div>
-        </section>
-      </main>
-    </AppShell>
-  )
-}
-
-/** Client-side convenience gate only; the migration's RLS policies enforce access server-side. */
-export function RequireAdmin({ children }: { children: ReactNode }) {
-  const { loading, profile, profileError, refresh } = useAccount()
-  const { locale } = useI18n()
-
-  if (loading) return <SessionLoading label={adminCopy[locale].access.checking} />
-  if (profileError || !profile) return <AdminAccessPage unavailable onRetry={() => void refresh()} />
-  if ((profile.role !== 'admin' && profile.role !== 'super_admin') || profile.status !== 'active') return <AdminAccessPage />
-
-  return <>{children}</>
 }
 
 function TableWrap({ children }: { children: ReactNode }) {
@@ -154,146 +119,6 @@ function MobileDetail({ label, children }: { label: string; children: ReactNode 
   return <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] items-start gap-3">
     <dt className="text-muted">{label}</dt>
     <dd className="min-w-0 break-words text-end text-ink-soft">{children}</dd>
-  </div>
-}
-
-function RequestsView({
-  requests,
-  pagination,
-  loading,
-  onSave,
-  onPageChange,
-}: {
-  requests: AdminMissingRequest[]
-  pagination: PaginatedResult<AdminMissingRequest>
-  loading: boolean
-  onSave: (request: AdminMissingRequest, status: MissingServiceRequestStatus, adminNote: string) => Promise<void>
-  onPageChange: (page: number) => void
-}) {
-  const { locale } = useI18n()
-  const copy = adminCopy[locale]
-  const { mobile, content } = copy
-  const [statuses, setStatuses] = useState<Record<string, MissingServiceRequestStatus>>({})
-  const [notes, setNotes] = useState<Record<string, string>>({})
-  const [saving, setSaving] = useState<string | null>(null)
-
-  useEffect(() => {
-    setStatuses({})
-    setNotes({})
-  }, [requests])
-
-  if (loading) return <LoadingCard label={content.loading.requests} lines={5} />
-  if (requests.length === 0) return <EmptyState icon="message" title={content.empty.requestsTitle} text={content.empty.requestsText} />
-
-  const save = async (request: AdminMissingRequest) => {
-    setSaving(request.id)
-    await onSave(request, statuses[request.id] ?? request.status, notes[request.id] ?? request.admin_note ?? '')
-    setSaving(null)
-  }
-
-  return (
-    <>
-      <MobileCardList>
-        {requests.map((request) => (
-          <MobileCard key={request.id}>
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0"><TableTitle>{request.query}</TableTitle><p className="mt-1 break-words text-xs text-muted">{request.normalized_query}</p></div>
-              <StatusBadge value={statuses[request.id] ?? request.status} />
-            </div>
-            <MobileDetails>
-              <MobileDetail label={mobile.user}><span dir="auto">{personName(request.user, locale)}</span><span className="ltr-isolate mt-1 block text-xs text-muted">{request.user?.email ?? '—'}</span></MobileDetail>
-              <MobileDetail label={mobile.createdAt}><time dateTime={request.created_at}>{formatDate(request.created_at, locale)}</time></MobileDetail>
-              <MobileDetail label={mobile.linkedLog}>{request.search_log ? <span>{request.search_log.query}<span className="mt-1 block"><StatusBadge value={request.search_log.status} /></span></span> : '—'}</MobileDetail>
-            </MobileDetails>
-            <div className="mt-4 grid gap-3">
-              <label className={fieldLabel} htmlFor={`mobile-status-${request.id}`}>{mobile.requestStatus}</label>
-              <select id={`mobile-status-${request.id}`} value={statuses[request.id] ?? request.status} onChange={(event) => setStatuses((value) => ({ ...value, [request.id]: event.target.value as MissingServiceRequestStatus }))} className={field}><option value="pending">{content.status.pending}</option>{requestStatuses.filter((status) => status !== 'pending').map((status) => <option key={status} value={status}>{content.status[status] ?? status}</option>)}</select>
-              <label className={fieldLabel} htmlFor={`mobile-note-${request.id}`}>{mobile.teamNote}</label>
-              <textarea id={`mobile-note-${request.id}`} value={notes[request.id] ?? request.admin_note ?? ''} onChange={(event) => setNotes((value) => ({ ...value, [request.id]: event.target.value }))} className={`${field} h-24 py-3`} placeholder={mobile.notePlaceholder} />
-              <AdminActionButton icon={ListChecks} label={saving === request.id ? mobile.saving : mobile.save} disabled={saving === request.id} onClick={() => void save(request)} tone="primary" className="w-full justify-center" />
-            </div>
-          </MobileCard>
-        ))}
-      </MobileCardList>
-      <div className="hidden lg:block"><TableWrap>
-        <table className="min-w-[1120px] w-full border-collapse">
-          <TableHeader>
-            <th className="px-4 py-3">{content.table.request}</th><th className="px-4 py-3">{content.table.user}</th><th className="px-4 py-3">{content.table.status}</th><th className="px-4 py-3">{content.table.linkedLog}</th><th className="px-4 py-3">{content.table.teamNote}</th><th className="px-4 py-3">{content.table.action}</th>
-          </TableHeader>
-          <tbody className="divide-y divide-line">
-            {requests.map((request) => (
-              <tr key={request.id}>
-                <TableCell><TableTitle>{request.query}</TableTitle><p className="mt-1 text-xs text-muted">{request.normalized_query}</p><time className="mt-2 block text-xs text-muted" dateTime={request.created_at}>{formatDate(request.created_at, locale)}</time></TableCell>
-                <TableCell><p dir="auto">{personName(request.user, locale)}</p><p className="ltr-isolate mt-1 text-xs text-muted">{request.user?.email ?? '—'}</p></TableCell>
-                <TableCell><label className="sr-only" htmlFor={`status-${request.id}`}>{mobile.requestStatus}</label><select id={`status-${request.id}`} value={statuses[request.id] ?? request.status} onChange={(event) => setStatuses((value) => ({ ...value, [request.id]: event.target.value as MissingServiceRequestStatus }))} className={`${field} min-w-36`}><option value="pending">{content.status.pending}</option>{requestStatuses.filter((status) => status !== 'pending').map((status) => <option key={status} value={status}>{content.status[status] ?? status}</option>)}</select></TableCell>
-                <TableCell>{request.search_log ? <><p>{request.search_log.query}</p><div className="mt-1"><StatusBadge value={request.search_log.status} /></div></> : <span className="text-muted">—</span>}</TableCell>
-                <TableCell><label className="sr-only" htmlFor={`note-${request.id}`}>{mobile.teamNote}</label><textarea id={`note-${request.id}`} value={notes[request.id] ?? request.admin_note ?? ''} onChange={(event) => setNotes((value) => ({ ...value, [request.id]: event.target.value }))} className={`${field} h-24 min-w-64 py-3`} placeholder={mobile.notePlaceholder} /></TableCell>
-                <TableCell><AdminActionButton icon={ListChecks} label={saving === request.id ? mobile.saving : mobile.save} disabled={saving === request.id} onClick={() => void save(request)} tone="primary" /></TableCell>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </TableWrap></div>
-      <PaginationControls {...pagination} labels={copy.pagination} disabled={loading} onPageChange={onPageChange} />
-    </>
-  )
-}
-
-function CreditsView({
-  wallets,
-  walletPagination,
-  ledger,
-  ledgerPagination,
-  loading,
-  onWalletPageChange,
-  onLedgerPageChange,
-}: {
-  wallets: AdminWallet[]
-  walletPagination: PaginatedResult<AdminWallet>
-  ledger: AdminCreditLedgerEntry[]
-  ledgerPagination: PaginatedResult<AdminCreditLedgerEntry>
-  loading: boolean
-  onWalletPageChange: (page: number) => void
-  onLedgerPageChange: (page: number) => void
-}) {
-  const { locale } = useI18n()
-  const copy = adminCopy[locale]
-  const { mobile, content } = copy
-  const latestByWallet = useMemo(() => {
-    const value = new Map<string, AdminCreditLedgerEntry>()
-    ledger.forEach((entry) => { if (!value.has(entry.wallet_id)) value.set(entry.wallet_id, entry) })
-    return value
-  }, [ledger])
-  if (loading) return <LoadingCard label={content.loading.credits} lines={5} />
-  if (wallets.length === 0 && ledger.length === 0) return <EmptyState icon="wallet" title={content.empty.creditsTitle} />
-  return <div className="space-y-6">
-    <section><h2 className="mb-3 text-base font-bold text-ink">{content.sections.wallets}</h2>
-      <MobileCardList>{wallets.map((wallet) => {
-        const last = latestByWallet.get(wallet.id)
-        return <MobileCard key={wallet.id}>
-          <TableTitle>{personName(wallet.user, locale)}</TableTitle><p className="ltr-isolate mt-1 break-all text-xs text-muted">{wallet.user?.email ?? '—'}</p>
-          <MobileDetails>
-            <MobileDetail label={mobile.balance}><span className="tabular text-base font-bold text-ink">{formatNumber(wallet.balance, locale)} pts</span></MobileDetail>
-            <MobileDetail label={mobile.lastMovement}>{last ? <span><span className="font-medium">{content.status[last.type] ?? last.type.replaceAll('_', ' ')}</span><span className="ms-2 block tabular text-muted">{formatSignedPoints(last.amount, locale, 'pts')}</span></span> : '—'}</MobileDetail>
-            <MobileDetail label={mobile.updatedAt}><time dateTime={wallet.updated_at}>{formatDate(wallet.updated_at, locale)}</time></MobileDetail>
-          </MobileDetails>
-        </MobileCard>
-      })}</MobileCardList>
-      <div className="hidden lg:block"><TableWrap><table className="min-w-[800px] w-full border-collapse"><TableHeader><th className="px-4 py-3">{content.table.user}</th><th className="px-4 py-3">{content.table.balance}</th><th className="px-4 py-3">{content.table.lastMovement}</th><th className="px-4 py-3">{content.table.updatedAt}</th></TableHeader><tbody className="divide-y divide-line">{wallets.map((wallet) => { const last = latestByWallet.get(wallet.id); return <tr key={wallet.id}><TableCell><TableTitle>{personName(wallet.user, locale)}</TableTitle><p className="ltr-isolate mt-1 text-xs text-muted">{wallet.user?.email ?? '—'}</p></TableCell><TableCell><span className="tabular text-base font-bold text-ink">{formatNumber(wallet.balance, locale)} pts</span></TableCell><TableCell>{last ? <><span className="font-medium">{content.status[last.type] ?? last.type.replaceAll('_', ' ')}</span><span className="ms-2 tabular text-muted">{formatSignedPoints(last.amount, locale, 'pts')}</span></> : <span className="text-muted">—</span>}</TableCell><TableCell><time dateTime={wallet.updated_at}>{formatDate(wallet.updated_at, locale)}</time></TableCell></tr> })}</tbody></table></TableWrap></div>
-      <PaginationControls {...walletPagination} labels={copy.pagination} disabled={loading} onPageChange={onWalletPageChange} />
-    </section>
-    <section><h2 className="mb-3 text-base font-bold text-ink">{content.sections.recentMovements}</h2>
-      <MobileCardList>{ledger.map((entry) => <MobileCard key={entry.id}>
-        <TableTitle>{personName(entry.user, locale)}</TableTitle><p className="ltr-isolate mt-1 break-all text-xs text-muted">{entry.user?.email ?? '—'}</p>
-        <MobileDetails>
-          <MobileDetail label={mobile.movement}><span><span className="font-medium">{content.status[entry.type] ?? entry.type.replaceAll('_', ' ')}</span><span className="ms-2 block tabular font-bold text-ink">{formatSignedPoints(entry.amount, locale, 'pts')}</span></span></MobileDetail>
-          <MobileDetail label={mobile.reason}>{entry.reason ?? '—'}</MobileDetail>
-          <MobileDetail label={mobile.date}><time dateTime={entry.created_at}>{formatDate(entry.created_at, locale)}</time></MobileDetail>
-        </MobileDetails>
-      </MobileCard>)}</MobileCardList>
-      <div className="hidden lg:block"><TableWrap><table className="min-w-[850px] w-full border-collapse"><TableHeader><th className="px-4 py-3">{content.table.user}</th><th className="px-4 py-3">{content.table.movement}</th><th className="px-4 py-3">{content.table.reason}</th><th className="px-4 py-3">{content.table.date}</th></TableHeader><tbody className="divide-y divide-line">{ledger.map((entry) => <tr key={entry.id}><TableCell><TableTitle>{personName(entry.user, locale)}</TableTitle><p className="ltr-isolate mt-1 text-xs text-muted">{entry.user?.email ?? '—'}</p></TableCell><TableCell><span className="font-medium">{content.status[entry.type] ?? entry.type.replaceAll('_', ' ')}</span><span className="ms-2 tabular font-bold text-ink">{formatSignedPoints(entry.amount, locale, 'pts')}</span></TableCell><TableCell>{entry.reason ?? '—'}</TableCell><TableCell><time dateTime={entry.created_at}>{formatDate(entry.created_at, locale)}</time></TableCell></tr>)}</tbody></table></TableWrap></div>
-      <PaginationControls {...ledgerPagination} labels={copy.pagination} disabled={loading} onPageChange={onLedgerPageChange} />
-    </section>
   </div>
 }
 
@@ -399,6 +224,7 @@ export function AdminPage() {
   const [errors, setErrors] = useState<Partial<Record<AdminTab, string>>>({})
   const [warnings, setWarnings] = useState<Partial<Record<AdminTab, string>>>({})
   const [overview, setOverview] = useState<AdminOverview | null>(null)
+  const [analytics, setAnalytics] = useState<AdminAnalytics | null>(null)
   const [requests, setRequests] = useState<PaginatedResult<AdminMissingRequest>>(() => emptyPage())
   const [users, setUsers] = useState<PaginatedResult<AdminUser>>(() => emptyPage())
   const [userFilters, setUserFilters] = useState<{
@@ -407,7 +233,8 @@ export function AdminPage() {
     status: AdminUserStatusFilter
   }>({ search: '', role: 'all', status: 'all' })
   const [wallets, setWallets] = useState<PaginatedResult<AdminWallet>>(() => emptyPage())
-  const [ledger, setLedger] = useState<PaginatedResult<AdminCreditLedgerEntry>>(() => emptyPage())
+  const [recharges, setRecharges] = useState<AdminRechargeRequest[]>([])
+  const [rechargeModule, setRechargeModule] = useState<AdminRechargeModule>('not-connected')
   const [searchLogs, setSearchLogs] = useState<PaginatedResult<AdminSearchLog>>(() => emptyPage())
   const [services, setServices] = useState<AdminServices | null>(null)
   const [pages, setPages] = useState<Record<AdminListPage, number>>({
@@ -417,8 +244,6 @@ export function AdminPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const isSuperAdmin = profile?.role === 'super_admin'
-  const visibleTabs = tabs.filter((tab) => tab.id !== 'system' || isSuperAdmin)
-  const safeActiveTab = activeTab === 'system' && !isSuperAdmin ? 'dashboard' : activeTab
   const copy = adminCopy[locale]
 
   const setPage = useCallback((target: AdminListPage, page: number) => {
@@ -441,9 +266,15 @@ export function AdminPage() {
     if (target === 'dashboard') {
       // Les services alimentent deux alertes (établissements sans agence, agences
       // sans coordonnées). Leur échec ne doit pas masquer les compteurs.
-      const [result, servicesResult] = await Promise.all([getAdminOverview(), getAdminServices()])
+      const [result, servicesResult, analyticsResult] = await Promise.all([
+        getAdminOverview(),
+        getAdminServices(),
+        getAdminAnalytics(),
+      ])
       setOverview(result.data)
       if (servicesResult.data) setServices(servicesResult.data)
+      // Les analytics sont un complément : leur échec ne doit pas vider le tableau de bord.
+      setAnalytics(analyticsResult.data)
       if (result.error) {
         const error = result.error
         setErrors((value) => ({ ...value, dashboard: error }))
@@ -470,15 +301,18 @@ export function AdminPage() {
       }
     }
     if (target === 'credits') {
-      const [walletResult, ledgerResult] = await Promise.all([
+      const [walletResult, rechargeResult] = await Promise.all([
         getAdminWallets({ page: pages.wallets, pageSize: DEFAULT_PAGE_SIZE }),
-        getAdminCreditLedger({ page: pages.ledger, pageSize: DEFAULT_PAGE_SIZE }),
+        getAdminRechargeRequests(),
       ])
       setWallets(walletResult.data)
-      setLedger(ledgerResult.data)
-      const warning = walletResult.warning ?? ledgerResult.warning
-      if (warning) setWarnings((value) => ({ ...value, credits: warning }))
-      const error = walletResult.error ?? ledgerResult.error
+      setRecharges(rechargeResult.data)
+      setRechargeModule(rechargeResult.module)
+      if (walletResult.warning) {
+        const warning = walletResult.warning
+        setWarnings((value) => ({ ...value, credits: warning }))
+      }
+      const error = walletResult.error ?? rechargeResult.error
       if (error) setErrors((value) => ({ ...value, credits: error }))
     }
     if (target === 'search-logs') {
@@ -509,31 +343,25 @@ export function AdminPage() {
   }, [pages, userFilters])
 
   useEffect(() => {
-    if (activeTab === 'system' && !isSuperAdmin) setActiveTab('dashboard')
-  }, [activeTab, isSuperAdmin])
+    void load(activeTab)
+  }, [activeTab, load])
 
   useEffect(() => {
-    if (safeActiveTab === 'system') {
-      void load('dashboard')
-      return
-    }
-    void load(safeActiveTab)
-  }, [load, safeActiveTab])
-
-  useEffect(() => {
-    if (!rechargeRequested || safeActiveTab !== 'dashboard' || loading.dashboard) return
+    if (!rechargeRequested || activeTab !== 'dashboard' || loading.dashboard) return
     const frame = window.requestAnimationFrame(() => {
       document.getElementById('admin-recharges')?.scrollIntoView({ block: 'start' })
       setRechargeRequested(false)
     })
     return () => window.cancelAnimationFrame(frame)
-  }, [loading.dashboard, rechargeRequested, safeActiveTab])
+  }, [activeTab, loading.dashboard, rechargeRequested])
 
+  /** Renvoie le message d'erreur pour que la vue Demandes affiche son propre retour inline. */
   const saveRequest = async (request: AdminMissingRequest, status: MissingServiceRequestStatus, adminNote: string) => {
     const result = await updateMissingRequestStatus({ id: request.id, status, adminNote })
     if (result.error || !result.data) {
-      setErrors((value) => ({ ...value, requests: result.error ?? 'La demande n’a pas pu être mise à jour.' }))
-      return
+      const message = copy.requests.requestUpdateFailed
+      setErrors((value) => ({ ...value, requests: message }))
+      return message
     }
     setRequests((value) => ({
       ...value,
@@ -544,6 +372,20 @@ export function AdminPage() {
       setWarnings((value) => ({ ...value, requests: warning }))
     }
     void load('dashboard')
+    return null
+  }
+
+  const createEstablishment = async (params: AdminCreateEstablishmentParams) => {
+    const result = await adminCreateEstablishment(params)
+    if (result.error || !result.data) {
+      setErrors((value) => ({ ...value, requests: copy.requests.serviceAddFailed }))
+      return null
+    }
+
+    if (params.sourceRequestId) await load('requests')
+    void load('services')
+    void load('dashboard')
+    return result.data
   }
 
   const saveUserStatus = async (user: AdminUser, status: 'active' | 'suspended') => {
@@ -555,16 +397,7 @@ export function AdminPage() {
     return null
   }
 
-  const saveUserRole = async (user: AdminUser, role: AdminUser['role']) => {
-    const result = await superAdminUpdateUserRole({ userId: user.id, role })
-    if (result.error || !result.data) return result.error ?? 'User role update failed.'
-
-    setUsers((value) => ({ ...value, data: value.data.map((item) => item.id === user.id ? result.data as AdminUser : item) }))
-    void load('dashboard')
-    return null
-  }
-
-  const activeLabel = copy.tabs[safeActiveTab]
+  const activeLabel = copy.tabs[activeTab]
   const adminRole = isSuperAdmin ? copy.header.superAdmin : copy.header.admin
   const openRechargePanel = () => {
     setRechargeRequested(true)
@@ -589,22 +422,21 @@ export function AdminPage() {
       <>
       <main id="app-main" className={`${appWrap} pb-24 pt-4 sm:pt-5 lg:pb-12 lg:pt-5`}>
         <div className={`lg:grid lg:items-start lg:gap-6 ${sidebarCollapsed ? 'lg:grid-cols-[5rem_minmax(0,1fr)]' : 'lg:grid-cols-[17rem_minmax(0,1fr)]'}`}>
-          <AdminSidebar tabs={visibleTabs} activeTab={safeActiveTab} collapsed={sidebarCollapsed} mobileOpen={mobileSidebarOpen} onMobileOpenChange={setMobileSidebarOpen} onSelectTab={setActiveTab} onSelectRecharge={openRechargePanel} />
+          <AdminSidebar tabs={tabs} activeTab={activeTab} collapsed={sidebarCollapsed} mobileOpen={mobileSidebarOpen} onMobileOpenChange={setMobileSidebarOpen} onSelectTab={setActiveTab} onSelectRecharge={openRechargePanel} superAdminHref={isSuperAdmin ? '/super-admin' : undefined} />
 
           <section className="min-w-0" aria-label={activeLabel}>
-          {errors[safeActiveTab] && <InlineAlert tone="error" title={copy.header.dataErrorTitle} className="mb-5">{errors[safeActiveTab]} {copy.header.dataErrorText}</InlineAlert>}
-          {warnings[safeActiveTab] && <InlineAlert tone="info" title={copy.content.partialProfilesUnavailable} className="mb-5">{warnings[safeActiveTab]}</InlineAlert>}
-          {safeActiveTab === 'dashboard' && <AdminDashboard overview={overview} services={services} loading={Boolean(loading.dashboard)} />}
-          {safeActiveTab === 'requests' && <RequestsView requests={requests.data} pagination={requests} loading={Boolean(loading.requests)} onSave={saveRequest} onPageChange={(page) => setPage('requests', page)} />}
-          {safeActiveTab === 'users' && <AdminUsers users={users.data} pagination={users} loading={Boolean(loading.users)} currentRole={isSuperAdmin ? 'super_admin' : 'admin'} filters={userFilters} onFiltersChange={setUsersFilters} onPageChange={(page) => setPage('users', page)} onStatusChange={saveUserStatus} onRoleChange={saveUserRole} displayName={(user) => personName(user, locale)} />}
-          {safeActiveTab === 'credits' && <CreditsView wallets={wallets.data} walletPagination={wallets} ledger={ledger.data} ledgerPagination={ledger} loading={Boolean(loading.credits)} onWalletPageChange={(page) => setPage('wallets', page)} onLedgerPageChange={(page) => setPage('ledger', page)} />}
-          {safeActiveTab === 'search-logs' && <SearchLogsView logs={searchLogs.data} pagination={searchLogs} loading={Boolean(loading['search-logs'])} onPageChange={(page) => setPage('searchLogs', page)} />}
-          {safeActiveTab === 'services' && <ServicesView services={services} loading={Boolean(loading.services)} onCategoryPageChange={(page) => setPage('categories', page)} onEstablishmentPageChange={(page) => setPage('establishments', page)} onBranchPageChange={(page) => setPage('branches', page)} />}
-          {safeActiveTab === 'system' && isSuperAdmin && <SuperAdminPanel locale={locale} overview={overview} loading={Boolean(loading.dashboard)} />}
+          {errors[activeTab] && <InlineAlert tone="error" title={copy.header.dataErrorTitle} className="mb-5">{errors[activeTab]} {copy.header.dataErrorText}</InlineAlert>}
+          {warnings[activeTab] && <InlineAlert tone="info" title={copy.content.partialProfilesUnavailable} className="mb-5">{warnings[activeTab]}</InlineAlert>}
+          {activeTab === 'dashboard' && <AdminDashboard overview={overview} services={services} analytics={analytics} loading={Boolean(loading.dashboard)} />}
+          {activeTab === 'requests' && <AdminRequests requests={requests.data} pagination={requests} loading={Boolean(loading.requests)} onSave={saveRequest} onCreateEstablishment={createEstablishment} onPageChange={(page) => setPage('requests', page)} displayName={(user) => personName(user, locale)} />}
+          {activeTab === 'users' && <AdminUsers users={users.data} pagination={users} loading={Boolean(loading.users)} currentRole="admin" filters={userFilters} onFiltersChange={setUsersFilters} onPageChange={(page) => setPage('users', page)} onStatusChange={saveUserStatus} onRoleChange={async () => copy.users.superAdminRequired} displayName={(user) => personName(user, locale)} />}
+          {activeTab === 'credits' && <AdminCredits wallets={wallets.data} pagination={wallets} loading={Boolean(loading.credits)} recharges={recharges} rechargeModule={rechargeModule} onPageChange={(page) => setPage('wallets', page)} onRefresh={() => void load('credits')} displayName={(user) => personName(user, locale)} />}
+          {activeTab === 'search-logs' && <SearchLogsView logs={searchLogs.data} pagination={searchLogs} loading={Boolean(loading['search-logs'])} onPageChange={(page) => setPage('searchLogs', page)} />}
+          {activeTab === 'services' && <ServicesView services={services} loading={Boolean(loading.services)} onCategoryPageChange={(page) => setPage('categories', page)} onEstablishmentPageChange={(page) => setPage('establishments', page)} onBranchPageChange={(page) => setPage('branches', page)} />}
           </section>
         </div>
       </main>
-      <AdminBottomNav activeTab={safeActiveTab} onSelectTab={setActiveTab} />
+      <AdminBottomNav activeTab={activeTab} onSelectTab={setActiveTab} />
       </>
     </AppShell>
   )

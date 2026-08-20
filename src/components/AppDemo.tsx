@@ -315,8 +315,7 @@ export function PublicSearchDemo() {
     }
 
     setLastNotFoundQuery(requestedQuery)
-    // DB3A does not expose search_log_id yet. DB3B accepts null safely.
-    setLastSearchLogId(null)
+    setLastSearchLogId(result.searchLogId)
     setDidYouMean(findClosestSearchMatch(searchDemoEstablishments, normalizedQuery))
     setState('unavailable')
   }

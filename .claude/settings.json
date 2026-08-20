@@ -55,7 +55,24 @@
       "Bash(grep -oE \"categories: .{0,40}\")",
       "Bash(sleep 4; tail -8 /tmp/v6.log)",
       "Bash(node admin.mjs)",
-      "Bash(sed -E 's#https://\\([a-z0-9]+\\)\\\\.supabase\\\\.co#\\\\1#')"
+      "Bash(sed -E 's#https://\\([a-z0-9]+\\)\\\\.supabase\\\\.co#\\\\1#')",
+      "Bash(sleep 5; tail -6 /tmp/v7.log | grep -oE \"localhost:[0-9]+\")",
+      "Bash(tail -12 /tmp/v7.log)",
+      "PowerShell(npx tsc --noEmit -p tsconfig.app.json)",
+      "Bash(python -)",
+      "PowerShell(npm run build)",
+      "Bash(sed -i \"s#localhost:5179#localhost:5174#\" admin.mjs)",
+      "PowerShell(npx tsc --noEmit -p tsconfig.app.json; \"exit=$LASTEXITCODE\")",
+      "Bash(awk -F: '$1>194')",
+      "Bash(sed -n '/Mobile : carte compacte/,/^            <\\\\/div>$/p' src/components/admin/AdminUsers.tsx | head -45)",
+      "Bash(CHROME_PATH=\"C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe\" node chartcheck.mjs)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5174/)",
+      "Bash(sed -i \"s/waitUntil: 'networkidle'/waitUntil: 'domcontentloaded'/\" chartcheck.mjs)",
+      "Bash(sed -i \"s/await page.waitForTimeout\\(1600\\)/await page.waitForTimeout\\(3000\\)/\" chartcheck.mjs)",
+      "Bash(grep -rn \"Do not create this table\\\\|future \\\\`recharge_requests\\\\`\\\\|appear only after a real table\" agent/ CODEX.md CLAUDE.md)"
+    ],
+    "additionalDirectories": [
+      "C:\\dev\\Lewad\\src\\components\\admin"
     ]
   }
 }

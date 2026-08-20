@@ -15,7 +15,7 @@ export const contact = {
 }
 
 /** Sections de la landing, dans l'ordre. Sert d'ancre ET de source du menu déroulant. */
-export const sectionIds = ['what', 'strip', 'service', 'demo', 'faq', 'offers', 'contact'] as const
+export const sectionIds = ['what', 'strip', 'service', 'demo', 'install', 'faq', 'offers', 'contact'] as const
 export type SectionId = (typeof sectionIds)[number]
 
 /**

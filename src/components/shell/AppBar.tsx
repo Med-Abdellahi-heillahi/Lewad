@@ -65,7 +65,7 @@ export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
   const isSuperAdmin = hasAdminAccess && profile?.role === 'super_admin'
   const roleSpaceItems = hasAdminAccess
     ? [
-      ...(isSuperAdmin ? [{ label: copy.superAdminSpace, href: '/admin' }] : []),
+      ...(isSuperAdmin ? [{ label: copy.superAdminSpace, href: '/super-admin' }] : []),
       { label: copy.adminSpace, href: '/admin' },
     ]
     : []
@@ -107,7 +107,12 @@ export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
         <div className={`${appWrap} flex h-16 items-center gap-2 sm:h-[72px] sm:gap-3`}>
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <button type="button" className={`${iconBtn} lg:hidden`} aria-label={admin.mobileToggleLabel} title={admin.mobileToggleLabel} aria-expanded={admin.mobileSidebarOpen} aria-haspopup="dialog" onClick={admin.onMobileSidebarToggle}><Menu size={19} aria-hidden /></button>
-            <button type="button" className={`${iconBtn} hidden lg:inline-flex`} aria-label={admin.desktopToggleLabel} title={admin.desktopToggleLabel} aria-pressed={admin.sidebarCollapsed} onClick={admin.onDesktopSidebarToggle}>{admin.sidebarCollapsed ? <PanelLeftOpen size={19} aria-hidden /> : <PanelLeftClose size={19} aria-hidden />}</button>
+            {/* Enveloppe nécessaire : `iconBtn` pose déjà `inline-flex`, qui l'emporte
+                sur un `hidden` appliqué au même élément. Le bouton restait donc
+                visible sur mobile, à côté du bouton menu. */}
+            <span className="hidden lg:inline-flex">
+              <button type="button" className={iconBtn} aria-label={admin.desktopToggleLabel} title={admin.desktopToggleLabel} aria-pressed={admin.sidebarCollapsed} onClick={admin.onDesktopSidebarToggle}>{admin.sidebarCollapsed ? <PanelLeftOpen size={19} aria-hidden /> : <PanelLeftClose size={19} aria-hidden />}</button>
+            </span>
             <div className="hidden min-w-0 lg:block">
               <p className="truncate text-[11px] font-bold tracking-[0.09em] text-muted uppercase rtl:tracking-normal rtl:normal-case">{admin.productLabel}</p>
               <h1 className="truncate text-base font-bold text-ink sm:text-lg">{admin.sectionLabel}</h1>

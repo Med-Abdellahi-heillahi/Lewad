@@ -45,6 +45,12 @@ components. Keep row data separate from a UI display model whenever formatting
 or labels differ. Permitted profile writes use the `SafeProfileUpdate` type,
 which allowlists `full_name`, `full_name_ar`, `phone`, and `avatar_url`.
 
+**Approved RPC hygiene.** For the existing secure search, request, recharge,
+and admin flows, keep request payloads and response adaptation typed in
+`src/lib/`. Components call those functions rather than the Supabase client.
+Use narrow server-authorised inputs such as an offer code or request id; do not
+reintroduce browser-owned points, prices, balances, roles, or statuses.
+
 **Localise display data once.** Every user-facing string belongs in `fr.ts`,
 `ar.ts`, and `en.ts`. For DB1 display, use `src/lib/format.ts` rather than
 repeating number, point, ledger-label, date, currency, or name formatting in a
@@ -91,6 +97,8 @@ editing them; do not reformat them wholesale as a side quest.
 - [ ] No duplicated block that the shared layer already covers.
 - [ ] Every new user-facing string exists in `fr.ts`, `ar.ts` and `en.ts`.
 - [ ] No component imports or calls the Supabase client directly.
+- [ ] Approved RPC payloads and responses are typed in `src/lib/`; no browser
+      value is treated as a wallet, ledger, price, or role authority.
 - [ ] DB1 query logic and row types are not duplicated.
 - [ ] Raw DB enum values have a user-facing label where one exists.
 - [ ] Arabic display prefers `full_name_ar` and never shows `MRO` as the

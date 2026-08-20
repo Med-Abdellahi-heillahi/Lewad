@@ -213,6 +213,18 @@
   }
 }
 
+/* Tracé progressif des courbes du tableau de bord admin. */
+@keyframes chartDraw {
+  from {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+  }
+}
+
 @keyframes marquee {
   from {
     transform: translateX(0);

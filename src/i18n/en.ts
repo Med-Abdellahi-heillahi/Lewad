@@ -31,6 +31,7 @@ export const en: Dictionary = {
       strip: 'Overview',
       service: 'Service',
       demo: 'Demo',
+      install: 'App',
       faq: 'Questions',
       offers: 'Offers',
       contact: 'Contact',
@@ -123,6 +124,39 @@ export const en: Dictionary = {
       confirm: 'OK',
       suggestions: ['Gym', 'Pharmacy', 'Supermarket'],
     },
+  },
+
+  install: {
+    eyebrow: 'On your phone',
+    title: 'Add Lewad to your phone',
+    text: 'Lewad works directly from your browser, and you can also add it to your phone home screen to open it like an app.',
+    stepsLabel: 'Three steps',
+    steps: [
+      'Open Lewad in your browser',
+      'Tap your browser menu',
+      'Choose “Add to home screen”',
+    ],
+    installCta: 'Install Lewad',
+    guideCta: 'See how to add it',
+    browsers: 'On Android, the option is usually in the browser menu. On iPhone, use the share button then “Add to Home Screen”.',
+    webAppNote: 'Lewad is added to the home screen as a web app — nothing to download from an app store.',
+    mockup: {
+      menu: 'Browser menu',
+      addToHome: 'Add to home screen',
+      homeScreen: 'Home screen',
+    },
+  },
+
+  installPrompt: {
+    title: 'Add Lewad to your phone',
+    description: 'Open Lewad quickly from your home screen.',
+    storeNote: 'Nothing to download from an app store.',
+    seeSteps: 'See steps',
+    gotIt: 'Got it',
+    step1Label: 'Open Lewad in your browser',
+    step2Label: 'Tap the browser menu',
+    step3Label: 'Add Lewad to your home screen',
+    closeLabel: 'Close',
   },
 
   faq: {

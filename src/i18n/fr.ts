@@ -38,6 +38,7 @@ export const fr = {
       strip: 'Animation',
       service: 'Service',
       demo: 'Démo',
+      install: 'Application',
       faq: 'Questions',
       offers: 'Offres',
       contact: 'Contact',
@@ -142,6 +143,39 @@ export const fr = {
       confirm: 'OK',
       suggestions: ['Salle de sport', 'Pharmacie', 'Supermarché'],
     },
+  },
+
+  install: {
+    eyebrow: 'Sur votre téléphone',
+    title: 'Ajoutez Lewad à votre téléphone',
+    text: 'Lewad fonctionne directement depuis le navigateur, mais vous pouvez aussi l’ajouter à l’écran d’accueil de votre téléphone pour l’ouvrir comme une application.',
+    stepsLabel: 'Trois étapes',
+    steps: [
+      'Ouvrez Lewad dans votre navigateur',
+      'Appuyez sur le menu de votre navigateur',
+      'Choisissez « Ajouter à l’écran d’accueil »',
+    ],
+    installCta: 'Installer Lewad',
+    guideCta: 'Voir comment l’ajouter',
+    browsers: 'Sur Android, l’option apparaît souvent dans le menu du navigateur. Sur iPhone, utilisez le bouton de partage puis « Sur l’écran d’accueil ».',
+    webAppNote: 'Lewad s’ajoute à l’écran d’accueil comme application web : rien à télécharger depuis un magasin d’applications.',
+    mockup: {
+      menu: 'Menu du navigateur',
+      addToHome: 'Ajouter à l’écran d’accueil',
+      homeScreen: 'Écran d’accueil',
+    },
+  },
+
+  installPrompt: {
+    title: 'Ajoutez Lewad à votre téléphone',
+    description: 'Ouvrez Lewad rapidement depuis votre écran d\'accueil.',
+    storeNote: 'Rien à télécharger depuis un magasin d\'applications.',
+    seeSteps: 'Voir étapes',
+    gotIt: 'Compris',
+    step1Label: 'Ouvrez Lewad dans votre navigateur',
+    step2Label: 'Appuyez sur le menu du navigateur',
+    step3Label: 'Ajoutez Lewad à l\'écran d\'accueil',
+    closeLabel: 'Fermer',
   },
 
   faq: {

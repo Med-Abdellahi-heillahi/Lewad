@@ -5,7 +5,9 @@
 Before every task, read this file, then [`CLAUDE.md`](./CLAUDE.md),
 [`agent/README.md`](./agent/README.md), and every agent file relevant to the
 area being changed. Never skip an agent rule. Survey the current code before
-editing: this repository is worked on by people and multiple agents.
+editing: this repository is worked on by people and multiple agents. Before
+adding backend or state-changing logic, also review the relevant current
+migrations and agent contracts; do not repeat a superseded restriction.
 
 For an admin CRUD phase, also read `agent/admin-space-brief.md`, the applicable
 area agent below, `security-agent.md`, `design-agent.md`,
@@ -18,6 +20,22 @@ area agent below, `security-agent.md`, `design-agent.md`,
 - Preserve FR, AR, EN, Arabic RTL, mobile-first layouts, and dark/light mode.
 - Do not touch Supabase tables, migrations, RLS, RPCs, wallet, ledger, payment,
   credit-debit, or role logic unless the request explicitly authorises it.
+- The **manual recharge workflow** (`recharge_requests` plus its user-creation
+  and admin approval/rejection RPCs) is approved by the project owner;
+  earlier guidance forbidding that table is superseded. A user creates one
+  pending request from `/recharge` using a fixed server-authorised offer, then
+  receives the WhatsApp handoff. Its invariants are not negotiable: no
+  service-role key in the frontend, no wallet update or `credit_ledger` insert
+  from React, no arbitrary credit amount input, approval reads the stored
+  pending request's own values, and only an active `admin`/`super_admin` may
+  approve or reject. A payment gateway remains out of scope. See
+  [`agent/credits-agent.md`](./agent/credits-agent.md).
+- Admin establishment creation is also an approved, RPC-only workflow. The
+  secure `admin_create_establishment` RPC creates an approved, verified
+  establishment and active main branch; it may resolve a missing-service
+  request. Normal users never create establishments directly. See
+  [`agent/services-agent.md`](./agent/services-agent.md) and
+  [`agent/requests-agent.md`](./agent/requests-agent.md).
 - Never expose, print, log, or commit a service-role key or any secret.
 - Never delete files unless explicitly instructed.
 - Keep components, hooks, and data access in their established layers; do not

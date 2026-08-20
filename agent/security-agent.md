@@ -4,8 +4,9 @@
 
 Keep Lewad's frontend safe by construction: no leaked secrets, no privileged
 keys in the browser, no client-side trust for anything that costs money or grants
-access. **At this stage this agent documents and audits — it does not create
-security infrastructure.**
+access. **This agent documents and audits.** It does not invent database
+authority: server-side security infrastructure is written only where the project
+owner has explicitly approved it, and the approved scope is recorded below.
 
 ## When to use this agent
 
@@ -28,6 +29,9 @@ security infrastructure.**
 - DB1 (`profiles`, `wallets`, and `credit_ledger`) and its RLS policies are the
   current data-security baseline. Their live configuration must still be
   reviewed in Supabase before production release.
+- `recharge_requests` and its admin approval/rejection functions are the
+  owner-approved manual recharge workflow. See
+  [`credits-agent.md`](./credits-agent.md) for the invariants they must keep.
 
 ### Historical context only
 
@@ -80,15 +84,17 @@ target is normalized to the current origin before navigation.
 - RLS is the real boundary: user-owned rows must always be constrained to
   `auth.uid()` and privileged admin functions must not be callable by normal
   users.
-- When adding `/admin`, `/wallet`, `/requests`, `/search`, `/services/:id`, or
-  `/add-business`, protect it only when the route exists and pair the UI guard
-  with the appropriate RLS or server-side authorization.
+- `/admin` is wrapped in `RequireAuthentication` and its lazy admin route also
+  applies `RequireAdmin`. These are UX controls only; the admin data and RPCs
+  still require their server-side active-role and RLS checks. Any new privileged
+  route must follow the same pairing of UI guard and server authority.
 
 ## DB1 and RLS awareness
 
 DB1 (`profiles`, `wallets`, and `credit_ledger`) exists with RLS. Do not create
-or alter policies, tables, or schema from this agent. The production policy set
-must continue to enforce the following:
+or alter policies, tables, or schema unless the request carries explicit owner
+approval — the manual recharge workflow is the one such approval on record. The
+production policy set must continue to enforce the following:
 
 - Every user-owned table has RLS enabled and only exposes rows belonging to the
   requesting user (`auth.uid() = user_id`, or `auth.uid() = id` for profiles).
@@ -97,7 +103,19 @@ must continue to enforce the following:
   `role` and `status` are read-only in the UI.
 - The frontend does not update `wallets.balance` or insert into
   `credit_ledger`. Balance, payment, approval, and admin adjustments must be
-  enforced by trusted database/server code, not by browser state.
+  enforced by trusted database/server code, not by browser state. This holds
+  for the recharge workflow too: the user UI calls the creation RPC with a
+  fixed offer code only, while the admin UI calls approval/rejection with a
+  request id (and an optional rejection note), never a credit amount or price.
+- The creation RPC resolves user-created recharge values to the fixed,
+  server-authorised offers. There is no direct client insert path for
+  `recharge_requests`, and no client `UPDATE` or `DELETE` policy.
+- Recharge approval and rejection functions must be `security definer`, gated on
+  an active `admin`/`super_admin` check inside the function, and revoked from
+  `public` and `anon`. `recharge_requests` gets no client `UPDATE` or `DELETE`
+  policy, so a status change cannot be separated from the wallet write. Approval
+  locks the pending recharge request and its wallet row before changing either,
+  so the same request cannot credit twice.
 - Public listing policies must expose only intentionally public business data;
   approval and administrative fields need a separate privileged path.
 
@@ -184,9 +202,29 @@ fetch arbitrary user-controlled targets.
 
 ## Credit and payment safety
 
-Recharge selection and the WhatsApp handoff are informational UI only. They do
-not update a wallet, insert a payment, or insert a ledger entry. Preserve that
-property until a server-validated payment and crediting flow is designed.
+`/recharge` creates a pending recharge request through the fixed-offer creation
+RPC before opening WhatsApp. The user action does not update a wallet, take a
+payment, or insert a ledger entry.
+
+Crediting a wallet is approved through exactly one path: an active admin
+approves a stored **pending** `recharge_requests` row, and the database function
+credits the wallet, writes the `recharge_credit` ledger row, and marks the
+request in a single transaction. Preserve these properties:
+
+- No arbitrary credit amount input anywhere in the UI. Points come from the
+  stored request, never from a field a team member types into.
+- The user client sends a fixed offer code only; the admin client sends a
+  request id (and an optional rejection note). A client-supplied amount, price,
+  or balance is never authoritative.
+- Normal users cannot approve or reject. The role check lives in the function.
+- The same request cannot be approved twice — the recharge request row and its
+  wallet row are locked and its `pending` status is re-checked before any
+  credit.
+- A rejection touches neither the wallet nor the ledger.
+
+**Payment validation is still out of scope.** There is no payment gateway, no
+card flow, and no automated confirmation that money arrived. Approval records a
+human decision made outside the product.
 
 ## Production decisions requiring a human owner
 
@@ -196,14 +234,21 @@ property until a server-validated payment and crediting flow is designed.
 - Select a future OTP/SMS provider and its anti-abuse controls.
 - Restrict production Supabase Auth redirect URLs.
 - Define avatar Storage bucket access and upload policy before enabling uploads.
-- Define admin audit logging and the payment-validation/crediting flow.
+- Define admin audit logging for approvals and role changes.
+- Define payment validation — how the team confirms money actually arrived
+  before approving a recharge request. The crediting flow itself is settled;
+  its payment evidence is not.
 
 ## Forbidden
 
 - Committing, printing or logging any key, token or session.
 - Putting a service role key anywhere in `src/`.
-- Creating tables, RLS policies, migrations or Supabase configuration.
-- Implementing payment, wallet or credit mutation logic.
+- Creating tables, RLS policies, migrations or Supabase configuration without
+  explicit owner approval for that specific change.
+- Implementing a payment gateway or any automated payment confirmation.
+- Mutating a wallet or the ledger from React, under any circumstance.
+- Offering an arbitrary credit amount input, or crediting a wallet by any route
+  other than approving a stored pending recharge request.
 - Trusting a client-side value for authorisation, pricing or balance.
 - Disabling TypeScript strictness or silencing errors to make auth compile.
 - Deleting existing auth code.
@@ -218,6 +263,13 @@ property until a server-validated payment and crediting flow is designed.
 - [ ] Any new protected view has a documented server-side counterpart, or is
       explicitly marked as cosmetic-only protection.
 - [ ] No credit, price or permission value is decided in the browser.
+- [ ] User recharge creation accepts only a fixed offer code, and no UI offers
+      a free-form credit amount; crediting goes through approval of a stored
+      pending recharge request.
+- [ ] Approval and rejection functions check for an active admin inside the
+      function and are revoked from `public` and `anon`.
+- [ ] Recharge creation and approval lock the appropriate rows, and a request
+      cannot be approved twice.
 
 ## How to report
 

@@ -1,7 +1,7 @@
 import { useI18n } from '../../i18n'
 import { card } from '../../lib/ui'
 import { Drawer } from '../shell/Drawer'
-import { CreditCard, Home, Mail, RefreshCw, Search, Settings, User, Wallet } from 'lucide-react'
+import { CreditCard, Home, Mail, RefreshCw, Search, Settings, ShieldCheck, User, Wallet } from 'lucide-react'
 import type { AdminTabId } from './adminCopy'
 import { adminCopy } from './adminCopy'
 import type { AdminIcon } from './AdminUi'
@@ -14,13 +14,14 @@ type AdminSidebarProps = {
   onMobileOpenChange: (open: boolean) => void
   onSelectTab: (tab: AdminTabId) => void
   onSelectRecharge: () => void
+  superAdminHref?: string
 }
 
-type SidebarLinksProps = Pick<AdminSidebarProps, 'tabs' | 'activeTab' | 'collapsed' | 'onSelectTab' | 'onSelectRecharge'> & {
+type SidebarLinksProps = Pick<AdminSidebarProps, 'tabs' | 'activeTab' | 'collapsed' | 'onSelectTab' | 'onSelectRecharge' | 'superAdminHref'> & {
   onNavigate?: () => void
 }
 
-function SidebarLinks({ tabs, activeTab, collapsed, onSelectTab, onSelectRecharge, onNavigate }: SidebarLinksProps) {
+function SidebarLinks({ tabs, activeTab, collapsed, onSelectTab, onSelectRecharge, superAdminHref, onNavigate }: SidebarLinksProps) {
   const { locale } = useI18n()
   const copy = adminCopy[locale].sidebar
   const userLinks = [
@@ -45,6 +46,7 @@ function SidebarLinks({ tabs, activeTab, collapsed, onSelectTab, onSelectRecharg
             const label = adminCopy[locale].tabs[tab.id]
             return <li key={tab.id}><button type="button" aria-current={active ? 'page' : undefined} aria-label={collapsed ? label : undefined} title={collapsed ? label : undefined} onClick={() => { onSelectTab(tab.id); onNavigate?.() }} className={`${itemClass} ${active ? 'bg-brand-soft font-semibold text-brand-deep' : 'font-semibold text-ink-soft hover:bg-surface-2 hover:text-ink'}`}><TabIcon size={17} aria-hidden />{!collapsed && <span>{label}</span>}</button></li>
           })}
+          {superAdminHref && <li><a href={superAdminHref} aria-label={collapsed ? copy.superAdminSpace : undefined} title={collapsed ? copy.superAdminSpace : undefined} onClick={onNavigate} className={`${itemClass} border border-brand/30 bg-brand-soft font-semibold text-brand-deep hover:bg-brand/20`}><ShieldCheck size={17} aria-hidden />{!collapsed && <span>{copy.superAdminSpace}</span>}</a></li>}
           <li><button type="button" aria-label={collapsed ? copy.recharges : undefined} title={collapsed ? copy.recharges : undefined} onClick={() => { onSelectRecharge(); onNavigate?.() }} className={`${itemClass} font-semibold text-ink-soft hover:bg-surface-2 hover:text-ink`}><CreditCard size={17} aria-hidden />{!collapsed && <span>{copy.recharges}</span>}</button></li>
         </ul>
       </section>

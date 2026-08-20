@@ -8,6 +8,7 @@ import { useTheme } from '../lib/theme'
 import { contact as contactDetails } from '../lib/content'
 import { formatCurrency, formatDate, formatNumber, formatSignedPoints, initialOf, profileDisplayName } from '../lib/format'
 import { isAdminRole } from '../lib/routeAuth'
+import { createRechargeRequest, type RechargeOfferCode, type RechargeRequest } from '../lib/recharge'
 import {
   appPad,
   appWrap,
@@ -30,9 +31,6 @@ import { PaginationControls } from './ui/PaginationControls'
 
 export type PrivatePageName = 'profile' | 'credits' | 'settings' | 'recharge'
 
-/** Tarif manuel de la V1 : 1 point = 20 MRO. Aucun paiement n'est déclenché ici. */
-const pricePerPoint = 20
-
 const copy = {
   fr: {
     account: 'Mon compte', pointsUnit: 'points', pointsUnavailable: 'Solde indisponible', retry: 'Réessayer', readOnly: 'Lecture seule', close: 'Fermer',
@@ -50,12 +48,14 @@ const copy = {
     creditHistory: 'Historique', historySubtitle: 'Tous vos mouvements de points, du plus récent au plus ancien.', loadingLedger: 'Chargement de l’historique…', ledgerUnavailable: 'L’historique est momentanément indisponible.', noCreditMovements: 'Aucun mouvement pour le moment', noCreditMovementsText: 'Vos bonus, recharges et recherches apparaîtront ici.', movements: 'mouvements',
     welcomeBonus: 'Bonus de bienvenue', searchDebit: 'Recherche', rechargeCredit: 'Recharge', adminAdjustment: 'Ajustement', referralBonus: 'Partage Lewad', movement: 'Mouvement',
     showAllMovements: 'Voir tout l’historique', showFewerMovements: 'Réduire l’historique', pagination: { previous: 'Précédent', next: 'Suivant', page: 'Page', of: 'sur', items: 'mouvements' },
-    recharge: 'Recharger', rechargeSubtitle: 'Choisissez une offre fixe ou saisissez le nombre de points souhaité.', fixedOffers: 'Offres de recharge', popular: 'Le plus choisi',
+    recharge: 'Recharger', rechargeSubtitle: 'Choisissez une offre fixe pour préparer votre demande de recharge.', fixedOffers: 'Offres de recharge', popular: 'Le plus choisi',
     offerTest: 'Pour tester Lewad et faire quelques recherches.', offerRegular: 'Pour une utilisation régulière.', offerAdvanced: 'Pour une utilisation avancée.', chooseOffer: 'Choisir cette offre',
     customRecharge: 'Recharge personnalisée', pointsNumber: 'Nombre de points', totalPrice: 'Prix total', perPoint: '1 point = {price}', minimumPoints: 'Minimum : 1 point', continue: 'Continuer',
     rechargeModalTitle: 'Finaliser votre recharge', rechargeModalText: 'Pour finaliser l’achat de vos points, contactez l’équipe Lewad sur WhatsApp. Nous vous guiderons pour le paiement et l’activation.', selectedOffer: 'Offre sélectionnée', contactWhatsApp: 'Contacter sur WhatsApp', closeRechargeModal: 'Fermer la fenêtre de recharge', whatsappMessagePrefix: 'Bonjour Lewad, je veux recharger mon compte avec', whatsappMessageFor: 'pour',
     paymentNotice: 'Le paiement en ligne n’est pas encore activé : la recharge se fait avec l’équipe Lewad.',
     activationNotice: 'Les points seront activés après validation de l’équipe Lewad.',
+    rechargeRequestCreating: 'Création de votre demande de recharge…', rechargeRequestCreated: 'Demande de recharge créée.', rechargeRequestDuplicate: 'Vous avez déjà une demande de recharge en attente.', rechargeRequestError: 'Impossible de créer la demande de recharge.', rechargeRequestContinue: 'Envoyez maintenant le message WhatsApp pour confirmer le paiement.',
+    whatsappFallback: 'WhatsApp ne s’est pas ouvert automatiquement. Utilisez le bouton ci-dessous.', whatsappMessageIntro: 'Bonjour Lewad, je souhaite recharger mon compte.', whatsappUserName: 'Nom', whatsappUserEmail: 'E-mail', whatsappUserPhone: 'Téléphone', whatsappOffer: 'Offre', whatsappPoints: 'Points demandés', whatsappAmount: 'Montant', whatsappRequestId: 'ID demande', whatsappThanks: 'Merci.',
     settings: 'Paramètres', settingsSubtitle: 'Réglez l’apparence de Lewad et retrouvez les options de votre compte.', appearance: 'Apparence et langue', appearanceText: 'Le choix est conservé sur cet appareil.', language: 'Langue', theme: 'Thème', light: 'Clair', dark: 'Sombre',
     accountSection: 'Compte', accountText: 'La gestion complète du compte arrive prochainement.', security: 'Sécurité', securityText: 'Les réglages de sécurité seront ajoutés avec le profil complet.', notifications: 'Notifications', notificationsText: 'Les préférences de notification seront disponibles prochainement.',
     contact: 'Contact', contactTitle: 'Parlons de votre besoin.', contactText: 'L’équipe Wasla Soft accompagne les utilisateurs et les établissements Lewad.', reason: 'Motif', reasonOptions: ['Ajouter un établissement', 'Demander un service', 'Support compte', 'Autre'], message: 'Votre message', messagePlaceholder: 'Décrivez votre besoin en quelques lignes…', send: 'Préparer mon message', messagePrepared: 'Votre message est préparé. L’envoi réel sera activé dans une prochaine étape.', contactDetails: 'Nous joindre',
@@ -76,12 +76,14 @@ const copy = {
     creditHistory: 'السجل', historySubtitle: 'كل حركات نقاطك، من الأحدث إلى الأقدم.', loadingLedger: 'جارٍ تحميل السجل…', ledgerUnavailable: 'السجل غير متاح مؤقتًا.', noCreditMovements: 'لا توجد حركات حتى الآن', noCreditMovementsText: 'ستظهر هنا مكافآتك وعمليات الشحن وعمليات البحث.', movements: 'حركات',
     welcomeBonus: 'مكافأة الترحيب', searchDebit: 'بحث', rechargeCredit: 'شحن', adminAdjustment: 'تعديل', referralBonus: 'مشاركة لواد', movement: 'حركة',
     showAllMovements: 'عرض السجل كاملًا', showFewerMovements: 'تصغير السجل', pagination: { previous: 'السابق', next: 'التالي', page: 'الصفحة', of: 'من', items: 'حركة' },
-    recharge: 'شحن', rechargeSubtitle: 'اختر عرضًا ثابتًا أو أدخل عدد النقاط الذي تريده.', fixedOffers: 'عروض الشحن', popular: 'الأكثر اختيارًا',
+    recharge: 'شحن', rechargeSubtitle: 'اختر عرضًا ثابتًا لإعداد طلب إعادة الشحن.', fixedOffers: 'عروض الشحن', popular: 'الأكثر اختيارًا',
     offerTest: 'لتجربة لواد وإجراء بعض عمليات البحث.', offerRegular: 'لاستخدام منتظم.', offerAdvanced: 'لاستخدام متقدم.', chooseOffer: 'اختر هذا العرض',
     customRecharge: 'شحن مخصص', pointsNumber: 'عدد النقاط', totalPrice: 'السعر الإجمالي', perPoint: 'نقطة واحدة = {price}', minimumPoints: 'الحد الأدنى: نقطة واحدة', continue: 'متابعة',
     rechargeModalTitle: 'إتمام شحن النقاط', rechargeModalText: 'لإتمام شراء نقاطك، تواصل مع فريق لواد عبر واتساب. سنرشدك إلى الدفع والتفعيل.', selectedOffer: 'العرض المختار', contactWhatsApp: 'التواصل عبر واتساب', closeRechargeModal: 'إغلاق نافذة الشحن', whatsappMessagePrefix: 'مرحبًا لواد، أريد شحن حسابي بـ', whatsappMessageFor: 'مقابل',
     paymentNotice: 'الدفع الإلكتروني غير مفعّل بعد: يتم الشحن مع فريق لواد.',
     activationNotice: 'سيتم تفعيل النقاط بعد مصادقة فريق لواد.',
+    rechargeRequestCreating: 'جارٍ إنشاء طلب إعادة الشحن…', rechargeRequestCreated: 'تم إنشاء طلب إعادة الشحن.', rechargeRequestDuplicate: 'لديك بالفعل طلب إعادة شحن معلق.', rechargeRequestError: 'تعذر إنشاء طلب إعادة الشحن.', rechargeRequestContinue: 'أرسل الآن رسالة واتساب لتأكيد الدفع.',
+    whatsappFallback: 'لم يُفتح واتساب تلقائيًا. استخدم الزر أدناه.', whatsappMessageIntro: 'مرحبًا لواد، أرغب في شحن حسابي.', whatsappUserName: 'الاسم', whatsappUserEmail: 'البريد الإلكتروني', whatsappUserPhone: 'الهاتف', whatsappOffer: 'العرض', whatsappPoints: 'النقاط المطلوبة', whatsappAmount: 'المبلغ', whatsappRequestId: 'معرّف الطلب', whatsappThanks: 'شكرًا.',
     settings: 'الإعدادات', settingsSubtitle: 'اضبط مظهر لواد واطّلع على خيارات حسابك.', appearance: 'المظهر واللغة', appearanceText: 'يُحفظ اختيارك على هذا الجهاز.', language: 'اللغة', theme: 'السمة', light: 'فاتح', dark: 'داكن',
     accountSection: 'الحساب', accountText: 'ستتوفر إدارة الحساب الكاملة قريبًا.', security: 'الأمان', securityText: 'ستضاف إعدادات الأمان مع الملف الشخصي الكامل.', notifications: 'الإشعارات', notificationsText: 'ستتوفر تفضيلات الإشعارات قريبًا.',
     contact: 'التواصل', contactTitle: 'لنتحدث عن حاجتك.', contactText: 'فريق Wasla Soft يرافق مستخدمي ومؤسسات لواد.', reason: 'السبب', reasonOptions: ['إضافة مؤسسة', 'طلب خدمة', 'دعم الحساب', 'أخرى'], message: 'رسالتك', messagePlaceholder: 'صف حاجتك في بضعة أسطر…', send: 'تجهيز رسالتي', messagePrepared: 'تم تجهيز رسالتك. سيتم تفعيل الإرسال الحقيقي في مرحلة قادمة.', contactDetails: 'كيف تصل إلينا',
@@ -102,12 +104,14 @@ const copy = {
     creditHistory: 'History', historySubtitle: 'Every points movement, newest first.', loadingLedger: 'Loading history…', ledgerUnavailable: 'History is temporarily unavailable.', noCreditMovements: 'No movements yet', noCreditMovementsText: 'Your bonuses, recharges and searches will appear here.', movements: 'movements',
     welcomeBonus: 'Welcome bonus', searchDebit: 'Search', rechargeCredit: 'Recharge', adminAdjustment: 'Adjustment', referralBonus: 'Share Lewad', movement: 'Movement',
     showAllMovements: 'Show full history', showFewerMovements: 'Show less', pagination: { previous: 'Previous', next: 'Next', page: 'Page', of: 'of', items: 'movements' },
-    recharge: 'Recharge', rechargeSubtitle: 'Pick a fixed offer or enter the number of points you want.', fixedOffers: 'Recharge offers', popular: 'Most chosen',
+    recharge: 'Recharge', rechargeSubtitle: 'Choose a fixed offer to prepare your recharge request.', fixedOffers: 'Recharge offers', popular: 'Most chosen',
     offerTest: 'To try Lewad and run a few searches.', offerRegular: 'For regular use.', offerAdvanced: 'For advanced use.', chooseOffer: 'Choose this offer',
     customRecharge: 'Custom recharge', pointsNumber: 'Number of points', totalPrice: 'Total price', perPoint: '1 point = {price}', minimumPoints: 'Minimum: 1 point', continue: 'Continue',
     rechargeModalTitle: 'Complete your recharge', rechargeModalText: 'To complete your points purchase, contact the Lewad team on WhatsApp. We will guide you through payment and activation.', selectedOffer: 'Selected offer', contactWhatsApp: 'Contact on WhatsApp', closeRechargeModal: 'Close recharge dialog', whatsappMessagePrefix: 'Hello Lewad, I want to recharge my account with', whatsappMessageFor: 'for',
     paymentNotice: 'Online payment is not enabled yet: recharges are handled with the Lewad team.',
     activationNotice: 'Points will be activated after the Lewad team validates your recharge.',
+    rechargeRequestCreating: 'Creating your recharge request…', rechargeRequestCreated: 'Recharge request created.', rechargeRequestDuplicate: 'You already have a pending recharge request.', rechargeRequestError: 'Could not create recharge request.', rechargeRequestContinue: 'Now send the WhatsApp message to confirm payment.',
+    whatsappFallback: 'WhatsApp did not open automatically. Use the button below.', whatsappMessageIntro: 'Hello Lewad, I would like to recharge my account.', whatsappUserName: 'Name', whatsappUserEmail: 'Email', whatsappUserPhone: 'Phone', whatsappOffer: 'Offer', whatsappPoints: 'Requested points', whatsappAmount: 'Amount', whatsappRequestId: 'Request ID', whatsappThanks: 'Thank you.',
     settings: 'Settings', settingsSubtitle: 'Adjust how Lewad looks and find your account options.', appearance: 'Appearance and language', appearanceText: 'Your choice is kept on this device.', language: 'Language', theme: 'Theme', light: 'Light', dark: 'Dark',
     accountSection: 'Account', accountText: 'Full account management is coming soon.', security: 'Security', securityText: 'Security settings will be added with the complete profile.', notifications: 'Notifications', notificationsText: 'Notification preferences will be available soon.',
     contact: 'Contact', contactTitle: 'Let’s talk about what you need.', contactText: 'The Wasla Soft team supports Lewad users and businesses.', reason: 'Reason', reasonOptions: ['Add a business', 'Request a service', 'Account support', 'Other'], message: 'Your message', messagePlaceholder: 'Describe what you need in a few lines…', send: 'Prepare my message', messagePrepared: 'Your message is prepared. Real sending will be enabled in a future step.', contactDetails: 'Reach us',
@@ -771,26 +775,89 @@ function LedgerRow({ entry, text }: { entry: Db1CreditLedgerEntry; text: Copy })
 
 /* ---------------------------------------------------------------- recharge */
 
-type RechargeSelection = { kind: 'fixed' | 'custom'; points: number; price: number }
+type RechargeOffer = {
+  code: RechargeOfferCode
+  points: number
+  amountMro: number
+  description: string
+  icon: IconName
+  featured: boolean
+}
+
+type RechargeNotice = { tone: 'success' | 'error' | 'info'; text: string } | null
+
+type RechargeRequester = { name: string; email: string | null; phone: string | null }
+
+function rechargeWhatsAppUrl({
+  request,
+  requester,
+  text,
+  locale,
+}: {
+  request: RechargeRequest
+  requester: RechargeRequester
+  text: Copy
+  locale: Locale
+}) {
+  const details = [
+    text.whatsappMessageIntro,
+    '',
+    `${text.whatsappUserName}: ${requester.name}`,
+    requester.email ? `${text.whatsappUserEmail}: ${requester.email}` : null,
+    requester.phone ? `${text.whatsappUserPhone}: ${requester.phone}` : null,
+    `${text.whatsappOffer}: ${request.offerLabel}`,
+    `${text.whatsappPoints}: ${formatNumber(request.requestedPoints, locale)} ${text.pointsUnit}`,
+    `${text.whatsappAmount}: ${formatCurrency(request.amountMro, locale)}`,
+    `${text.whatsappRequestId}: ${request.id}`,
+    '',
+    text.whatsappThanks,
+  ].filter((line): line is string => Boolean(line))
+
+  return `${contactDetails.whatsappHref}?text=${encodeURIComponent(details.join('\n'))}`
+}
 
 function RechargePage({ text }: { text: Copy }) {
   const { locale } = useI18n()
-  const [rawPoints, setRawPoints] = useState('1')
-  const [selection, setSelection] = useState<RechargeSelection | null>(null)
-  const points = Math.max(1, Number.parseInt(rawPoints, 10) || 1)
+  const { user, profile, authFullName } = useAccount()
+  const [selection, setSelection] = useState<RechargeRequest | null>(null)
+  const [creatingOffer, setCreatingOffer] = useState<RechargeOfferCode | null>(null)
+  const [notice, setNotice] = useState<RechargeNotice>(null)
+  const [whatsAppOpened, setWhatsAppOpened] = useState(true)
   const closeModal = useCallback(() => setSelection(null), [])
-  const perPointLabel = text.perPoint.replace('{price}', formatCurrency(pricePerPoint, locale))
 
-  const offers: { points: number; price: number; description: string; icon: IconName; featured: boolean }[] = [
-    { points: 10, price: 50, description: text.offerTest, icon: 'sparkle', featured: false },
-    { points: 30, price: 100, description: text.offerRegular, icon: 'sparkle', featured: true },
-    { points: 100, price: 500, description: text.offerAdvanced, icon: 'wallet', featured: false },
+  const offers: RechargeOffer[] = [
+    { code: 'starter_10', points: 10, amountMro: 50, description: text.offerTest, icon: 'sparkle', featured: false },
+    { code: 'regular_30', points: 30, amountMro: 100, description: text.offerRegular, icon: 'sparkle', featured: true },
+    { code: 'advanced_100', points: 100, amountMro: 500, description: text.offerAdvanced, icon: 'wallet', featured: false },
   ]
 
-  const updatePoints = (input: string) => {
-    const digits = input.replace(/[^0-9]/g, '').slice(0, 6)
-    const numericValue = Number.parseInt(digits, 10)
-    setRawPoints(String(Number.isNaN(numericValue) || numericValue < 1 ? 1 : numericValue))
+  const requester: RechargeRequester = {
+    name: profileDisplayName(profile, locale, authFullName) ?? user?.email ?? text.account,
+    email: user?.email ?? null,
+    phone: profile?.phone ?? null,
+  }
+
+  const startRechargeRequest = async (offer: RechargeOffer) => {
+    if (creatingOffer) return
+
+    setCreatingOffer(offer.code)
+    setNotice({ tone: 'info', text: text.rechargeRequestCreating })
+    const result = await createRechargeRequest(offer.code)
+    setCreatingOffer(null)
+
+    if (!result.ok || !result.request) {
+      setNotice({ tone: 'error', text: text.rechargeRequestError })
+      return
+    }
+
+    const whatsAppUrl = rechargeWhatsAppUrl({ request: result.request, requester, text, locale })
+    const opened = window.open(whatsAppUrl, '_blank', 'noopener,noreferrer')
+    setWhatsAppOpened(Boolean(opened))
+    setSelection(result.request)
+    setNotice({
+      tone: 'success',
+      text: `${result.status === 'duplicate' ? text.rechargeRequestDuplicate : text.rechargeRequestCreated} ${text.rechargeRequestContinue}`,
+    })
   }
 
   return (
@@ -800,6 +867,8 @@ function RechargePage({ text }: { text: Copy }) {
       <InlineAlert tone="info" className="mt-6" title={text.activationNotice}>
         {text.paymentNotice}
       </InlineAlert>
+
+      {notice && <InlineAlert tone={notice.tone} className="mt-4">{notice.text}</InlineAlert>}
 
       <section className="mt-8" aria-labelledby="recharge-offers">
         <h2 id="recharge-offers" className="text-lg font-bold tracking-tight">
@@ -825,15 +894,17 @@ function RechargePage({ text }: { text: Copy }) {
                 <span className="text-base font-semibold text-muted">{text.pointsUnit}</span>
               </p>
               <p className="mt-1.5 text-base font-bold text-brand-deep dark:text-brand">
-                {formatCurrency(offer.price, locale)}
+                {formatCurrency(offer.amountMro, locale)}
               </p>
               <p className="mt-3 flex-1 text-sm leading-6 text-muted">{offer.description}</p>
               <button
                 type="button"
                 className={`${offer.featured ? btnPrimary : btnGhost} mt-6 w-full`}
-                onClick={() => setSelection({ kind: 'fixed', points: offer.points, price: offer.price })}
+                disabled={creatingOffer !== null}
+                aria-busy={creatingOffer === offer.code}
+                onClick={() => void startRechargeRequest(offer)}
               >
-                {text.chooseOffer}
+                {creatingOffer === offer.code ? text.rechargeRequestCreating : text.chooseOffer}
                 <span className="rtl:rotate-180">
                   <Icon name="arrow" size={17} />
                 </span>
@@ -843,66 +914,28 @@ function RechargePage({ text }: { text: Copy }) {
         </div>
       </section>
 
-      <section className={`${card} mt-6 p-5 sm:p-7`} aria-labelledby="custom-recharge">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 id="custom-recharge" className="text-lg font-bold tracking-tight">
-              {text.customRecharge}
-            </h2>
-            <p className="mt-1 text-sm text-muted">{perPointLabel}</p>
-          </div>
-          <span className={`${pill} bg-brand-soft text-brand-deep`}>{text.minimumPoints}</span>
-        </div>
-
-        <div className="mt-6 grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start lg:gap-6">
-          <div>
-            <label htmlFor="custom-points" className={fieldLabel}>
-              {text.pointsNumber}
-            </label>
-            <input
-              id="custom-points"
-              className={`${field} ltr-isolate text-base font-semibold`}
-              value={rawPoints}
-              onChange={(event) => updatePoints(event.target.value)}
-              inputMode="numeric"
-              pattern="[0-9]*"
-              aria-describedby="custom-points-hint"
-            />
-            <p id="custom-points-hint" className={fieldHint}>
-              {text.minimumPoints} · {perPointLabel}
-            </p>
-          </div>
-
-          <div className={`${cardMuted} px-5 py-4 sm:min-w-52`} aria-live="polite">
-            <p className="text-xs font-semibold text-muted">{text.totalPrice}</p>
-            <p className="tabular mt-1 text-2xl font-bold text-ink">{formatCurrency(points * pricePerPoint, locale)}</p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          className={`${btnPrimary} mt-6 w-full sm:w-auto`}
-          onClick={() => setSelection({ kind: 'custom', points, price: points * pricePerPoint })}
-        >
-          {text.continue}
-          <span className="rtl:rotate-180">
-            <Icon name="arrow" size={17} />
-          </span>
-        </button>
-      </section>
-
-      <RechargeWhatsAppModal selection={selection} text={text} onClose={closeModal} />
+      <RechargeWhatsAppModal
+        selection={selection}
+        requester={requester}
+        text={text}
+        whatsAppOpened={whatsAppOpened}
+        onClose={closeModal}
+      />
     </>
   )
 }
 
 function RechargeWhatsAppModal({
   selection,
+  requester,
   text,
+  whatsAppOpened,
   onClose,
 }: {
-  selection: RechargeSelection | null
+  selection: RechargeRequest | null
+  requester: RechargeRequester
   text: Copy
+  whatsAppOpened: boolean
   onClose: () => void
 }) {
   const { locale } = useI18n()
@@ -930,11 +963,9 @@ function RechargeWhatsAppModal({
 
   if (!selection) return null
 
-  const selectionTitle = selection.kind === 'fixed' ? text.selectedOffer : text.customRecharge
-  const pointsLabel = `${formatNumber(selection.points, locale)} ${text.pointsUnit}`
-  const priceLabel = formatCurrency(selection.price, locale)
-  const whatsappText = `${text.whatsappMessagePrefix} ${pointsLabel} ${text.whatsappMessageFor} ${priceLabel}.`
-  const whatsappUrl = `${contactDetails.whatsappHref}?text=${encodeURIComponent(whatsappText)}`
+  const pointsLabel = `${formatNumber(selection.requestedPoints, locale)} ${text.pointsUnit}`
+  const priceLabel = formatCurrency(selection.amountMro, locale)
+  const whatsappUrl = rechargeWhatsAppUrl({ request: selection, requester, text, locale })
 
   return (
     <div
@@ -967,7 +998,7 @@ function RechargeWhatsAppModal({
 
         <div className={`${cardMuted} mt-5 flex items-center justify-between gap-3 p-4`}>
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-muted">{selectionTitle}</p>
+            <p className="text-xs font-semibold text-muted">{selection.offerLabel}</p>
             <p className="tabular mt-1 text-base font-bold text-ink">{pointsLabel}</p>
           </div>
           <p className="tabular shrink-0 text-base font-bold text-brand-deep dark:text-brand">{priceLabel}</p>
@@ -979,6 +1010,8 @@ function RechargeWhatsAppModal({
           </span>
           {text.activationNotice}
         </p>
+
+        {!whatsAppOpened && <InlineAlert tone="info" className="mt-4">{text.whatsappFallback}</InlineAlert>}
 
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <button type="button" className={btnGhost} onClick={onClose}>

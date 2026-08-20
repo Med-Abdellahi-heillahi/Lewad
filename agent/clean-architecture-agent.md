@@ -2,10 +2,11 @@
 
 ## Mission
 
-Keep the frontend's layers separate while DB1 data is integrated: profiles,
-wallets, and credit-ledger reads must plug into existing seams without forcing a
-rewrite of the UI. Payments, credit mutation, business submission, and admin
-validation remain future server-side concerns.
+Keep the frontend's layers separate while Supabase data is integrated: profiles,
+wallets, ledger, search, requests, and admin reads must plug into existing seams
+without forcing a rewrite of the UI. Approved server-side RPC workflows are
+part of the current architecture; payment, business submission, arbitrary credit
+creation, and unreviewed admin validation are not.
 
 ## When to use this agent
 
@@ -30,6 +31,11 @@ src/
     supabaseClient.ts   the single Supabase client
     auth.ts             auth calls, thin wrapper over supabase.auth
     db1.ts              typed DB1 profile, wallet and ledger access
+    db2.ts              typed categories and establishments access
+    db3a.ts             secure search-with-credit RPC wrapper
+    db3b.ts             missing-service request access
+    recharge.ts         fixed-offer recharge-request RPC wrapper
+    admin.ts             typed admin reads and reviewed admin RPC wrappers
     format.ts           locale-aware display helpers for DB1 values
     theme.tsx           ThemeProvider / useTheme
     content.ts          non-translated content, section ids, demo fixtures
@@ -81,11 +87,11 @@ signed-in user later.
 
 ## The demo/real seam — the important one
 
-`/app` may retain demo search behavior. `AppDemo.tsx` contains the Bankily
-fixture, nearby-agency data, and fake search behavior; `Demo.tsx` on the
-landing is a scripted 4-step carousel. In contrast, DB1 profile, wallet, and
-credit-ledger data are real application data accessed through `db1.ts` and its
-hooks.
+`/app` uses DB3A's secure search-with-credit RPC for real search results. Its
+Bankily fixtures remain only for suggestions or UI fallback/demo context;
+`Demo.tsx` on the landing is a scripted 4-step carousel. DB1 profile, wallet,
+and credit-ledger data are real application data accessed through `db1.ts` and
+its hooks.
 
 The risk is that demo values quietly become the shape the real feature is built
 against. To avoid it:
@@ -99,16 +105,28 @@ against. To avoid it:
 - A component that will eventually show real data should take that data as
   **props** now, so swapping the source does not touch the markup.
 
-## DB1 boundaries and future Supabase work
+## Supabase boundaries and approved workflows
 
 - Components never import Supabase directly or write to the database.
 - `profiles` updates are restricted to `full_name`, `full_name_ar`, `phone`, and
   `avatar_url`; `role` and `status` remain read-only.
 - Wallets and credit ledgers are readable from the frontend only. No component
-  or lib function may update `wallets.balance` or insert `credit_ledger` rows.
+  or client-side `lib/` function may update `wallets.balance` or insert
+  `credit_ledger` rows directly.
 - Money and permission logic never runs in the browser. Balances, prices and
   approval status are decided server-side. The client displays, it does not
   decide. See `security-agent.md`.
+- Approved state-changing flows stay isolated in typed `lib/` RPC wrappers:
+  DB3A secure search, DB3B missing-service creation, fixed-offer recharge
+  request creation, and active-admin RPCs for recharge decisions and
+  establishment creation. They remain exceptions defined by current migrations,
+  not a precedent for direct table writes or arbitrary new mutations.
+- The recharge creation wrapper sends an offer code only. Its approval wrapper
+  sends a request id only; PostgreSQL locks and uses the stored request values
+  before it mutates the wallet and append-only ledger.
+- The establishment creation wrapper calls `admin_create_establishment`; its
+  approved, verified establishment and active main branch may resolve a
+  missing-service request.
 - A table is not a prerequisite for future UI work. Design against a typed
   `lib/` interface backed by a fixture until that future schema exists.
 - Routing remains a pathname switch in `App.tsx`; preserve it unless a task
@@ -137,6 +155,8 @@ against. To avoid it:
 - [ ] New shared logic sits in `lib/` or `hooks/`, not duplicated in a page.
 - [ ] Real DB1 logic lives in `lib/`; hooks only adapt it to React.
 - [ ] Wallet and ledger access are read-only from the frontend.
+- [ ] Any approved RPC is called from a typed `lib/` wrapper, not directly from
+      a component, and the browser does not decide privileged values.
 - [ ] Profile updates are limited to the four safe fields.
 - [ ] Mock fixtures are grouped, named as mock, and separate from DB1 data.
 - [ ] Components that will later show real data receive it as props.

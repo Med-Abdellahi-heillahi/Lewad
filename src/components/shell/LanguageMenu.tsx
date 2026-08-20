@@ -37,7 +37,11 @@ export function LanguageMenu({ align = 'start', className = '' }: LanguageMenuPr
         aria-haspopup="true"
         onClick={() => setOpen((value) => !value)}
       >
-        <Icon name="globe" size={18} />
+        {/* Sur mobile, seul le code de langue : le globe alourdit une barre
+            déjà chargée, et « FR / ع / EN » se lit sans pictogramme. */}
+        <span className="hidden sm:inline-flex">
+          <Icon name="globe" size={18} />
+        </span>
         <span aria-hidden="true">{dictionaries[locale].meta.short}</span>
       </button>
 

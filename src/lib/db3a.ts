@@ -11,6 +11,7 @@ export type Db3aSearchResponse = {
   unlimited: boolean
   debitedPoints: number
   resultsCount: number
+  searchLogId: string | null
   results: Db2Establishment[]
 }
 
@@ -36,6 +37,7 @@ const errorResponse: Db3aSearchResponse = {
   unlimited: false,
   debitedPoints: 0,
   resultsCount: 0,
+  searchLogId: null,
   results: [],
 }
 
@@ -79,6 +81,7 @@ export async function searchServicesWithCredit(query: string): Promise<Db3aSearc
     unlimited: response.unlimited === true,
     debitedPoints: typeof response.debited_points === 'number' ? response.debited_points : 0,
     resultsCount: typeof response.results_count === 'number' ? response.results_count : 0,
+    searchLogId: typeof response.search_log_id === 'string' ? response.search_log_id : null,
     results: normalizeResults(response.results),
   }
 }
