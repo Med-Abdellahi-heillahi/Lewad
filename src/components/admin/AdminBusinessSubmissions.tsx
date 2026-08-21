@@ -44,7 +44,9 @@ function SubmissionNotice({ tone, text, dismissLabel, onDismiss }: { tone: 'succ
 }
 
 export function AdminBusinessSubmissions({ submissions, pagination, loading, onApprove, onReject, onPageChange }: AdminBusinessSubmissionsProps) {
-  const { locale } = useI18n()
+  const { locale, t } = useI18n()
+  /** La durée vient du serveur ; elle reste absente tant que 20260821000004 n'est pas appliqué. */
+  const periodLabel = (months: number) => t.businessSubmission.periodMonthsValue.replace('{months}', String(months))
   const copy = adminCopy[locale]
   const subCopy = copy.businessSubmissions
   const [dialog, setDialog] = useState<Dialog>(null)
@@ -151,7 +153,10 @@ export function AdminBusinessSubmissions({ submissions, pagination, loading, onA
                         <td className="px-4 py-3.5 align-top text-sm text-ink-soft">{sub.ownerFirstName} {sub.ownerLastName}</td>
                         <td className="px-4 py-3.5 align-top text-sm text-ink-soft ltr-isolate">{sub.ownerPhone}</td>
                         <td className="px-4 py-3.5 align-top"><AdminStatusBadge value={sub.status} /></td>
-                        <td className="px-4 py-3.5 align-top text-sm text-ink-soft tabular">{`${sub.amountMro} MRO`}</td>
+                        <td className="px-4 py-3.5 align-top text-sm text-ink-soft tabular">
+                          <p>{`${sub.amountMro} MRO`}</p>
+                          {sub.periodMonths !== null && <p className="mt-0.5 text-xs text-muted">{periodLabel(sub.periodMonths)}</p>}
+                        </td>
                         <td className="px-4 py-3.5 align-top text-sm text-ink-soft"><time dateTime={sub.createdAt}>{formatDate(sub.createdAt, locale)}</time></td>
                         <td className="px-4 py-3.5 align-top">
                           <div className="flex flex-wrap items-center gap-1.5">
@@ -208,6 +213,9 @@ export function AdminBusinessSubmissions({ submissions, pagination, loading, onA
             <FieldGroup title={subCopy.adminSection}>
               <FieldRow label={subCopy.status} value={<AdminStatusBadge value={detailSubmission.status} />} />
               <FieldRow label={subCopy.amount} value={`${detailSubmission.amountMro} MRO`} />
+              {detailSubmission.periodMonths !== null && (
+                <FieldRow label={subCopy.period} value={periodLabel(detailSubmission.periodMonths)} />
+              )}
             </FieldGroup>
           </div>
 

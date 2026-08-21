@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { type Locale, useI18n } from '../i18n'
-import { signInWithEmail, signOut, signUpWithEmail } from '../lib/auth'
+import { signInWithEmail, signOut, signUpWithEmail, requestPasswordReset, updateUserPassword } from '../lib/auth'
 import { useAuthSession } from '../hooks/useAuthSession'
 import { appWrap, btnGhost, btnPrimary, card, eyebrow, field, fieldHint, fieldLabel, skeleton } from '../lib/ui'
 import { Icon } from './Icon'
@@ -12,24 +12,30 @@ import { ThemeToggle } from './shell/ThemeToggle'
 import { getAuthRedirectDestination, resolvePostLoginDestination } from '../lib/routeAuth'
 import { isValidLewadSignUpPassword } from '../lib/validation'
 
-type Mode = 'signIn' | 'signUp'
+type Mode = 'signIn' | 'signUp' | 'forgotPassword' | 'resetPassword'
 type Notice = { type: 'error' | 'success'; text: string } | null
 
 const authCopy = {
   fr: {
     title: 'Connexion', eyebrow: 'Lewad V1', subtitle: 'Connectez-vous pour retrouver votre espace Lewad.', signIn: 'Connexion', signUp: 'Inscription', fullName: 'Nom complet', email: 'Adresse e-mail', password: 'Mot de passe', confirmPassword: 'Confirmer le mot de passe',
     signInButton: 'Se connecter', signUpButton: 'Créer mon compte', backHome: 'Retour à l’accueil', language: 'Choisir la langue', loading: 'Connexion en cours…', createLoading: 'Création en cours…',
-    requiredName: 'Veuillez saisir votre nom complet.', requiredEmail: 'Veuillez saisir votre adresse e-mail.', invalidEmail: 'Veuillez saisir une adresse e-mail valide.', requiredPassword: 'Veuillez saisir votre mot de passe.', passwordRule: 'Le mot de passe doit contenir au moins 8 caractères, au moins une lettre et exactement 4 chiffres.', passwordMismatch: 'Les mots de passe ne correspondent pas.', invalidCredentials: 'Adresse e-mail ou mot de passe incorrect.', accountExists: 'Un compte existe déjà avec cette adresse e-mail.', genericError: 'Une erreur est survenue. Veuillez réessayer.', accountCreated: 'Compte créé. Vous pouvez maintenant utiliser Lewad.', signedIn: 'Connexion réussie. Redirection vers Lewad…', alreadySignedIn: 'Vous êtes déjà connecté.', continueToApp: 'Aller vers Lewad', signOut: 'Se déconnecter', signedOut: 'Vous êtes déconnecté.', showPassword: 'Afficher le mot de passe', hidePassword: 'Masquer le mot de passe', resolvingSpace: 'Préparation de votre espace Lewad…', profileUnavailable: 'Impossible de charger votre profil Lewad. Réessayez dans un instant.', retryProfile: 'Réessayer',
+    requiredName: 'Veuillez saisir votre nom complet.', requiredEmail: 'Veuillez saisir votre adresse e-mail.', invalidEmail: 'Veuillez saisir une adresse e-mail valide.', requiredPassword: 'Veuillez saisir votre mot de passe.', passwordRule: 'Le mot de passe doit contenir au moins 8 caractères, au moins une lettre et au moins un chiffre.', passwordMismatch: 'Les mots de passe ne correspondent pas.', invalidCredentials: 'Adresse e-mail ou mot de passe incorrect.', accountExists: 'Un compte existe déjà avec cette adresse e-mail.', genericError: 'Une erreur est survenue. Veuillez réessayer.', accountCreated: 'Compte créé. Vous pouvez maintenant utiliser Lewad.', signedIn: 'Connexion réussie. Redirection vers Lewad…', alreadySignedIn: 'Vous êtes déjà connecté.', continueToApp: 'Aller vers Lewad', signOut: 'Se déconnecter', signedOut: 'Vous êtes déconnecté.', showPassword: 'Afficher le mot de passe', hidePassword: 'Masquer le mot de passe', resolvingSpace: 'Préparation de votre espace Lewad…', profileUnavailable: 'Impossible de charger votre profil Lewad. Réessayez dans un instant.', retryProfile: 'Réessayer',
+    forgotPassword: 'Mot de passe oublié ?', forgotPasswordTitle: 'Réinitialisation du mot de passe', forgotPasswordDesc: 'Entrez votre adresse e-mail et nous vous enverrons un lien pour définir un nouveau mot de passe.', sendResetLink: 'Envoyer le lien', sendingResetLink: 'Envoi…', resetLinkSent: 'Un e-mail de réinitialisation vous a été envoyé. Vérifiez votre boîte de réception.', resetLinkFailed: 'Impossible d\'envoyer l\'e-mail. Réessayez plus tard.', backToSignIn: 'Retour à la connexion',
+    resetPasswordTitle: 'Nouveau mot de passe', resetPasswordDesc: 'Définissez un nouveau mot de passe pour votre compte.', newPassword: 'Nouveau mot de passe', confirmPasswordLabel: 'Confirmer le mot de passe', updatePassword: 'Mettre à jour', updatingPassword: 'Mise à jour…', passwordUpdated: 'Mot de passe mis à jour. Vous pouvez maintenant vous connecter.', passwordUpdateFailed: 'Impossible de mettre à jour le mot de passe. Le lien a peut-être expiré.',
   },
   ar: {
     title: 'تسجيل الدخول', eyebrow: 'لواد V1', subtitle: 'سجّل الدخول للعودة إلى مساحة لواد الخاصة بك.', signIn: 'تسجيل الدخول', signUp: 'إنشاء حساب', fullName: 'الاسم الكامل', email: 'البريد الإلكتروني', password: 'كلمة المرور', confirmPassword: 'تأكيد كلمة المرور',
     signInButton: 'تسجيل الدخول', signUpButton: 'إنشاء حسابي', backHome: 'العودة للرئيسية', language: 'اختيار اللغة', loading: 'جارٍ تسجيل الدخول…', createLoading: 'جارٍ إنشاء الحساب…',
-    requiredName: 'يرجى إدخال الاسم الكامل.', requiredEmail: 'يرجى إدخال بريدك الإلكتروني.', invalidEmail: 'يرجى إدخال بريد إلكتروني صالح.', requiredPassword: 'يرجى إدخال كلمة المرور.', passwordRule: 'يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل، وحرف واحد على الأقل، و4 أرقام بالضبط.', passwordMismatch: 'كلمتا المرور غير متطابقتين.', invalidCredentials: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.', accountExists: 'يوجد حساب بهذه البريد الإلكتروني بالفعل.', genericError: 'حدث خطأ. يرجى المحاولة مجددًا.', accountCreated: 'تم إنشاء الحساب. يمكنك الآن استخدام لواد.', signedIn: 'تم تسجيل الدخول. جارٍ الانتقال إلى لواد…', alreadySignedIn: 'أنت مسجل الدخول بالفعل.', continueToApp: 'الذهاب إلى لواد', signOut: 'تسجيل الخروج', signedOut: 'تم تسجيل الخروج.', showPassword: 'إظهار كلمة المرور', hidePassword: 'إخفاء كلمة المرور', resolvingSpace: 'جارٍ تجهيز مساحة لواد…', profileUnavailable: 'تعذر تحميل ملف لواد الشخصي. يرجى المحاولة بعد لحظات.', retryProfile: 'إعادة المحاولة',
+    requiredName: 'يرجى إدخال الاسم الكامل.', requiredEmail: 'يرجى إدخال بريدك الإلكتروني.', invalidEmail: 'يرجى إدخال بريد إلكتروني صالح.', requiredPassword: 'يرجى إدخال كلمة المرور.', passwordRule: 'يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل، وحرف واحد على الأقل، ورقم واحد على الأقل.', passwordMismatch: 'كلمتا المرور غير متطابقتين.', invalidCredentials: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.', accountExists: 'يوجد حساب بهذه البريد الإلكتروني بالفعل.', genericError: 'حدث خطأ. يرجى المحاولة مجددًا.', accountCreated: 'تم إنشاء الحساب. يمكنك الآن استخدام لواد.', signedIn: 'تم تسجيل الدخول. جارٍ الانتقال إلى لواد…', alreadySignedIn: 'أنت مسجل الدخول بالفعل.', continueToApp: 'الذهاب إلى لواد', signOut: 'تسجيل الخروج', signedOut: 'تم تسجيل الخروج.', showPassword: 'إظهار كلمة المرور', hidePassword: 'إخفاء كلمة المرور', resolvingSpace: 'جارٍ تجهيز مساحة لواد…', profileUnavailable: 'تعذر تحميل ملف لواد الشخصي. يرجى المحاولة بعد لحظات.', retryProfile: 'إعادة المحاولة',
+    forgotPassword: 'نسيت كلمة المرور؟', forgotPasswordTitle: 'إعادة تعيين كلمة المرور', forgotPasswordDesc: 'أدخل بريدك الإلكتروني وسنرسل رابطاً لإعداد كلمة مرور جديدة.', sendResetLink: 'إرسال الرابط', sendingResetLink: 'جارٍ الإرسال…', resetLinkSent: 'تم إرسال بريد إلكتروني لإعادة التعيين. تحقق من صندوق الوارد.', resetLinkFailed: 'تعذر إرسال البريد الإلكتروني. أعد المحاولة لاحقاً.', backToSignIn: 'العودة إلى تسجيل الدخول',
+    resetPasswordTitle: 'كلمة مرور جديدة', resetPasswordDesc: 'أعد إعداد كلمة المرور لحسابك.', newPassword: 'كلمة المرور الجديدة', confirmPasswordLabel: 'تأكيد كلمة المرور', updatePassword: 'تحديث', updatingPassword: 'جارٍ التحديث…', passwordUpdated: 'تم تحديث كلمة المرور. يمكنك الآن تسجيل الدخول.', passwordUpdateFailed: 'تعذر تحديث كلمة المرور. ربما انتهت صلاحية الرابط.',
   },
   en: {
     title: 'Sign in', eyebrow: 'Lewad V1', subtitle: 'Sign in to return to your Lewad space.', signIn: 'Sign in', signUp: 'Sign up', fullName: 'Full name', email: 'Email address', password: 'Password', confirmPassword: 'Confirm password',
     signInButton: 'Sign in', signUpButton: 'Create my account', backHome: 'Back to home', language: 'Choose language', loading: 'Signing in…', createLoading: 'Creating account…',
-    requiredName: 'Please enter your full name.', requiredEmail: 'Please enter your email address.', invalidEmail: 'Please enter a valid email address.', requiredPassword: 'Please enter your password.', passwordRule: 'Password must contain at least 8 characters, at least one letter, and exactly 4 digits.', passwordMismatch: 'Passwords do not match.', invalidCredentials: 'Incorrect email address or password.', accountExists: 'An account already exists with this email address.', genericError: 'Something went wrong. Please try again.', accountCreated: 'Account created. You can now use Lewad.', signedIn: 'Signed in. Redirecting to Lewad…', alreadySignedIn: 'You are already signed in.', continueToApp: 'Go to Lewad', signOut: 'Sign out', signedOut: 'You have been signed out.', showPassword: 'Show password', hidePassword: 'Hide password', resolvingSpace: 'Preparing your Lewad space…', profileUnavailable: 'Your Lewad profile could not be loaded. Please try again in a moment.', retryProfile: 'Try again',
+    requiredName: 'Please enter your full name.', requiredEmail: 'Please enter your email address.', invalidEmail: 'Please enter a valid email address.', requiredPassword: 'Please enter your password.', passwordRule: 'Password must contain at least 8 characters, at least one letter, and at least one digit.', passwordMismatch: 'Passwords do not match.', invalidCredentials: 'Incorrect email address or password.', accountExists: 'An account already exists with this email address.', genericError: 'Something went wrong. Please try again.', accountCreated: 'Account created. You can now use Lewad.', signedIn: 'Signed in. Redirecting to Lewad…', alreadySignedIn: 'You are already signed in.', continueToApp: 'Go to Lewad', signOut: 'Sign out', signedOut: 'You have been signed out.', showPassword: 'Show password', hidePassword: 'Hide password', resolvingSpace: 'Preparing your Lewad space…', profileUnavailable: 'Your Lewad profile could not be loaded. Please try again in a moment.', retryProfile: 'Try again',
+    forgotPassword: 'Forgot password?', forgotPasswordTitle: 'Password reset', forgotPasswordDesc: 'Enter your email address and we\'ll send you a link to set a new password.', sendResetLink: 'Send reset link', sendingResetLink: 'Sending…', resetLinkSent: 'A password reset email has been sent. Check your inbox.', resetLinkFailed: 'Could not send the email. Please try again later.', backToSignIn: 'Back to sign in',
+    resetPasswordTitle: 'New password', resetPasswordDesc: 'Set a new password for your account.', newPassword: 'New password', confirmPasswordLabel: 'Confirm password', updatePassword: 'Update', updatingPassword: 'Updating…', passwordUpdated: 'Password updated. You can now sign in.', passwordUpdateFailed: 'Could not update password. The link may have expired.',
   },
 } as const
 
@@ -37,7 +43,7 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export function AuthPage() {
   const { locale, t } = useI18n()
-  const { user, loading: sessionLoading, isAuthenticated } = useAuthSession()
+  const { user, loading: sessionLoading, isAuthenticated, isRecovery } = useAuthSession()
   const copy = authCopy[locale]
   const requestedDestination = getAuthRedirectDestination()
   const [mode, setMode] = useState<Mode>('signIn')
@@ -49,6 +55,9 @@ export function AuthPage() {
   const [notice, setNotice] = useState<Notice>(null)
   const [resolvedDestination, setResolvedDestination] = useState<string | null>(null)
   const [resolvingRole, setResolvingRole] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
+  const [newPw, setNewPw] = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
 
   useEffect(() => { document.title = `${copy.title} — Lewad` }, [copy.title])
 
@@ -79,6 +88,12 @@ export function AuthPage() {
   useEffect(() => {
     if (sessionLoading || settled.current) return
     settled.current = true
+
+    if (isRecovery) {
+      setMode('resetPassword')
+      return
+    }
+
     if (!isAuthenticated) return
 
     let active = true
@@ -88,7 +103,7 @@ export function AuthPage() {
       window.location.replace(nextDestination)
     })
     return () => { active = false }
-  }, [isAuthenticated, resolveDestination, sessionLoading])
+  }, [isAuthenticated, isRecovery, resolveDestination, sessionLoading])
 
   const validate = () => {
     if (mode === 'signUp' && !fullName.trim()) return copy.requiredName
@@ -152,6 +167,42 @@ export function AuthPage() {
     if (!error) window.setTimeout(() => window.location.replace('/'), 700)
   }
 
+  const handleForgotPassword = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!resetEmail.trim()) { setNotice({ type: 'error', text: copy.requiredEmail }); return }
+    if (!emailPattern.test(resetEmail.trim())) { setNotice({ type: 'error', text: copy.invalidEmail }); return }
+    setSubmitting(true)
+    setNotice(null)
+    try {
+      const { error } = await requestPasswordReset(resetEmail.trim())
+      setNotice(error ? { type: 'error', text: copy.resetLinkFailed } : { type: 'success', text: copy.resetLinkSent })
+    } catch {
+      setNotice({ type: 'error', text: copy.resetLinkFailed })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleResetPassword = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!newPw) { setNotice({ type: 'error', text: copy.requiredPassword }); return }
+    if (!isValidLewadSignUpPassword(newPw)) { setNotice({ type: 'error', text: copy.passwordRule }); return }
+    if (newPw !== confirmPw) { setNotice({ type: 'error', text: copy.passwordMismatch }); return }
+    setSubmitting(true)
+    setNotice(null)
+    try {
+      const { error } = await updateUserPassword(newPw)
+      if (error) throw error
+      setNotice({ type: 'success', text: copy.passwordUpdated })
+      await signOut()
+      window.setTimeout(() => { setMode('signIn'); setNewPw(''); setConfirmPw('') }, 1500)
+    } catch {
+      setNotice({ type: 'error', text: copy.passwordUpdateFailed })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return <div className="flex min-h-dvh flex-col bg-page text-ink">
     <header className="border-b border-line bg-page/90 backdrop-blur-md">
       <div className={`${appWrap} flex h-16 items-center justify-between gap-3 sm:h-[72px]`}>
@@ -184,8 +235,12 @@ export function AuthPage() {
               <span className="size-1.5 rounded-full bg-brand-deep dark:bg-brand" />
               {copy.eyebrow}
             </span>
-            <h1 id="auth-title" className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl lg:mt-0">{copy.title}</h1>
-            <p className="mt-2.5 text-sm leading-6 text-muted">{copy.subtitle}</p>
+            <h1 id="auth-title" className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl lg:mt-0">
+              {mode === 'forgotPassword' ? copy.forgotPasswordTitle : mode === 'resetPassword' ? copy.resetPasswordTitle : copy.title}
+            </h1>
+            <p className="mt-2.5 text-sm leading-6 text-muted">
+              {mode === 'forgotPassword' ? copy.forgotPasswordDesc : mode === 'resetPassword' ? copy.resetPasswordDesc : copy.subtitle}
+            </p>
           </div>
 
           <div className="p-6 sm:p-7">
@@ -196,6 +251,30 @@ export function AuthPage() {
                 <div className={`mt-4 h-12 w-2/3 ${skeleton}`} />
                 <span className="sr-only">{copy.loading}</span>
               </div>
+            ) : mode === 'forgotPassword' ? (
+              <>
+                <form className="grid gap-4" onSubmit={handleForgotPassword} noValidate>
+                  <Field id="reset-email" label={copy.email} type="email" value={resetEmail} onChange={setResetEmail} autoComplete="email" />
+                  {notice && <InlineAlert tone={notice.type === 'success' ? 'success' : 'error'}>{notice.text}</InlineAlert>}
+                  <button type="submit" className={`${btnPrimary} mt-1 w-full`} disabled={submitting}>
+                    {submitting ? copy.sendingResetLink : copy.sendResetLink}
+                  </button>
+                </form>
+                <div className="mt-4 flex justify-center text-sm">
+                  <button type="button" className="inline-flex min-h-11 items-center text-muted transition-colors hover:text-ink" onClick={() => { setMode('signIn'); setNotice(null); setResetEmail('') }}>{copy.backToSignIn}</button>
+                </div>
+              </>
+            ) : mode === 'resetPassword' ? (
+              <>
+                <form className="grid gap-4" onSubmit={handleResetPassword} noValidate>
+                  <Field id="new-pw" label={copy.newPassword} type="password" value={newPw} onChange={setNewPw} autoComplete="new-password" hint={copy.passwordRule} reveal={{ show: copy.showPassword, hide: copy.hidePassword }} />
+                  <Field id="confirm-pw" label={copy.confirmPasswordLabel} type="password" value={confirmPw} onChange={setConfirmPw} autoComplete="new-password" reveal={{ show: copy.showPassword, hide: copy.hidePassword }} />
+                  {notice && <InlineAlert tone={notice.type === 'success' ? 'success' : 'error'}>{notice.text}</InlineAlert>}
+                  <button type="submit" className={`${btnPrimary} mt-1 w-full`} disabled={submitting}>
+                    {submitting ? copy.updatingPassword : copy.updatePassword}
+                  </button>
+                </form>
+              </>
             ) : isAuthenticated ? (
               <div>
                 {resolvingRole ? (
@@ -254,6 +333,11 @@ export function AuthPage() {
                     hint={mode === 'signUp' ? copy.passwordRule : undefined}
                     reveal={{ show: copy.showPassword, hide: copy.hidePassword }}
                   />
+                  {mode === 'signIn' && (
+                    <div className="flex justify-end">
+                      <button type="button" className="text-sm font-medium text-brand-deep hover:text-brand transition-colors" onClick={() => { setMode('forgotPassword'); setNotice(null) }}>{copy.forgotPassword}</button>
+                    </div>
+                  )}
                   {mode === 'signUp' && (
                     <Field
                       id="password-confirmation"

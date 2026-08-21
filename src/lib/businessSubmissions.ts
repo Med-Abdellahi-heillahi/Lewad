@@ -29,6 +29,7 @@ export type BusinessSubmissionResult<T> = {
 export type CreatedBusinessSubmission = {
   id: string
   amountMro: number
+  periodMonths: number | null
   status: 'pending_review'
 }
 
@@ -38,6 +39,11 @@ export type CreateBusinessSubmissionResult = {
   message: string | null
   submissionId: string | null
   amountMro: number | null
+  /**
+   * Null until 20260821000004 is applied remotely: an older server simply does
+   * not return the field, and a missing period must not fail the submission.
+   */
+  periodMonths: number | null
 }
 
 export type BusinessSubmissionSummary = {
@@ -54,6 +60,7 @@ export type BusinessSubmissionSummary = {
   categoryName: string | null
   status: BusinessSubmissionStatus
   amountMro: number
+  periodMonths: number | null
   resolvedEstablishmentId: string | null
   approvedAt: string | null
   rejectedAt: string | null
@@ -155,6 +162,7 @@ function readSummary(value: unknown): BusinessSubmissionSummary | null {
   const categoryName = nullableStringValue(value.category_name)
   const status = submissionStatus(value.status)
   const amountMro = numberValue(value.amount_mro)
+  const periodMonths = numberValue(value.period_months)
   const resolvedEstablishmentId = nullableStringValue(value.resolved_establishment_id)
   const approvedAt = nullableStringValue(value.approved_at)
   const rejectedAt = nullableStringValue(value.rejected_at)
@@ -183,6 +191,7 @@ function readSummary(value: unknown): BusinessSubmissionSummary | null {
     categoryName,
     status,
     amountMro,
+    periodMonths,
     resolvedEstablishmentId,
     approvedAt,
     rejectedAt,
@@ -311,8 +320,8 @@ function createStatusFor(response: JsonRecord): CreateBusinessSubmissionResult['
 
 /**
  * Creates a proposal through PostgreSQL. The browser sends business details
- * only: the server owns the 500 MRO amount, owner id, pending status, and
- * anti-spam decision.
+ * only: the server owns the price, the listing period, the owner id, the
+ * pending status, and the anti-spam decision.
  */
 export async function createBusinessSubmission(input: BusinessSubmissionInput): Promise<CreateBusinessSubmissionResult> {
   const { data, error } = await supabase.rpc('create_business_submission', {
@@ -338,17 +347,18 @@ export async function createBusinessSubmission(input: BusinessSubmissionInput): 
       message: stringValue(error.message),
       submissionId: null,
       amountMro: null,
+      periodMonths: null,
     }
   }
 
   if (!isRecord(data)) {
-    return { ok: false, status: 'error', message: null, submissionId: null, amountMro: null }
+    return { ok: false, status: 'error', message: null, submissionId: null, amountMro: null, periodMonths: null }
   }
 
   const id = stringValue(data.submission_id)
   const amountMro = numberValue(data.amount_mro)
   if (data.ok === true && data.status === 'pending_review' && id && amountMro !== null) {
-    return { ok: true, status: 'created', message: null, submissionId: id, amountMro }
+    return { ok: true, status: 'created', message: null, submissionId: id, amountMro, periodMonths: numberValue(data.period_months) }
   }
 
   return {
@@ -357,6 +367,7 @@ export async function createBusinessSubmission(input: BusinessSubmissionInput): 
     message: nullableStringValue(data.message) ?? null,
     submissionId: null,
     amountMro: null,
+    periodMonths: null,
   }
 }
 

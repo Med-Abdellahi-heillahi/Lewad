@@ -1,17 +1,34 @@
 import type { Db2Establishment } from './db2'
 
 /**
- * Contenu non traduit. Les coordonnées sont des espaces réservés :
- * à remplacer par les vraies avant le lancement.
+ * Contenu non traduit. Source unique des coordonnées officielles de l'équipe
+ * Lewad : la landing, le pied de page, `/contact`, le relais WhatsApp de
+ * recharge et celui de soumission d'établissement lisent tous cet objet. Ne
+ * jamais recopier un numéro ou un e-mail dans un composant.
  */
 
 export const contact = {
-  phoneDisplay: '+222 36 00 00 00',
-  phoneHref: 'tel:+22236000000',
-  whatsappDisplay: '+222 36 00 00 00',
-  whatsappHref: 'https://wa.me/22236000000',
-  email: 'contact@lewad.mr',
-  emailHref: 'mailto:contact@lewad.mr',
+  phoneDisplay: '+222 30 68 75 43',
+  phoneHref: 'tel:+22230687543',
+  whatsappDisplay: '+222 30 68 75 43',
+  whatsappHref: 'https://wa.me/22230687543',
+  email: 'dedahisdh@gmail.com',
+  emailHref: 'mailto:dedahisdh@gmail.com',
+}
+
+/**
+ * Offre publiée pour l'inscription d'un établissement, affichée **avant** la
+ * soumission — au moment où aucune réponse serveur n'existe encore.
+ *
+ * Le serveur reste seul décideur : `create_business_submission` fixe lui-même
+ * le montant et la durée, et l'écran de succès, le message WhatsApp et l'espace
+ * admin n'affichent que les valeurs renvoyées par la base. Ces deux constantes
+ * ne servent qu'à l'affichage et sont verrouillées sur la migration par
+ * `tests/businessSubmissionsContracts.test.ts`.
+ */
+export const businessSubmissionOffer = {
+  amountMro: 200,
+  periodMonths: 3,
 }
 
 /** Sections de la landing, dans l'ordre. Sert d'ancre ET de source du menu déroulant. */

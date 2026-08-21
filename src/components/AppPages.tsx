@@ -5,6 +5,7 @@ import { updateMyProfile, uploadMyAvatar, type CreditLedgerType, type Db1CreditL
 import { saveProfileWithOptionalAvatar } from '../lib/profileUpdateWorkflow'
 import { useAccount } from '../hooks/useAccount'
 import { useCreditLedger } from '../hooks/useCreditLedger'
+import { HistoryPage } from './HistoryPage'
 import { isAllowedAvatarFile, isAvatarFileTooLarge, isValidArabicName, isValidMauritanianPhone, normalizeMauritanianPhone } from '../lib/validation'
 import { contact as contactDetails } from '../lib/content'
 import { formatCurrency, formatDate, formatNumber, formatSignedPoints, initialOf, profileDisplayName } from '../lib/format'
@@ -32,7 +33,7 @@ import { AppearanceSettings, PasswordResetSettings } from './settings/SettingsCo
 import { PaginationControls } from './ui/PaginationControls'
 import { BusinessSubmissionForm } from './BusinessSubmissionForm'
 
-export type PrivatePageName = 'profile' | 'credits' | 'settings' | 'recharge'
+export type PrivatePageName = 'profile' | 'credits' | 'settings' | 'recharge' | 'history'
 
 const copy = {
   fr: {
@@ -59,6 +60,7 @@ const copy = {
     activationNotice: 'Les points seront activés après validation de l’équipe Lewad.',
     rechargeRequestCreating: 'Création de votre demande de recharge…', rechargeRequestCreated: 'Demande de recharge créée.', rechargeRequestDuplicate: 'Vous avez déjà une demande de recharge en attente.', rechargeRequestError: 'Impossible de créer la demande de recharge.', rechargeRequestContinue: 'Envoyez maintenant le message WhatsApp pour confirmer le paiement.',
     whatsappFallback: 'WhatsApp ne s’est pas ouvert automatiquement. Utilisez le bouton ci-dessous.', whatsappMessageIntro: 'Bonjour Lewad, je souhaite recharger mon compte.', whatsappUserName: 'Nom', whatsappUserEmail: 'E-mail', whatsappUserPhone: 'Téléphone', whatsappOffer: 'Offre', whatsappPoints: 'Points demandés', whatsappAmount: 'Montant', whatsappRequestId: 'ID demande', whatsappThanks: 'Merci.',
+    history: 'Historique', whereMyPoints: 'Où sont passés mes points ?',
     settings: 'Paramètres', settingsSubtitle: 'Réglez l’apparence de Lewad et retrouvez les options de votre compte.', appearance: 'Apparence et langue', appearanceText: 'Le choix est conservé sur cet appareil.', language: 'Langue', theme: 'Thème', light: 'Clair', dark: 'Sombre',
     accountSection: 'Compte', accountText: 'La gestion complète du compte arrive prochainement.', security: 'Sécurité', securityText: 'Les réglages de sécurité seront ajoutés avec le profil complet.', notifications: 'Notifications', notificationsText: 'Les préférences de notification seront disponibles prochainement.',
     contact: 'Contact', contactTitle: 'Parlons de votre besoin.', contactText: 'L’équipe Wasla Soft accompagne les utilisateurs et les établissements Lewad.', reason: 'Motif', reasonOptions: ['Ajouter un établissement', 'Demander un service', 'Support compte', 'Autre'], message: 'Votre message', messagePlaceholder: 'Décrivez votre besoin en quelques lignes…', send: 'Préparer mon message', messagePrepared: 'Votre message est préparé. L’envoi réel sera activé dans une prochaine étape.', contactDetails: 'Nous joindre',
@@ -87,6 +89,7 @@ const copy = {
     activationNotice: 'سيتم تفعيل النقاط بعد مصادقة فريق لواد.',
     rechargeRequestCreating: 'جارٍ إنشاء طلب إعادة الشحن…', rechargeRequestCreated: 'تم إنشاء طلب إعادة الشحن.', rechargeRequestDuplicate: 'لديك بالفعل طلب إعادة شحن معلق.', rechargeRequestError: 'تعذر إنشاء طلب إعادة الشحن.', rechargeRequestContinue: 'أرسل الآن رسالة واتساب لتأكيد الدفع.',
     whatsappFallback: 'لم يُفتح واتساب تلقائيًا. استخدم الزر أدناه.', whatsappMessageIntro: 'مرحبًا لواد، أرغب في شحن حسابي.', whatsappUserName: 'الاسم', whatsappUserEmail: 'البريد الإلكتروني', whatsappUserPhone: 'الهاتف', whatsappOffer: 'العرض', whatsappPoints: 'النقاط المطلوبة', whatsappAmount: 'المبلغ', whatsappRequestId: 'معرّف الطلب', whatsappThanks: 'شكرًا.',
+    history: 'السجل', whereMyPoints: 'أين ذهبت نقاطي؟',
     settings: 'الإعدادات', settingsSubtitle: 'اضبط مظهر لواد واطّلع على خيارات حسابك.', appearance: 'المظهر واللغة', appearanceText: 'يُحفظ اختيارك على هذا الجهاز.', language: 'اللغة', theme: 'السمة', light: 'فاتح', dark: 'داكن',
     accountSection: 'الحساب', accountText: 'ستتوفر إدارة الحساب الكاملة قريبًا.', security: 'الأمان', securityText: 'ستضاف إعدادات الأمان مع الملف الشخصي الكامل.', notifications: 'الإشعارات', notificationsText: 'ستتوفر تفضيلات الإشعارات قريبًا.',
     contact: 'التواصل', contactTitle: 'لنتحدث عن حاجتك.', contactText: 'فريق Wasla Soft يرافق مستخدمي ومؤسسات لواد.', reason: 'السبب', reasonOptions: ['إضافة مؤسسة', 'طلب خدمة', 'دعم الحساب', 'أخرى'], message: 'رسالتك', messagePlaceholder: 'صف حاجتك في بضعة أسطر…', send: 'تجهيز رسالتي', messagePrepared: 'تم تجهيز رسالتك. سيتم تفعيل الإرسال الحقيقي في مرحلة قادمة.', contactDetails: 'كيف تصل إلينا',
@@ -115,6 +118,7 @@ const copy = {
     activationNotice: 'Points will be activated after the Lewad team validates your recharge.',
     rechargeRequestCreating: 'Creating your recharge request…', rechargeRequestCreated: 'Recharge request created.', rechargeRequestDuplicate: 'You already have a pending recharge request.', rechargeRequestError: 'Could not create recharge request.', rechargeRequestContinue: 'Now send the WhatsApp message to confirm payment.',
     whatsappFallback: 'WhatsApp did not open automatically. Use the button below.', whatsappMessageIntro: 'Hello Lewad, I would like to recharge my account.', whatsappUserName: 'Name', whatsappUserEmail: 'Email', whatsappUserPhone: 'Phone', whatsappOffer: 'Offer', whatsappPoints: 'Requested points', whatsappAmount: 'Amount', whatsappRequestId: 'Request ID', whatsappThanks: 'Thank you.',
+    history: 'History', whereMyPoints: 'Where did my points go?',
     settings: 'Settings', settingsSubtitle: 'Adjust how Lewad looks and find your account options.', appearance: 'Appearance and language', appearanceText: 'Your choice is kept on this device.', language: 'Language', theme: 'Theme', light: 'Light', dark: 'Dark',
     accountSection: 'Account', accountText: 'Full account management is coming soon.', security: 'Security', securityText: 'Security settings will be added with the complete profile.', notifications: 'Notifications', notificationsText: 'Notification preferences will be available soon.',
     contact: 'Contact', contactTitle: 'Let’s talk about what you need.', contactText: 'The Wasla Soft team supports Lewad users and businesses.', reason: 'Reason', reasonOptions: ['Add a business', 'Request a service', 'Account support', 'Other'], message: 'Your message', messagePlaceholder: 'Describe what you need in a few lines…', send: 'Prepare my message', messagePrepared: 'Your message is prepared. Real sending will be enabled in a future step.', contactDetails: 'Reach us',
@@ -133,7 +137,7 @@ function avatarImageSource(url: string, updatedAt: string) {
   return `${url}${separator}v=${encodeURIComponent(updatedAt)}`
 }
 
-const navIdOf: Record<PrivatePageName, AppNavId> = { profile: 'profile', credits: 'credits', recharge: 'recharge', settings: 'settings' }
+const navIdOf: Record<PrivatePageName, AppNavId> = { profile: 'profile', credits: 'credits', recharge: 'recharge', settings: 'settings', history: 'history' }
 
 /** Le rôle et le statut sont stockés en clés techniques : jamais montrés tels quels. */
 function roleLabel(value: Db1Profile['role'], text: Copy) {
@@ -205,6 +209,7 @@ export function ProtectedAppPage({ page }: { page: PrivatePageName }) {
         {page === 'credits' && <CreditsPage text={text} />}
         {page === 'recharge' && <RechargePage text={text} />}
         {page === 'settings' && <SettingsPage text={text} />}
+        {page === 'history' && <HistoryPage />}
       </main>
     </AppShell>
   )
@@ -266,12 +271,18 @@ function ProfilePage({ text }: { text: Copy }) {
         title={text.profile}
         text={text.profileSubtitle}
         action={
-          <a href="/app" className={btnGhost}>
-            <span className="rtl:rotate-180">
-              <Icon name="chevronLeft" size={16} />
-            </span>
-            {text.backApp}
-          </a>
+          <div className="flex flex-wrap gap-2">
+            <a href="/history" className={btnGhost}>
+              <Icon name="clock" size={16} />
+              {text.history}
+            </a>
+            <a href="/app" className={btnGhost}>
+              <span className="rtl:rotate-180">
+                <Icon name="chevronLeft" size={16} />
+              </span>
+              {text.backApp}
+            </a>
+          </div>
         }
       />
 
@@ -645,6 +656,17 @@ function CreditsPage({ text }: { text: Copy }) {
           )}
 
           <p className="mt-4 text-sm leading-6 text-muted">{text.creditsText}</p>
+
+          <a
+            href="/history"
+            className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand-deep hover:underline dark:text-brand"
+          >
+            <Icon name="clock" size={16} />
+            {text.whereMyPoints}
+            <span className="rtl:rotate-180">
+              <Icon name="arrow" size={15} />
+            </span>
+          </a>
 
           {hasUnlimitedSearches && (
             <InlineAlert tone="info" className="mt-5">

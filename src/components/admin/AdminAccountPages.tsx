@@ -3,6 +3,7 @@ import { CalendarDays, Home, Mail, Phone, Shield, ShieldCheck, UserRound } from 
 import { useI18n } from '../../i18n'
 import { useAccount } from '../../hooks/useAccount'
 import { signOut } from '../../lib/auth'
+import { contact } from '../../lib/content'
 import type { Db1Profile } from '../../lib/db1'
 import { formatDate, initialOf, profileDisplayName } from '../../lib/format'
 import { appWrap, btnGhost, card, pill } from '../../lib/ui'
@@ -103,6 +104,7 @@ export function AdminAccountPage({ space, page }: { space: AdminAccountSpace; pa
 
   const displayName = profileDisplayName(profile, locale, authFullName) ?? user?.email ?? copy.content.unnamedUser
   const email = profile?.email ?? user?.email ?? null
+  const statusLabels = copy.content.status
 
   const endSession = async () => {
     setSigningOut(true)
@@ -170,8 +172,92 @@ export function AdminAccountPage({ space, page }: { space: AdminAccountSpace; pa
             )
           ) : (
             <>
+              {/* Admin Account Identity */}
+              <section className={`${card} overflow-hidden`} aria-label={account.identity}>
+                <div className="flex items-center gap-4 border-b border-line bg-page-alt p-5 sm:p-6">
+                  <span className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-brand text-2xl font-bold text-brand-ink">
+                    {profile?.avatar_url
+                      ? <img src={profile.avatar_url} alt="" className="size-full object-cover" />
+                      : initialOf(displayName)}
+                  </span>
+                  <div className="min-w-0">
+                    <h2 dir="auto" className="truncate text-lg font-bold text-ink sm:text-xl">{displayName}</h2>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className={`${pill} bg-surface-2 text-ink-soft`}>
+                        <Shield size={12} aria-hidden />
+                        {roleLabel(profile?.role ?? 'admin', statusLabels)}
+                      </span>
+                      {profile?.status && (
+                        <span className={`${pill} ${profile.status === 'active' ? 'bg-answer-bg text-answer' : 'bg-ask-bg text-ask'}`}>
+                          <span aria-hidden className={`size-1.5 rounded-full ${profile.status === 'active' ? 'bg-answer' : 'bg-ask'}`} />
+                          {statusLabels[profile.status] ?? profile.status}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="grid gap-px bg-line sm:grid-cols-2">
+                  {email && (
+                    <div className="bg-surface px-4 py-3.5">
+                      <dt className="flex items-center gap-1.5 text-xs font-semibold text-muted"><Mail size={13} aria-hidden />{account.email}</dt>
+                      <dd className="mt-1.5 text-sm font-semibold break-words text-ink ltr-isolate">{email}</dd>
+                    </div>
+                  )}
+                  {profile?.phone && (
+                    <div className="bg-surface px-4 py-3.5">
+                      <dt className="flex items-center gap-1.5 text-xs font-semibold text-muted"><Phone size={13} aria-hidden />{account.phone}</dt>
+                      <dd className="mt-1.5 text-sm font-semibold break-words text-ink ltr-isolate">{profile.phone}</dd>
+                    </div>
+                  )}
+                  {profile?.created_at && (
+                    <div className="bg-surface px-4 py-3.5">
+                      <dt className="flex items-center gap-1.5 text-xs font-semibold text-muted"><CalendarDays size={13} aria-hidden />{account.createdAt}</dt>
+                      <dd className="mt-1.5 text-sm font-semibold break-words text-ink">{formatDate(profile.created_at, locale)}</dd>
+                    </div>
+                  )}
+                </div>
+                <div className="border-t border-line bg-page-alt px-4 py-3">
+                  <a href="/admin/profile" className={btnGhost}>
+                    <ShieldCheck size={16} aria-hidden />
+                    {account.backToAdmin} — {account.platformRole}
+                  </a>
+                </div>
+              </section>
+
               <AppearanceSettings />
-              <PasswordResetSettings />
+              <PasswordResetSettings userEmail={email} />
+
+              {/* Lewad Contact */}
+              <section className={`${card} p-5 sm:p-6`}>
+                <h2 className="text-lg font-bold tracking-tight text-ink">{locale === 'ar' ? 'التواصل' : locale === 'en' ? 'Contact' : 'Contact'}</h2>
+                <p className="mt-1 text-sm text-muted">{locale === 'ar' ? 'معلومات التواصل مع فريق لواد.' : locale === 'en' ? 'Lewad team contact details.' : 'Coordonnées de l\'équipe Lewad.'}</p>
+                <dl className="mt-4 grid gap-px bg-line sm:grid-cols-2">
+                  <div className="bg-surface px-4 py-3.5">
+                    <dt className="flex items-center gap-1.5 text-xs font-semibold text-muted"><Phone size={13} aria-hidden />{locale === 'ar' ? 'الهاتف' : locale === 'en' ? 'Phone' : 'Téléphone'}</dt>
+                    <dd className="mt-1.5 text-sm font-semibold text-ink ltr-isolate">{contact.phoneDisplay}</dd>
+                  </div>
+                  <div className="bg-surface px-4 py-3.5">
+                    <dt className="flex items-center gap-1.5 text-xs font-semibold text-muted"><Mail size={13} aria-hidden />{locale === 'ar' ? 'البريد الإلكتروني' : locale === 'en' ? 'Email' : 'E-mail'}</dt>
+                    <dd className="mt-1.5 text-sm font-semibold text-ink ltr-isolate">{contact.email}</dd>
+                  </div>
+                </dl>
+              </section>
+
+              {/* System Info */}
+              <section className={`${card} p-5 sm:p-6`}>
+                <h2 className="text-lg font-bold tracking-tight text-ink">{locale === 'ar' ? 'معلومات النظام' : locale === 'en' ? 'System info' : 'Informations système'}</h2>
+                <p className="mt-1 text-sm text-muted">{locale === 'ar' ? 'معلومات تقنية عن النسخة الحالية.' : locale === 'en' ? 'Technical details about the current version.' : 'Informations techniques sur la version actuelle.'}</p>
+                <dl className="mt-4 grid gap-px bg-line sm:grid-cols-2">
+                  <div className="bg-surface px-4 py-3.5">
+                    <dt className="text-xs font-semibold text-muted">{locale === 'ar' ? 'الإصدار' : locale === 'en' ? 'Version' : 'Version'}</dt>
+                    <dd className="mt-1.5 text-sm font-semibold text-ink">Lewad V1</dd>
+                  </div>
+                  <div className="bg-surface px-4 py-3.5">
+                    <dt className="text-xs font-semibold text-muted">{locale === 'ar' ? 'دورك' : locale === 'en' ? 'Your role' : 'Votre rôle'}</dt>
+                    <dd className="mt-1.5 text-sm font-semibold text-ink">{roleLabel(profile?.role ?? 'admin', statusLabels)}</dd>
+                  </div>
+                </dl>
+              </section>
             </>
           )}
         </div>

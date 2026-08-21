@@ -1,7 +1,7 @@
 import type { Locale } from '../../i18n'
 import type { IconName } from '../Icon'
 
-export type AppNavId = 'search' | 'credits' | 'recharge' | 'profile' | 'contact' | 'settings'
+export type AppNavId = 'search' | 'credits' | 'recharge' | 'history' | 'profile' | 'contact' | 'settings'
 
 export type AppNavItem = {
   id: AppNavId
@@ -20,6 +20,7 @@ export const appNavItems: AppNavItem[] = [
   { id: 'search', href: '/app', icon: 'search' },
   { id: 'credits', href: '/credits', icon: 'wallet' },
   { id: 'recharge', href: '/recharge', icon: 'sparkle' },
+  { id: 'history', href: '/history', icon: 'clock', secondary: true },
   { id: 'profile', href: '/profile', icon: 'user' },
   { id: 'contact', href: '/contact', icon: 'message', secondary: true },
   { id: 'settings', href: '/settings', icon: 'gear', secondary: true },
@@ -58,7 +59,7 @@ export type AppShellCopy = {
 
 export const appShellCopy: Record<Locale, AppShellCopy> = {
   fr: {
-    items: { search: 'Recherche', credits: 'Mes crédits', recharge: 'Recharger', profile: 'Profil', contact: 'Contact', settings: 'Paramètres' },
+    items: { search: 'Recherche', credits: 'Mes crédits', recharge: 'Recharger', history: 'Historique', profile: 'Profil', contact: 'Contact', settings: 'Paramètres' },
     shortItems: { credits: 'Crédits' },
     menu: 'Ouvrir le menu', closeMenu: 'Fermer le menu', account: 'Mon compte', signIn: 'Se connecter', addEstablishment: 'Ajouter un établissement', signOut: 'Se déconnecter', signingOut: 'Déconnexion…', adminSpace: 'Espace admin', superAdminSpace: 'Espace super admin',
     balance: 'Solde de points', pointsUnit: 'points', pointsUnavailable: 'Solde indisponible',
@@ -67,7 +68,7 @@ export const appShellCopy: Record<Locale, AppShellCopy> = {
     by: 'By Wasla', version: 'Version 1.0.0', rights: '© 2026 Wasla Soft',
   },
   ar: {
-    items: { search: 'البحث', credits: 'نقاطي', recharge: 'شحن', profile: 'الملف الشخصي', contact: 'التواصل', settings: 'الإعدادات' },
+    items: { search: 'البحث', credits: 'نقاطي', recharge: 'شحن', history: 'السجل', profile: 'الملف الشخصي', contact: 'التواصل', settings: 'الإعدادات' },
     shortItems: { profile: 'حسابي' },
     menu: 'فتح القائمة', closeMenu: 'إغلاق القائمة', account: 'حسابي', signIn: 'تسجيل الدخول', addEstablishment: 'إضافة مؤسسة', signOut: 'تسجيل الخروج', signingOut: 'جارٍ تسجيل الخروج…', adminSpace: 'مساحة الإدارة', superAdminSpace: 'مساحة المشرف العام',
     balance: 'رصيد النقاط', pointsUnit: 'نقاط', pointsUnavailable: 'الرصيد غير متاح',
@@ -76,7 +77,7 @@ export const appShellCopy: Record<Locale, AppShellCopy> = {
     by: 'By Wasla', version: 'الإصدار 1.0.0', rights: '© 2026 Wasla Soft',
   },
   en: {
-    items: { search: 'Search', credits: 'My credits', recharge: 'Recharge', profile: 'Profile', contact: 'Contact', settings: 'Settings' },
+    items: { search: 'Search', credits: 'My credits', recharge: 'Recharge', history: 'History', profile: 'Profile', contact: 'Contact', settings: 'Settings' },
     shortItems: { credits: 'Credits' },
     menu: 'Open menu', closeMenu: 'Close menu', account: 'My account', signIn: 'Sign in', addEstablishment: 'Add an establishment', signOut: 'Sign out', signingOut: 'Signing out…', adminSpace: 'Admin space', superAdminSpace: 'Super admin space',
     balance: 'Points balance', pointsUnit: 'points', pointsUnavailable: 'Balance unavailable',

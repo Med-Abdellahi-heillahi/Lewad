@@ -1,6 +1,16 @@
 # DB4 — Business Submissions
 
-**Status:** local implementation only. The migration is **not applied to the remote Supabase project**.
+**Status per migration — confirm with `npx supabase migration list` before
+relying on any of it:**
+
+| Migration | Remote state |
+| --- | --- |
+| `20260821000002_db4_business_submissions.sql` | applied, history repaired |
+| `20260821000003_db4_maps_location_support.sql` | **not confirmed applied** |
+| `20260821000004_update_business_submission_amount_200_mro.sql` | **not applied** |
+
+Migrations 3 and 4 must be applied in order: 4 replaces the creation function
+that 3 defines, so applying 4 alone would leave a coordinate-free contract.
 
 DB4 adds the reviewed backend for `/add-business`. It supports a submitted
 business proposal, a manually verified WhatsApp payment handoff, and an
@@ -12,18 +22,33 @@ gateway or a final member/admin interface.
 `public.business_submissions` stores the owner and business contact data, an
 optional active category, optional location/website, the required map point
 for new submissions (`latitude` and `longitude`), and the server-owned
-`amount_mro`. The coordinate columns remain nullable for rows created before
-the map contract; the creation RPC rejects a new submission without a valid
-pair. The state is one of:
+`amount_mro` and `period_months`. The coordinate columns remain nullable for
+rows created before the map contract; the creation RPC rejects a new
+submission without a valid pair. The state is one of:
 
 - `pending_review`
 - `approved`
 - `rejected`
 - `cancelled`
 
-The server fixes `amount_mro` at **500 MRO**. The browser cannot supply,
-override, or update it. A member can have at most three `pending_review`
-submissions at once; PostgreSQL serialises this check per account.
+The server fixes `amount_mro` at **200 MRO** and `period_months` at
+**3 months** (`20260821000004_update_business_submission_amount_200_mro.sql`).
+The browser cannot supply, override, or update either value: the creation RPC
+takes no price or period argument. A member can have at most three
+`pending_review` submissions at once; PostgreSQL serialises this check per
+account.
+
+The retired **500 MRO** price survives only in the column constraint
+(`check (amount_mro in (200, 500))`) so rows created before the change keep
+the amount their owner was actually quoted. Nothing in the current creation
+path can produce a new 500 MRO row.
+
+`src/lib/content.ts` exports `businessSubmissionOffer` for the one place the
+form must show a price before any server response exists — the pre-submission
+amount block. It is display-only, and
+`tests/businessSubmissionsContracts.test.ts` fails if it drifts from the
+migration constants. Every transactional amount — the success panel, the
+WhatsApp handoff, and both admin views — reads the value the server returned.
 
 ## RPC contracts
 
@@ -33,7 +58,7 @@ to `authenticated`:
 
 | RPC | Caller | Effect |
 | --- | --- | --- |
-| `create_business_submission` | Authenticated owner | Validates input and a required latitude/longitude pair, resolves `auth.uid()`, fixes 500 MRO, and creates a pending proposal. |
+| `create_business_submission` | Authenticated owner | Validates input and a required latitude/longitude pair, resolves `auth.uid()`, fixes 200 MRO for 3 months, and creates a pending proposal. |
 | `admin_list_business_submissions` | Active admin or super admin | Returns a bounded, searchable page and total count. |
 | `admin_get_business_submission_details` | Active admin or super admin | Returns one proposal plus a minimal creator summary. |
 | `admin_approve_business_submission` | Active admin or super admin | Locks one pending row, requires its valid map point, creates an approved verified establishment and active main branch with its address, nearest place, latitude, and longitude, then links and approves the submission atomically. |
@@ -61,8 +86,9 @@ RLS is enabled on the table:
 - `anon` and `authenticated` have no table `INSERT`, `UPDATE`, or `DELETE`
   privileges and no corresponding policies.
 
-This means the browser cannot approve, reject, link, alter the 500 MRO price,
-or write another member's proposal by calling PostgREST directly.
+This means the browser cannot approve, reject, link, alter the 200 MRO price or
+the 3-month period, or write another member's proposal by calling PostgREST
+directly.
 
 ## Validation
 

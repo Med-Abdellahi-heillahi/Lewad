@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { SlidersHorizontal, UsersRound } from 'lucide-react'
+import { CalendarDays, Mail, Phone, Shield, ShieldCheck, UsersRound } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { signOut } from '../lib/auth'
 import { useAccount } from '../hooks/useAccount'
+import { contact } from '../lib/content'
+import { formatDate, initialOf, profileDisplayName } from '../lib/format'
 import { AccountLoading } from './system/AccountLoading'
 import {
   adminUpdateUserStatus,
@@ -21,9 +23,10 @@ import {
   type AdminUserStatusFilter,
 } from '../lib/admin'
 import { paginatedResult, DEFAULT_PAGE_SIZE, type PaginatedResult } from '../lib/pagination'
-import { appWrap, card } from '../lib/ui'
+import { appWrap, btnGhost, card, pill } from '../lib/ui'
 import { AppShell } from './shell/AppShell'
 import { InlineAlert } from './system/States'
+import { AppearanceSettings, PasswordResetSettings } from './settings/SettingsControls'
 import { AdminSectionHeader } from './admin/AdminUi'
 import { adminCopy, type SuperAdminTabId } from './admin/adminCopy'
 import { AdminUsers } from './admin/AdminUsers'
@@ -38,18 +41,105 @@ function emptyUsersPage(): PaginatedResult<AdminUser> {
 
 function SuperAdminSettingsPanel() {
   const { locale } = useI18n()
-  const copy = adminCopy[locale].superSpace
+  const { user, profile, authFullName } = useAccount()
+  const copy = adminCopy[locale]
+  const account = copy.account
+  const statusLabels = copy.content.status
+
+  const displayName = profileDisplayName(profile, locale, authFullName) ?? user?.email ?? copy.content.unnamedUser
+  const email = profile?.email ?? user?.email ?? null
+  const active = profile?.status === 'active'
 
   return (
     <div className="space-y-5">
-      <header className={`${card} border-brand/45 p-5 sm:p-6`}>
-        <h2 className="text-xl font-bold tracking-tight text-ink">{copy.settings.title}</h2>
-        <p className="mt-2 text-sm leading-6 text-muted">{copy.settings.text}</p>
-      </header>
+      {/* Super Admin Account */}
+      <section className={`${card} overflow-hidden`} aria-label={account.identity}>
+        <div className="flex items-center gap-4 border-b border-line bg-page-alt p-5 sm:p-6">
+          <span className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-brand text-2xl font-bold text-brand-ink">
+            {profile?.avatar_url
+              ? <img src={profile.avatar_url} alt="" className="size-full object-cover" />
+              : initialOf(displayName)}
+          </span>
+          <div className="min-w-0">
+            <h2 dir="auto" className="truncate text-lg font-bold text-ink sm:text-xl">{displayName}</h2>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className={`${pill} bg-surface-2 text-ink-soft`}>
+                <Shield size={12} aria-hidden />
+                {account.superAdminProfile === copy.superSpace.badge ? copy.superSpace.badge : account.superAdminProfile}
+              </span>
+              {active !== undefined && (
+                <span className={`${pill} ${active ? 'bg-answer-bg text-answer' : 'bg-ask-bg text-ask'}`}>
+                  <span aria-hidden className={`size-1.5 rounded-full ${active ? 'bg-answer' : 'bg-ask'}`} />
+                  {statusLabels[profile?.status ?? ''] ?? profile?.status ?? '—'}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="grid gap-px bg-line sm:grid-cols-2">
+          {email && (
+            <div className="bg-surface px-4 py-3.5">
+              <dt className="flex items-center gap-1.5 text-xs font-semibold text-muted"><Mail size={13} aria-hidden />{account.email}</dt>
+              <dd className="mt-1.5 text-sm font-semibold break-words text-ink ltr-isolate">{email}</dd>
+            </div>
+          )}
+          {profile?.phone && (
+            <div className="bg-surface px-4 py-3.5">
+              <dt className="flex items-center gap-1.5 text-xs font-semibold text-muted"><Phone size={13} aria-hidden />{account.phone}</dt>
+              <dd className="mt-1.5 text-sm font-semibold break-words text-ink ltr-isolate">{profile.phone}</dd>
+            </div>
+          )}
+          {profile?.created_at && (
+            <div className="bg-surface px-4 py-3.5">
+              <dt className="flex items-center gap-1.5 text-xs font-semibold text-muted"><CalendarDays size={13} aria-hidden />{account.createdAt}</dt>
+              <dd className="mt-1.5 text-sm font-semibold break-words text-ink">{formatDate(profile.created_at, locale)}</dd>
+            </div>
+          )}
+        </div>
+        <div className="border-t border-line bg-page-alt px-4 py-3">
+          <a href="/super-admin/profile" className={btnGhost}>
+            <ShieldCheck size={16} aria-hidden />
+            {account.backToSuperAdmin} — {account.platformRole}
+          </a>
+        </div>
+      </section>
+
+      {/* Interface Settings */}
+      <AppearanceSettings />
+
+      {/* Password Change */}
+      <PasswordResetSettings userEmail={email} />
+
+      {/* Lewad Contact */}
       <section className={`${card} p-5 sm:p-6`}>
-        <ul className="list-none space-y-3">
-          {copy.settings.items.map((item) => <li key={item} className="flex items-start gap-3 text-sm leading-6 text-ink-soft"><SlidersHorizontal className="mt-0.5 shrink-0 text-muted" size={18} aria-hidden />{item}</li>)}
-        </ul>
+        <h2 className="text-lg font-bold tracking-tight text-ink">{locale === 'ar' ? 'التواصل' : locale === 'en' ? 'Contact' : 'Contact'}</h2>
+        <p className="mt-1 text-sm text-muted">{locale === 'ar' ? 'معلومات التواصل مع فريق لواد.' : locale === 'en' ? 'Lewad team contact details.' : 'Coordonnées de l\'équipe Lewad.'}</p>
+        <div className="mt-4 grid gap-px bg-line sm:grid-cols-2">
+          <div className="bg-surface px-4 py-3.5">
+            <dt className="flex items-center gap-1.5 text-xs font-semibold text-muted"><Phone size={13} aria-hidden />{locale === 'ar' ? 'الهاتف' : locale === 'en' ? 'Phone' : 'Téléphone'}</dt>
+            <dd className="mt-1.5 text-sm font-semibold text-ink ltr-isolate">{contact.phoneDisplay}</dd>
+          </div>
+          <div className="bg-surface px-4 py-3.5">
+            <dt className="flex items-center gap-1.5 text-xs font-semibold text-muted"><Mail size={13} aria-hidden />{locale === 'ar' ? 'البريد الإلكتروني' : locale === 'en' ? 'Email' : 'E-mail'}</dt>
+            <dd className="mt-1.5 text-sm font-semibold text-ink ltr-isolate">{contact.email}</dd>
+          </div>
+        </div>
+      </section>
+
+      {/* System Info */}
+      <section className={`${card} p-5 sm:p-6`}>
+        <h2 className="text-lg font-bold tracking-tight text-ink">{locale === 'ar' ? 'معلومات النظام' : locale === 'en' ? 'System info' : 'Informations système'}</h2>
+        <p className="mt-1 text-sm text-muted">{locale === 'ar' ? 'معلومات تقنية عن النسخة الحالية.' : locale === 'en' ? 'Technical details about the current version.' : 'Informations techniques sur la version actuelle.'}</p>
+        <dl className="mt-4 grid gap-px bg-line sm:grid-cols-2">
+          <div className="bg-surface px-4 py-3.5">
+            <dt className="text-xs font-semibold text-muted">{locale === 'ar' ? 'الإصدار' : locale === 'en' ? 'Version' : 'Version'}</dt>
+            <dd className="mt-1.5 text-sm font-semibold text-ink">Lewad V1</dd>
+          </div>
+          <div className="bg-surface px-4 py-3.5">
+            <dt className="text-xs font-semibold text-muted">{locale === 'ar' ? 'دورك' : locale === 'en' ? 'Your role' : 'Votre rôle'}</dt>
+            <dd className="mt-1.5 text-sm font-semibold text-ink">{copy.superSpace.badge}</dd>
+          </div>
+        </dl>
       </section>
     </div>
   )

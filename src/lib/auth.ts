@@ -31,6 +31,11 @@ export async function requestPasswordReset(email: string) {
   })
 }
 
+/** Updates the authenticated user's password. Used by the password change panel. */
+export async function updateUserPassword(password: string) {
+  return supabase.auth.updateUser({ password })
+}
+
 export async function getCurrentUser() {
   const { data, error } = await supabase.auth.getUser()
   return error ? null : data.user

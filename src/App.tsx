@@ -151,7 +151,7 @@ function useRoute(): Route {
     if (path === '/auth') return 'auth'
     if (path === '/contact') return 'contact'
     if (path === '/add-business') return 'add-business'
-    if (path === '/profile' || path === '/credits' || path === '/settings' || path === '/recharge') return path.slice(1) as PrivatePageName
+    if (path === '/profile' || path === '/credits' || path === '/settings' || path === '/recharge' || path === '/history') return path.slice(1) as PrivatePageName
 
     const code = path.match(/^\/errors\/([a-z0-9]+)$/i)?.[1]
     if (code && (errorCodes as readonly string[]).includes(code)) return code as ErrorCode
@@ -207,7 +207,7 @@ function Shell() {
   if (route === 'auth') return <AuthPage />
   if (route === 'contact') return <AccountProvider><ContactPage /></AccountProvider>
   if (route === 'add-business') return <RequireAuthentication><AccountProvider><AddBusinessPage /></AccountProvider></RequireAuthentication>
-  if (route === 'profile' || route === 'credits' || route === 'settings' || route === 'recharge') return <RequireAuthentication><AccountProvider><ProtectedAppPage page={route} /></AccountProvider></RequireAuthentication>
+  if (route === 'profile' || route === 'credits' || route === 'settings' || route === 'recharge' || route === 'history') return <RequireAuthentication><AccountProvider><ProtectedAppPage page={route} /></AccountProvider></RequireAuthentication>
   if (route) return <ErrorPage code={route} onRetry={() => window.location.reload()} />
   return <Landing />
 }

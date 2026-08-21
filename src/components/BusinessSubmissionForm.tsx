@@ -1,9 +1,9 @@
 import { lazy, type FormEvent, Suspense, useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
 import { createBusinessSubmission } from '../lib/businessSubmissions'
-import { contact } from '../lib/content'
+import { businessSubmissionOffer, contact } from '../lib/content'
 import { getActiveCategories, type Db2Category } from '../lib/db2'
-import { formatCurrency } from '../lib/format'
+import { formatCurrency, formatNumber } from '../lib/format'
 import { isValidMauritanianPhone, normalizeMauritanianPhone, isValidArabicName } from '../lib/validation'
 import { btnGhost, btnPrimary, card, field, fieldHint, fieldLabel } from '../lib/ui'
 import { Icon } from './Icon'
@@ -15,6 +15,7 @@ type FormState = 'idle' | 'submitting' | 'success' | 'error'
 type SuccessResult = {
   submissionId: string | null
   amountMro: number | null
+  periodMonths: number | null
 }
 
 const MapLocationPicker = lazy(async () => {
@@ -25,6 +26,8 @@ const MapLocationPicker = lazy(async () => {
 export function BusinessSubmissionForm() {
   const { t, locale } = useI18n()
   const copy = t.businessSubmission
+  /** « 3 mois » / « 3 أشهر » — la durée vient du serveur, jamais du navigateur. */
+  const periodLabel = (months: number) => copy.periodMonthsValue.replace('{months}', formatNumber(months, locale))
   const [formState, setFormState] = useState<FormState>('idle')
   const [successResult, setSuccessResult] = useState<SuccessResult | null>(null)
   const [serverError, setServerError] = useState<string | null>(null)
@@ -147,7 +150,7 @@ export function BusinessSubmissionForm() {
       return
     }
 
-    setSuccessResult({ submissionId: result.submissionId, amountMro: result.amountMro })
+    setSuccessResult({ submissionId: result.submissionId, amountMro: result.amountMro, periodMonths: result.periodMonths })
     setFormState('success')
   }
 
@@ -156,6 +159,7 @@ export function BusinessSubmissionForm() {
       copy.successTitle,
       successResult.submissionId ? `${copy.submissionId}: ${successResult.submissionId}` : null,
       successResult.amountMro !== null ? `${copy.amountSection}: ${formatCurrency(successResult.amountMro, locale)}` : null,
+      successResult.periodMonths !== null ? `${copy.periodSection}: ${periodLabel(successResult.periodMonths)}` : null,
     ].filter((line): line is string => Boolean(line)).join('\n'))}`
     : contact.whatsappHref
 
@@ -179,6 +183,12 @@ export function BusinessSubmissionForm() {
             <div className="flex items-center justify-between gap-3">
               <dt className="text-sm text-muted">{copy.amountSection}</dt>
               <dd className="tabular text-sm font-semibold text-ink">{formatCurrency(successResult.amountMro, locale)}</dd>
+            </div>
+          )}
+          {successResult.periodMonths !== null && (
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-sm text-muted">{copy.periodSection}</dt>
+              <dd className="tabular text-sm font-semibold text-ink">{periodLabel(successResult.periodMonths)}</dd>
             </div>
           )}
           <div className="flex items-center justify-between gap-3">
@@ -274,7 +284,11 @@ export function BusinessSubmissionForm() {
         {/* Amount */}
         <div className="rounded-xl border border-line bg-page-alt p-4 sm:p-5">
           <h2 className="text-sm font-bold text-ink">{copy.amountSection}</h2>
-          <p className="mt-2 text-sm leading-6 text-muted">{copy.amountText}</p>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            {copy.amountText
+              .replace('{amount}', formatCurrency(businessSubmissionOffer.amountMro, locale))
+              .replace('{months}', formatNumber(businessSubmissionOffer.periodMonths, locale))}
+          </p>
         </div>
 
         <button type="submit" className={`${btnPrimary} w-full`} disabled={formState === 'submitting'}>

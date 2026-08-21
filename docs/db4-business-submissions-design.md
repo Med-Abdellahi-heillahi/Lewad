@@ -420,7 +420,7 @@ Nothing in this plan was built. No code, migration, RLS policy, RPC, or Supabase
 
 ### Open decisions for the owner
 
-1. **The fee.** The brief says 500 MRO; the backend must own the real value. Confirm the amount, and whether it is flat or varies by category — this design assumes flat, resolved server-side.
+1. ~~**The fee.**~~ **Resolved 21 August 2026:** flat, server-owned, **200 MRO for 3 months**, fixed by `20260821000004_update_business_submission_amount_200_mro.sql`. It does not vary by category. The earlier 500 MRO figure is retired and survives only for rows created before the change.
 2. **Refund/cancellation policy** when a paid submission is rejected. `cancelled` exists in the vocabulary but nothing defines who sets it or what happens to the money.
 3. **Anonymous submission.** This plan recommends authenticated-only; confirm.
 4. **Who may approve** — active `admin`, or `super_admin` only? This design assumes active `admin` or `super_admin`, consistent with recharge approval.

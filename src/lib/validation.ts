@@ -49,6 +49,5 @@ export function isAvatarFileTooLarge(file: File) {
 }
 
 export function isValidLewadSignUpPassword(password: string) {
-  const digitCount = (password.match(/\d/g) || []).length
-  return password.length >= 8 && digitCount === 4 && /[A-Za-z]/.test(password)
+  return password.length >= 8 && /[A-Za-z]/.test(password) && /\d/.test(password)
 }

@@ -2,14 +2,17 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 /**
- * The DB4 contract spans two migrations. The base migration owns the table,
- * its RLS, and the list/reject functions. The maps migration supersedes the
- * creation, details, and approval functions so a submission always carries a
- * map point, so each assertion below reads the file that actually owns it.
+ * The DB4 contract spans three migrations. The base migration owns the table,
+ * its RLS, and the reject function. The maps migration supersedes the approval
+ * function so a submission always carries a map point. The pricing migration
+ * supersedes creation, listing, and details so the server owns the 200 MRO /
+ * 3-month offer. Each assertion below reads the file that actually owns it.
  */
 const basePath = new URL('../supabase/migrations/20260821000002_db4_business_submissions.sql', import.meta.url)
 const mapsPath = new URL('../supabase/migrations/20260821000003_db4_maps_location_support.sql', import.meta.url)
+const pricingPath = new URL('../supabase/migrations/20260821000004_update_business_submission_amount_200_mro.sql', import.meta.url)
 const dataLayerPath = new URL('../src/lib/businessSubmissions.ts', import.meta.url)
+const contentPath = new URL('../src/lib/content.ts', import.meta.url)
 
 /** The obsolete signature: no coordinates. It must only ever appear as a `drop`. */
 const legacyCreateSignature = 'create_business_submission(text, text, text, text, text, text, text, text, uuid, text, text)'
@@ -23,15 +26,75 @@ function mapsMigration() {
   return readFileSync(mapsPath, 'utf8')
 }
 
-describe('DB4 business-submission contracts', () => {
-  it('keeps the submitted amount server-owned and fixed at 500 MRO', () => {
-    expect(baseMigration()).toContain('amount_mro integer not null default 500 check (amount_mro = 500)')
+function pricingMigration() {
+  return readFileSync(pricingPath, 'utf8')
+}
 
-    // The effective creation function still owns the price after the maps rewrite.
-    const sql = mapsMigration()
-    expect(sql).toContain('v_amount_mro constant integer := 500;')
-    expect(sql).toContain('create function public.create_business_submission(')
+describe('DB4 business-submission contracts', () => {
+  it('keeps the submitted amount server-owned and fixed at 200 MRO for 3 months', () => {
+    const sql = pricingMigration()
+
+    // The creation function is the only place the price and period are decided.
+    expect(sql).toContain('v_amount_mro constant integer := 200;')
+    expect(sql).toContain('v_period_months constant integer := 3;')
+    expect(sql).toContain("'amount_mro', v_amount_mro,")
+    expect(sql).toContain("'period_months', v_period_months")
+
+    // The column-level guard backs the function, and the retired 500 MRO value
+    // survives only for rows created before the change.
+    expect(sql).toContain('drop constraint if exists business_submissions_amount_mro_check;')
+    expect(sql).toContain('alter column amount_mro set default 200;')
+    expect(sql).toContain('check (amount_mro in (200, 500));')
+    expect(sql).toContain('add column if not exists period_months integer not null default 3;')
+    expect(sql).toContain('check (period_months = 3);')
+
+    // A price or period argument would let the browser name its own terms.
     expect(sql).not.toContain('p_amount_mro')
+    expect(sql).not.toContain('p_period_months')
+  })
+
+  it('never lets the retired 500 MRO price reach the current creation path', () => {
+    const sql = pricingMigration()
+
+    expect(sql).not.toContain('v_amount_mro constant integer := 500;')
+
+    // Outside comments, 500 may survive only in the legacy-tolerant column
+    // constraint and in the column comment that explains why it is tolerated.
+    const priceLines = sql
+      .split('\n')
+      .filter((line) => line.includes('500') && !line.trim().startsWith('--'))
+    expect(priceLines.length).toBeGreaterThan(0)
+    for (const line of priceLines) {
+      expect(line).toMatch(/amount_mro in \(200, 500\)|retired V1 price/)
+    }
+  })
+
+  it('reports the same published offer in the browser as the migration fixes', () => {
+    // The form must quote a price before any server response exists. That
+    // display constant drifting from the migration would advertise a price the
+    // server then refuses to honour.
+    const content = readFileSync(contentPath, 'utf8')
+    const sql = pricingMigration()
+
+    expect(content).toContain('export const businessSubmissionOffer = {')
+    expect(content).toContain('amountMro: 200,')
+    expect(content).toContain('periodMonths: 3,')
+    expect(sql).toContain('v_amount_mro constant integer := 200;')
+    expect(sql).toContain('v_period_months constant integer := 3;')
+  })
+
+  it('shows the stored period to the owner and to the reviewing admin', () => {
+    const sql = pricingMigration()
+
+    // Both admin read paths must surface it, or a reviewer cannot see the terms.
+    expect(sql).toContain("'period_months', submission.period_months,")
+    expect(sql).toContain("'period_months', v_submission.period_months,")
+
+    const source = readFileSync(dataLayerPath, 'utf8')
+    expect(source).toContain('const periodMonths = numberValue(value.period_months)')
+    // Nullable on purpose: an unapplied pricing migration returns no period, and
+    // that must degrade to a hidden row rather than a failed parse.
+    expect(source).toContain('periodMonths: number | null')
   })
 
   it('allows browser roles to read their permitted rows but never write the table directly', () => {

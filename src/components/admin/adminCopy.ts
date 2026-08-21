@@ -230,6 +230,7 @@ type AdminBusinessSubmissionsCopy = {
   businessPhone: string
   status: string
   amount: string
+  period: string
   date: string
   actions: string
   viewDetails: string
@@ -724,7 +725,7 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       emptyTitle: 'Aucune soumission', emptyText: 'Les soumissions d\'établissements apparaîtront ici.',
       pendingCount: '{count} en attente',
       businessName: 'Établissement', ownerName: 'Propriétaire', ownerPhone: 'Tél. propriétaire',
-      businessPhone: 'Tél. établissement', status: 'Statut', amount: 'Montant', date: 'Date', actions: 'Actions',
+      businessPhone: 'Tél. établissement', status: 'Statut', amount: 'Montant', period: 'Durée', date: 'Date', actions: 'Actions',
       viewDetails: 'Voir les détails', approve: 'Approuver', reject: 'Rejeter',
       detailsTitle: 'Détail de la soumission',
       ownerSection: 'Propriétaire', businessSection: 'Établissement', contactSection: 'Coordonnées',
@@ -961,7 +962,7 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       emptyTitle: 'لا توجد طلبات', emptyText: 'ستظهر هنا طلبات إضافة المؤسسات.',
       pendingCount: '{count} في الانتظار',
       businessName: 'المؤسسة', ownerName: 'المالك', ownerPhone: 'هاتف المالك',
-      businessPhone: 'هاتف المؤسسة', status: 'الحالة', amount: 'المبلغ', date: 'التاريخ', actions: 'الإجراءات',
+      businessPhone: 'هاتف المؤسسة', status: 'الحالة', amount: 'المبلغ', period: 'المدة', date: 'التاريخ', actions: 'الإجراءات',
       viewDetails: 'عرض التفاصيل', approve: 'الموافقة', reject: 'الرفض',
       detailsTitle: 'تفاصيل الطلب',
       ownerSection: 'المالك', businessSection: 'المؤسسة', contactSection: 'معلومات الاتصال',
@@ -1198,7 +1199,7 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       emptyTitle: 'No submissions', emptyText: 'Business submissions will appear here.',
       pendingCount: '{count} pending',
       businessName: 'Business', ownerName: 'Owner', ownerPhone: 'Owner phone',
-      businessPhone: 'Business phone', status: 'Status', amount: 'Amount', date: 'Date', actions: 'Actions',
+      businessPhone: 'Business phone', status: 'Status', amount: 'Amount', period: 'Duration', date: 'Date', actions: 'Actions',
       viewDetails: 'View details', approve: 'Approve', reject: 'Reject',
       detailsTitle: 'Submission details',
       ownerSection: 'Owner', businessSection: 'Business', contactSection: 'Contact details',

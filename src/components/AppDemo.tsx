@@ -1,12 +1,12 @@
-import { useMemo, useRef, useState, lazy, Suspense } from 'react'
+import { type KeyboardEvent, useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
 import { type Locale, useI18n } from '../i18n'
-import { searchDemoEstablishments } from '../lib/content'
 import { type Db2Branch, type Db2Establishment } from '../lib/db2'
 import { searchServicesWithCredit } from '../lib/db3a'
 import { createMissingServiceRequest } from '../lib/db3b'
 import { formatNumber } from '../lib/format'
 import { isAdminRole } from '../lib/routeAuth'
-import { findClosestSearchMatch, getSearchSuggestions, normalizeSearchText } from '../lib/searchMatching'
+import { findClosestSearchMatch, normalizeSearchText } from '../lib/searchMatching'
+import { SUGGESTION_MIN_LENGTH, type ServiceSuggestion, suggestServices } from '../lib/searchSuggestions'
 import { appPad, appWrap, btnGhost, btnPrimary, card } from '../lib/ui'
 import { useAccount } from '../hooks/useAccount'
 import { Icon, type IconName } from './Icon'
@@ -233,7 +233,7 @@ export function PublicSearchDemo() {
   const [state, setState] = useState<SearchState>('initial')
   const [validation, setValidation] = useState<ValidationMessage>(null)
   const [results, setResults] = useState<Db2Establishment[]>([])
-  const [didYouMean, setDidYouMean] = useState<Db2Establishment | null>(null)
+  const [didYouMean, setDidYouMean] = useState<ServiceSuggestion | null>(null)
   const [suggestionsOpen, setSuggestionsOpen] = useState(false)
   const [searchFailed, setSearchFailed] = useState(false)
   const [debited, setDebited] = useState(false)
@@ -242,16 +242,76 @@ export function PublicSearchDemo() {
   const [lastSearchLogId, setLastSearchLogId] = useState<string | null>(null)
   const [requestState, setRequestState] = useState<RequestState>('idle')
   const inputRef = useRef<HTMLInputElement>(null)
+  const suggestionListRef = useRef<HTMLDivElement>(null)
   const searchIdRef = useRef(0)
 
-  const suggestions = useMemo(
-    () => getSearchSuggestions(searchDemoEstablishments, query),
-    [query],
-  )
-  const hasSuggestionQuery = normalizeSearchText(query).length >= 2
+  const [suggestions, setSuggestions] = useState<ServiceSuggestion[]>([])
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false)
+  const suggestionQuery = useMemo(() => normalizeSearchText(query), [query])
+  const hasSuggestionQuery = suggestionQuery.length >= SUGGESTION_MIN_LENGTH
   const balance = wallet?.balance ?? null
   const hasUnlimitedSearches = isAdminRole(profile?.role)
   const focusSearch = () => inputRef.current?.focus()
+  const suggestionOptions = () =>
+    Array.from(suggestionListRef.current?.querySelectorAll<HTMLButtonElement>('[role="option"]') ?? [])
+
+  /*
+   * Navigation clavier dans la liste : flèches pour parcourir, Échap pour
+   * revenir au champ. Sans cela, la seule façon de choisir une suggestion
+   * serait la souris ou une longue série de tabulations.
+   */
+  const moveSuggestionFocus = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp' && event.key !== 'Escape') return
+    event.preventDefault()
+
+    if (event.key === 'Escape') {
+      setSuggestionsOpen(false)
+      focusSearch()
+      return
+    }
+
+    const options = suggestionOptions()
+    const current = options.indexOf(event.currentTarget)
+    if (current === -1) return
+
+    if (event.key === 'ArrowUp' && current === 0) {
+      focusSearch()
+      return
+    }
+
+    const next = event.key === 'ArrowDown' ? current + 1 : current - 1
+    options[next]?.focus()
+  }
+
+  /*
+   * Autocomplétion : `suggest_services` est en lecture seule et ne débite
+   * jamais un point — seule la recherche soumise coûte un crédit. On attend
+   * 220 ms après la dernière frappe pour ne pas lancer une requête par
+   * caractère, et chaque réponse obsolète est ignorée via l'AbortController.
+   */
+  useEffect(() => {
+    if (!hasSuggestionQuery) {
+      setSuggestions([])
+      setSuggestionsLoading(false)
+      return
+    }
+
+    const controller = new AbortController()
+    setSuggestionsLoading(true)
+
+    const timer = window.setTimeout(() => {
+      void suggestServices(suggestionQuery, controller.signal).then((response) => {
+        if (controller.signal.aborted) return
+        setSuggestions(response.items)
+        setSuggestionsLoading(false)
+      })
+    }, 220)
+
+    return () => {
+      controller.abort()
+      window.clearTimeout(timer)
+    }
+  }, [hasSuggestionQuery, suggestionQuery])
 
   const clearSearchState = () => {
     setResults([])
@@ -327,8 +387,15 @@ export function PublicSearchDemo() {
 
     setLastNotFoundQuery(requestedQuery)
     setLastSearchLogId(result.searchLogId)
-    setDidYouMean(findClosestSearchMatch(searchDemoEstablishments, normalizedQuery))
     setState('unavailable')
+
+    // La correction orthographique ne doit jamais proposer un nom qui n'existe
+    // pas : cliquer « Oui » relance une recherche payante. On sonde donc les
+    // vraies suggestions sur un préfixe court — la correspondance par
+    // sous-chaîne vient d'échouer — puis on ne garde qu'un nom assez proche.
+    const probe = await suggestServices(normalizedQuery.slice(0, 2))
+    if (searchId !== searchIdRef.current) return
+    setDidYouMean(findClosestSearchMatch(probe.items, normalizedQuery))
   }
 
   const handleRequestMissingService = async () => {
@@ -361,9 +428,21 @@ export function PublicSearchDemo() {
     window.setTimeout(focusSearch, 0)
   }
 
-  const chooseSuggestion = (establishment: Db2Establishment) => {
-    setQuery(establishment.name)
-    void runSearch(establishment.name)
+  /** Remplit le champ sans rien débiter : l'utilisateur lance la recherche lui-même. */
+  const applySuggestion = (suggestion: ServiceSuggestion) => {
+    setQuery(suggestion.name)
+    setValidation(null)
+    // On rend le focus AVANT de fermer : au clavier, l'option a le focus, et
+    // `focusSearch()` déclenche le `onFocus` du champ qui rouvre la liste. En
+    // fermant après, c'est bien la fermeture qui gagne.
+    focusSearch()
+    setSuggestionsOpen(false)
+  }
+
+  /** Action explicite « Oui » de la correction : là, la recherche payante est voulue. */
+  const acceptDidYouMean = (suggestion: ServiceSuggestion) => {
+    setQuery(suggestion.name)
+    void runSearch(suggestion.name)
   }
 
   const didYouMeanLabel = didYouMean ? searchCopy.didYouMean.replace('{name}', didYouMean.name) : ''
@@ -426,32 +505,58 @@ export function PublicSearchDemo() {
                   aria-autocomplete="list"
                   aria-controls="service-suggestions"
                   aria-expanded={suggestionsOpen && hasSuggestionQuery}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape') {
+                      setSuggestionsOpen(false)
+                      return
+                    }
+                    // Flèche bas : on entre dans la liste au clavier, sans souris.
+                    if (event.key === 'ArrowDown' && suggestionsOpen && suggestions.length) {
+                      event.preventDefault()
+                      suggestionOptions()[0]?.focus()
+                    }
+                  }}
                 />
                 {suggestionsOpen && hasSuggestionQuery && (
                   <div
                     id="service-suggestions"
+                    ref={suggestionListRef}
                     role="listbox"
                     aria-label={searchCopy.suggestions}
-                    className="absolute z-30 mt-2 w-full overflow-hidden rounded-xl border border-line bg-surface p-1 shadow-lg"
+                    aria-busy={suggestionsLoading}
+                    className="absolute z-30 mt-2 max-h-72 w-full overflow-y-auto overscroll-contain rounded-xl border border-line bg-surface p-1 shadow-lg"
                   >
                     <p className="px-3 py-2 text-xs font-bold tracking-[0.08em] text-muted uppercase rtl:tracking-normal rtl:normal-case">
                       {searchCopy.suggestions}
                     </p>
                     {suggestions.length ? (
-                      suggestions.map((suggestion) => (
-                        <button
-                          key={suggestion.id}
-                          type="button"
-                          role="option"
-                          className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-start text-sm font-semibold text-ink transition-colors hover:bg-brand-soft focus:bg-brand-soft focus:outline-none"
-                          onMouseDown={(event) => event.preventDefault()}
-                          onClick={() => chooseSuggestion(suggestion)}
-                        >
-                          <Icon name="store" size={17} className="text-brand-deep dark:text-brand" />
-                          <span>{suggestion.name}</span>
-                          <span className="ms-auto text-xs font-medium text-muted">{suggestion.category?.name}</span>
-                        </button>
-                      ))
+                      suggestions.map((suggestion) => {
+                        // En arabe, on affiche le nom arabe quand il existe : le
+                        // lecteur ne doit pas devoir déchiffrer un nom latin.
+                        const label = locale === 'ar' ? suggestion.nameAr ?? suggestion.name : suggestion.name
+                        const context = [suggestion.categoryName, suggestion.neighborhood].filter(Boolean).join(' · ')
+
+                        return (
+                          <button
+                            key={suggestion.id}
+                            type="button"
+                            role="option"
+                            aria-selected={false}
+                            className="flex min-h-11 w-full items-start gap-3 rounded-lg px-3 py-2 text-start transition-colors hover:bg-brand-soft focus:bg-brand-soft focus:outline-none"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => applySuggestion(suggestion)}
+                            onKeyDown={(event) => moveSuggestionFocus(event)}
+                          >
+                            <Icon name="store" size={17} className="mt-0.5 shrink-0 text-brand-deep dark:text-brand" />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-semibold text-ink">{label}</span>
+                              {context && <span className="block truncate text-xs font-medium text-muted">{context}</span>}
+                            </span>
+                          </button>
+                        )
+                      })
+                    ) : suggestionsLoading ? (
+                      <p className="px-3 py-3 text-sm text-muted">{searchCopy.suggestionsLoading}</p>
                     ) : (
                       <p className="px-3 py-3 text-sm text-muted">{searchCopy.noSuggestions}</p>
                     )}
@@ -552,7 +657,7 @@ export function PublicSearchDemo() {
                     <h2 className="mt-5 text-xl font-bold tracking-tight sm:text-2xl">{didYouMeanLabel}</h2>
                     <p className="mt-2 max-w-xl text-[15px] leading-7 text-muted sm:text-base">{searchCopy.demoNote}</p>
                     <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                      <button type="button" className={`${btnPrimary} w-full sm:w-auto`} onClick={() => chooseSuggestion(didYouMean)}>
+                      <button type="button" className={`${btnPrimary} w-full sm:w-auto`} onClick={() => acceptDidYouMean(didYouMean)}>
                         {searchCopy.yes}
                       </button>
                       <button type="button" className={`${btnGhost} w-full sm:w-auto`} onClick={() => setDidYouMean(null)}>
