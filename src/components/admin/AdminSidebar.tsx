@@ -1,9 +1,8 @@
+import { useMemo } from 'react'
+import { Home, LogOut, Settings, Shield, User } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { card } from '../../lib/ui'
+import { adminCopy, type AdminTabId } from './adminCopy'
 import { Drawer } from '../shell/Drawer'
-import { CreditCard, Home, Mail, RefreshCw, Search, Settings, ShieldCheck, User, Wallet } from 'lucide-react'
-import type { AdminTabId } from './adminCopy'
-import { adminCopy } from './adminCopy'
 import type { AdminIcon } from './AdminUi'
 
 type AdminSidebarProps = {
@@ -11,69 +10,185 @@ type AdminSidebarProps = {
   activeTab: AdminTabId
   collapsed: boolean
   mobileOpen: boolean
+  isSuperAdmin: boolean
+  signingOut: boolean
   onMobileOpenChange: (open: boolean) => void
   onSelectTab: (tab: AdminTabId) => void
   onSelectRecharge: () => void
+  onSignOut: () => void
   superAdminHref?: string
+  activeAccountPage?: 'profile' | 'settings'
 }
 
-type SidebarLinksProps = Pick<AdminSidebarProps, 'tabs' | 'activeTab' | 'collapsed' | 'onSelectTab' | 'onSelectRecharge' | 'superAdminHref'> & {
-  onNavigate?: () => void
-}
-
-function SidebarLinks({ tabs, activeTab, collapsed, onSelectTab, onSelectRecharge, superAdminHref, onNavigate }: SidebarLinksProps) {
-  const { locale } = useI18n()
-  const copy = adminCopy[locale].sidebar
-  const userLinks = [
-    { label: copy.userSpace, href: '/app', icon: Home },
-    { label: copy.search, href: '/app', icon: Search },
-    { label: copy.profile, href: '/profile', icon: User },
-    { label: copy.credits, href: '/credits', icon: Wallet },
-    { label: copy.recharge, href: '/recharge', icon: RefreshCw },
-    { label: copy.settings, href: '/settings', icon: Settings },
-    { label: copy.contact, href: '/contact', icon: Mail },
-  ]
-  const itemClass = `flex min-h-11 w-full items-center rounded-xl px-3 text-start text-sm transition-colors ${collapsed ? 'justify-center px-0' : 'gap-3'}`
+function SidebarContent({
+  tabs,
+  activeTab,
+  collapsed,
+  isSuperAdmin,
+  signingOut,
+  onSelectTab,
+  onSignOut,
+  superAdminHref,
+  activeAccountPage,
+  locale,
+}: {
+  tabs: { id: AdminTabId; icon: AdminIcon }[]
+  activeTab: AdminTabId
+  collapsed: boolean
+  isSuperAdmin: boolean
+  signingOut: boolean
+  onSelectTab: (tab: AdminTabId) => void
+  onSignOut: () => void
+  superAdminHref?: string
+  activeAccountPage?: 'profile' | 'settings'
+  locale: 'fr' | 'ar' | 'en'
+}) {
+  const copy = adminCopy[locale]
+  const { sidebar, tabs: tabLabels } = copy
 
   return (
-    <nav aria-label={copy.title} className="space-y-5">
-      <section>
-        <h2 className={`px-2 text-[11px] font-bold tracking-[0.09em] text-muted uppercase rtl:tracking-normal rtl:normal-case ${collapsed ? 'sr-only' : ''}`}>{copy.adminNavigation}</h2>
-        <ul className="mt-2 list-none space-y-1">
-          {tabs.map((tab) => {
-            const TabIcon = tab.icon
-            const active = activeTab === tab.id
-            const label = adminCopy[locale].tabs[tab.id]
-            return <li key={tab.id}><button type="button" aria-current={active ? 'page' : undefined} aria-label={collapsed ? label : undefined} title={collapsed ? label : undefined} onClick={() => { onSelectTab(tab.id); onNavigate?.() }} className={`${itemClass} ${active ? 'bg-brand-soft font-semibold text-brand-deep' : 'font-semibold text-ink-soft hover:bg-surface-2 hover:text-ink'}`}><TabIcon size={17} aria-hidden />{!collapsed && <span>{label}</span>}</button></li>
-          })}
-          {superAdminHref && <li><a href={superAdminHref} aria-label={collapsed ? copy.superAdminSpace : undefined} title={collapsed ? copy.superAdminSpace : undefined} onClick={onNavigate} className={`${itemClass} border border-brand/30 bg-brand-soft font-semibold text-brand-deep hover:bg-brand/20`}><ShieldCheck size={17} aria-hidden />{!collapsed && <span>{copy.superAdminSpace}</span>}</a></li>}
-          <li><button type="button" aria-label={collapsed ? copy.recharges : undefined} title={collapsed ? copy.recharges : undefined} onClick={() => { onSelectRecharge(); onNavigate?.() }} className={`${itemClass} font-semibold text-ink-soft hover:bg-surface-2 hover:text-ink`}><CreditCard size={17} aria-hidden />{!collapsed && <span>{copy.recharges}</span>}</button></li>
-        </ul>
-      </section>
+    <nav className="flex flex-1 flex-col gap-1 p-2" aria-label={sidebar.title}>
+      {/* Role badge */}
+      {!collapsed && (
+        <div className="mb-2 px-3 py-2">
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${isSuperAdmin ? 'bg-tint-4/60 text-tint-ink-4' : 'bg-tint-1/60 text-tint-ink-1'}`}>
+            <Shield size={12} aria-hidden />
+            {isSuperAdmin ? sidebar.superAdminBadge : sidebar.adminBadge}
+          </span>
+        </div>
+      )}
 
-      <section className="border-t border-line pt-5">
-        <h2 className={`px-2 text-[11px] font-bold tracking-[0.09em] text-muted uppercase rtl:tracking-normal rtl:normal-case ${collapsed ? 'sr-only' : ''}`}>{copy.userNavigation}</h2>
-        <ul className="mt-2 list-none space-y-1">
-          {userLinks.map(({ label, href, icon: LinkIcon }) => <li key={label}><a href={href} aria-label={collapsed ? label : undefined} title={collapsed ? label : undefined} onClick={onNavigate} className={`${itemClass} font-medium text-ink-soft hover:bg-surface-2 hover:text-ink`}><LinkIcon size={17} aria-hidden />{!collapsed && <span>{label}</span>}</a></li>)}
-        </ul>
-      </section>
+      {/* Tab navigation */}
+      <ul className="list-none space-y-0.5">
+        {tabs.map((tab) => {
+          const isActive = !activeAccountPage && activeTab === tab.id
+          const IconComp = tab.icon
+          return (
+            <li key={tab.id}>
+              <button
+                type="button"
+                onClick={() => onSelectTab(tab.id)}
+                title={collapsed ? tabLabels[tab.id] : undefined}
+                aria-current={isActive ? 'page' : undefined}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-brand-soft text-brand-deep font-semibold'
+                    : 'text-muted hover:bg-surface-2 hover:text-ink'
+                } ${collapsed ? 'justify-center !px-0' : ''}`}
+              >
+                <IconComp size={18} aria-hidden />
+                {!collapsed && <span className="truncate">{tabLabels[tab.id]}</span>}
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+
+      {/* Super Admin link */}
+      {superAdminHref && (
+        <div className="mt-2 border-t border-line pt-2">
+          <a
+            href={superAdminHref}
+            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-tint-ink-4 transition-colors hover:bg-tint-4/30 ${collapsed ? 'justify-center !px-0' : ''}`}
+          >
+            <Shield size={18} aria-hidden />
+            {!collapsed && <span className="truncate">{sidebar.superAdminSpace}</span>}
+          </a>
+        </div>
+      )}
+
+      {/* Bottom section: Profile + Settings + User Space + Logout.
+          Profil et Paramètres restent dans l'espace admin ; `/app` est le seul
+          passage assumé vers l'espace membre. */}
+      <div className="mt-auto border-t border-line pt-2 space-y-0.5">
+        <a
+          href="/admin/profile"
+          aria-current={activeAccountPage === 'profile' ? 'page' : undefined}
+          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${activeAccountPage === 'profile' ? 'bg-brand-soft text-brand-deep font-semibold' : 'text-muted hover:bg-surface-2 hover:text-ink'} ${collapsed ? 'justify-center !px-0' : ''}`}
+        >
+          <User size={18} aria-hidden />
+          {!collapsed && <span className="truncate">{sidebar.profile}</span>}
+        </a>
+        <a
+          href="/admin/settings"
+          title={collapsed ? sidebar.settings : undefined}
+          aria-current={activeAccountPage === 'settings' ? 'page' : undefined}
+          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${activeAccountPage === 'settings' ? 'bg-brand-soft text-brand-deep font-semibold' : 'text-muted hover:bg-surface-2 hover:text-ink'} ${collapsed ? 'justify-center !px-0' : ''}`}
+        >
+          <Settings size={18} aria-hidden />
+          {!collapsed && <span className="truncate">{sidebar.settings}</span>}
+        </a>
+        <a
+          href="/app"
+          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-ink ${collapsed ? 'justify-center !px-0' : ''}`}
+        >
+          <Home size={18} aria-hidden />
+          {!collapsed && <span className="truncate">{sidebar.userSpace}</span>}
+        </a>
+        <button
+          type="button"
+          onClick={onSignOut}
+          disabled={signingOut}
+          title={collapsed ? sidebar.logout : undefined}
+          className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ask transition-colors hover:bg-ask-bg disabled:opacity-50 ${collapsed ? 'justify-center !px-0' : ''}`}
+        >
+          <LogOut size={18} aria-hidden />
+          {!collapsed && <span className="truncate">{signingOut ? sidebar.loggingOut : sidebar.logout}</span>}
+        </button>
+      </div>
     </nav>
   )
 }
 
-/** Controlled rail on desktop and a shared accessible drawer below `lg`. */
-export function AdminSidebar({ collapsed, mobileOpen, onMobileOpenChange, ...props }: AdminSidebarProps) {
+/**
+ * Sidebar admin — deux rendus :
+ *   • Desktop (`lg+`) : aside sticky dans le flux, piloté par `collapsed`.
+ *   • Mobile : Drawer contrôlé par le parent via `mobileOpen` / `onMobileOpenChange`.
+ */
+export function AdminSidebar({
+  tabs,
+  activeTab,
+  collapsed,
+  mobileOpen,
+  isSuperAdmin,
+  signingOut,
+  onMobileOpenChange,
+  onSelectTab,
+  onSelectRecharge,
+  onSignOut,
+  superAdminHref,
+  activeAccountPage,
+}: AdminSidebarProps) {
   const { locale } = useI18n()
-  const copy = adminCopy[locale].sidebar
+  const copy = adminCopy[locale]
+
+  const common = useMemo(
+    () => ({ tabs, activeTab, collapsed, isSuperAdmin, signingOut, onSelectTab, onSignOut, superAdminHref, activeAccountPage, locale }),
+    [tabs, activeTab, collapsed, isSuperAdmin, signingOut, onSelectTab, onSignOut, superAdminHref, activeAccountPage, locale],
+  )
 
   return (
     <>
-      <aside className={`${card} sticky top-24 hidden self-start p-3 lg:block`}>
-        <SidebarLinks {...props} collapsed={collapsed} />
+      {/* Desktop sidebar */}
+      <aside
+        className={`hidden lg:flex sticky top-24 self-start flex-col rounded-2xl border border-line bg-surface transition-[width] duration-200 ${
+          collapsed ? 'w-[4.5rem]' : 'w-64'
+        }`}
+        aria-label={copy.sidebar.title}
+      >
+        <SidebarContent {...common} />
       </aside>
 
-      <Drawer open={mobileOpen} onClose={() => onMobileOpenChange(false)} title={copy.title} panelWidthClassName="w-[min(88vw,20rem)]">
-        <SidebarLinks {...props} collapsed={false} onNavigate={() => onMobileOpenChange(false)} />
+      {/* Mobile drawer */}
+      <Drawer
+        open={mobileOpen}
+        onClose={() => onMobileOpenChange(false)}
+        title={copy.sidebar.title}
+        panelWidthClassName="w-[min(85vw,18rem)]"
+      >
+        <div className="flex h-full flex-col">
+          <SidebarContent {...common} collapsed={false} />
+        </div>
       </Drawer>
     </>
   )

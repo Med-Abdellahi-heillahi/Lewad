@@ -29,9 +29,11 @@
           var root = document.documentElement
           var theme = null
           var locale = null
+          var textSize = null
           try {
             theme = localStorage.getItem('lewad-theme')
             locale = localStorage.getItem('lewad-locale')
+            textSize = localStorage.getItem('lewad-text-size')
           } catch (e) {
             /* storage blocked (private mode) — fall back to the system preference */
           }
@@ -40,9 +42,11 @@
               window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
           }
           if (locale !== 'fr' && locale !== 'ar' && locale !== 'en') locale = 'fr'
+          if (textSize !== 'sm' && textSize !== 'base' && textSize !== 'lg' && textSize !== 'xl') textSize = 'base'
 
           root.setAttribute('data-theme', theme)
           root.setAttribute('data-locale', locale)
+          root.setAttribute('data-text-size', textSize)
           root.style.colorScheme = theme
           root.lang = locale
           root.dir = locale === 'ar' ? 'rtl' : 'ltr'

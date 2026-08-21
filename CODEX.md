@@ -116,9 +116,14 @@ workflow, request-to-service workflow, and minimal PWA are implemented.
   bounded/throttled search/request paths, active-only unlimited admin search,
   RPC-only request updates, and compact admin audit events. Current count:
   Critical 0, High 0, Medium 1, Low 0.
-- Remaining finding: **SEC-002** — reconcile the remote migration history.
-  The historical duplicate `20260819000005` prefix remains deferred; never
-  rename old migrations until the remote history is confirmed.
+- Remote schema verification is complete and the owner repaired migration
+  metadata for all 15 unique versions. The two historical local
+  `20260819000005` files remain an intentional, documented unmatched
+  duplicate; their SQL must never be replayed or repaired under that version.
+  **Do not run `supabase db push` while they remain in active
+  `supabase/migrations/`.** Follow
+  [`docs/migration-repair-command-plan.md`](./docs/migration-repair-command-plan.md)
+  for the owner-approved controlled archival and future clean-baseline plan.
 - Important migration sequence: `20260820000000_admin_create_establishment_rpc.sql`,
   `20260820000001_recharge_requests_admin_approval.sql`,
   `20260820000002_security_2a_recharge_constraints.sql`,
@@ -140,14 +145,18 @@ workflow, request-to-service workflow, and minimal PWA are implemented.
 - Do not create broad RLS policies or cache authenticated Supabase responses in
   the service worker.
 - Do not claim App Store or Play Store availability.
-- Do not rename historical migrations without remote-history verification.
+- Do not replay, rename, or repair the historical `20260819000005` duplicate.
+  Do not run `supabase db push` until the controlled archival strategy in
+  `docs/migration-repair-command-plan.md` is completed and accepted.
 - Do not commit, push, or expose secrets automatically.
 
 ## Recommended next steps
 
 1. Review/remove `Supabase.docx` before GitHub push and recheck tracked env files.
-2. Apply or confirm all migrations in Supabase, then resolve SEC-002 from the
-   remote migration history.
+2. Before any future `db push`, complete the owner-approved archival of the
+   duplicate active migration files in an isolated clone and adopt the clean
+   baseline plan for any new environment. See
+   [`docs/migration-repair-command-plan.md`](./docs/migration-repair-command-plan.md).
 3. Run manual QA for user/admin/super-admin auth and routes; search debit;
    request creation/conversion; admin establishment creation; recharge creation
    and approval; Android/iOS PWA install; FR/AR/EN RTL; dark/light; and 390px.

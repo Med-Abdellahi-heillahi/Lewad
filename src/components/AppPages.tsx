@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
-import { dictionaries, locales, type Locale, useI18n } from '../i18n'
-import { updateMyProfile, uploadMyAvatar, type CreditLedgerType, type Db1CreditLedgerEntry, type Db1Profile } from '../lib/db1'
+import { type Locale, useI18n } from '../i18n'
+import { AccountLoading } from './system/AccountLoading'
+import { updateMyProfile, uploadMyAvatar, type CreditLedgerType, type Db1CreditLedgerEntry, type Db1Profile, type SafeProfileUpdate } from '../lib/db1'
+import { saveProfileWithOptionalAvatar } from '../lib/profileUpdateWorkflow'
 import { useAccount } from '../hooks/useAccount'
 import { useCreditLedger } from '../hooks/useCreditLedger'
 import { isAllowedAvatarFile, isAvatarFileTooLarge, isValidArabicName, isValidMauritanianPhone, normalizeMauritanianPhone } from '../lib/validation'
-import { useTheme } from '../lib/theme'
 import { contact as contactDetails } from '../lib/content'
 import { formatCurrency, formatDate, formatNumber, formatSignedPoints, initialOf, profileDisplayName } from '../lib/format'
-import { isAdminRole } from '../lib/routeAuth'
+import { defaultDestinationForRole, isAdminRole } from '../lib/routeAuth'
 import { createRechargeRequest, type RechargeOfferCode, type RechargeRequest } from '../lib/recharge'
 import {
   appPad,
@@ -27,6 +28,7 @@ import { Icon, type IconName } from './Icon'
 import { AppShell } from './shell/AppShell'
 import type { AppNavId } from './shell/appNav'
 import { EmptyState, InlineAlert, Skeleton } from './system/States'
+import { AppearanceSettings, PasswordResetSettings } from './settings/SettingsControls'
 import { PaginationControls } from './ui/PaginationControls'
 
 export type PrivatePageName = 'profile' | 'credits' | 'settings' | 'recharge'
@@ -120,6 +122,11 @@ const copy = {
 
 type Copy = (typeof copy)[Locale]
 
+/** Shared by the member and team-space profile editors so both use one safe patch flow. */
+export function profilePageCopy(locale: Locale) {
+  return copy[locale]
+}
+
 function avatarImageSource(url: string, updatedAt: string) {
   const separator = url.includes('?') ? '&' : '?'
   return `${url}${separator}v=${encodeURIComponent(updatedAt)}`
@@ -184,8 +191,11 @@ function ReadOnlyRow({ label, children, ltr = false }: { label: string; children
 
 export function ProtectedAppPage({ page }: { page: PrivatePageName }) {
   const { locale } = useI18n()
+  const { loading: accountLoading } = useAccount()
   const text = copy[locale]
   const heading = text[page]
+
+  if (accountLoading) return <AccountLoading />
 
   return (
     <AppShell active={navIdOf[page]} documentTitle={heading} skipLabel={heading}>
@@ -322,7 +332,7 @@ function IdentityCard({
   )
 }
 
-function ProfileForm({
+export function ProfileForm({
   text,
   profile,
   email,
@@ -333,7 +343,7 @@ function ProfileForm({
   email: string
   onSaved: () => Promise<void>
 }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const avatarText = t.profileAvatar
   const [fullName, setFullName] = useState(profile.full_name ?? '')
   const [fullNameAr, setFullNameAr] = useState(profile.full_name_ar ?? '')
@@ -341,7 +351,7 @@ function ProfileForm({
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url ?? '')
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [selectedAvatar, setSelectedAvatar] = useState<File | null>(null)
-  const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null)
+  const [notice, setNotice] = useState<{ text: string; error?: boolean; neutral?: boolean } | null>(null)
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const avatarInput = useRef<HTMLInputElement>(null)
@@ -387,41 +397,60 @@ function ProfileForm({
     const trimmedPhone = phone.trim()
     const trimmedArabicName = fullNameAr.trim()
     const normalizedPhone = normalizeMauritanianPhone(trimmedPhone)
+    const currentName = profile.full_name?.trim() ?? ''
+    const currentArabicName = profile.full_name_ar?.trim() ?? ''
+    const currentPhone = normalizeMauritanianPhone(profile.phone?.trim() ?? '')
+    const patch: SafeProfileUpdate = {}
 
-    if (!trimmedName) return setNotice({ text: text.fullNameRequired, error: true })
-    if (trimmedPhone && !isValidMauritanianPhone(trimmedPhone)) return setNotice({ text: avatarText.invalidPhone, error: true })
-    if (!isValidArabicName(trimmedArabicName)) return setNotice({ text: text.invalidArabicFullName, error: true })
-
-    const pendingAvatar = selectedAvatar
-    let nextAvatarUrl = avatarUrl || null
-    setNotice(null)
-
-    if (pendingAvatar) {
-      setUploading(true)
-      const uploadResult = await uploadMyAvatar(pendingAvatar)
-      setUploading(false)
-
-      if (uploadResult.error || !uploadResult.data) {
-        const errorText = uploadResult.error === 'file_too_large'
-          ? avatarText.fileTooLarge
-          : uploadResult.error === 'invalid_file'
-            ? avatarText.unsupportedImage
-            : avatarText.uploadFailed
-        setNotice({ text: errorText, error: true })
-        return
-      }
-
-      nextAvatarUrl = uploadResult.data
+    if (trimmedName && trimmedName !== currentName) {
+      if (trimmedName.length > 120) return setNotice({ text: avatarText.fullNameTooLong, error: true })
+      patch.full_name = trimmedName
     }
 
-    setSaving(true)
-    const result = await updateMyProfile({
-      full_name: trimmedName,
-      full_name_ar: trimmedArabicName,
-      phone: normalizedPhone || null,
-      avatar_url: nextAvatarUrl,
+    if (trimmedArabicName && trimmedArabicName !== currentArabicName) {
+      if (trimmedArabicName.length > 120) return setNotice({ text: avatarText.fullNameTooLong, error: true })
+      if (!isValidArabicName(trimmedArabicName)) return setNotice({ text: text.invalidArabicFullName, error: true })
+      patch.full_name_ar = trimmedArabicName
+    }
+
+    if (trimmedPhone && normalizedPhone !== currentPhone) {
+      if (!isValidMauritanianPhone(trimmedPhone)) return setNotice({ text: avatarText.invalidPhone, error: true })
+      patch.phone = normalizedPhone
+    }
+
+    const pendingAvatar = selectedAvatar
+    if (Object.keys(patch).length === 0 && !pendingAvatar) {
+      // Empty optional values are intentionally ignored; put the persisted
+      // values back in the form so the user can see that nothing was removed.
+      setFullName(profile.full_name ?? '')
+      setFullNameAr(profile.full_name_ar ?? '')
+      setPhone(profile.phone ?? '')
+      setNotice({ text: avatarText.noChangesToSave, neutral: true })
+      return
+    }
+
+    setNotice(null)
+
+    const workflowResult = await saveProfileWithOptionalAvatar({
+      patch,
+      avatar: pendingAvatar,
+      uploadAvatar: uploadMyAvatar,
+      updateProfile: updateMyProfile,
+      onUploadStateChange: setUploading,
+      onSaveStateChange: setSaving,
     })
-    setSaving(false)
+
+    if (workflowResult.kind === 'avatar_failed') {
+      const errorText = workflowResult.error === 'file_too_large'
+        ? avatarText.fileTooLarge
+        : workflowResult.error === 'invalid_file'
+          ? avatarText.unsupportedImage
+          : avatarText.uploadFailed
+      setNotice({ text: errorText, error: true })
+      return
+    }
+
+    const result = workflowResult.result
 
     if (result.error || !result.data) {
       setNotice({ text: result.error === 'duplicate_phone' ? avatarText.phoneAlreadyUsed : text.profileUpdateError, error: true })
@@ -460,6 +489,7 @@ function ProfileForm({
               onChange={(event) => setFullName(event.target.value)}
               autoComplete="name"
               dir="auto"
+              maxLength={120}
             />
           </div>
           <div>
@@ -474,6 +504,7 @@ function ProfileForm({
               autoComplete="name"
               lang="ar"
               dir="auto"
+              maxLength={120}
               aria-describedby="profile-full-name-ar-hint"
             />
             <p id="profile-full-name-ar-hint" className={fieldHint}>
@@ -493,6 +524,7 @@ function ProfileForm({
             onChange={(event) => setPhone(event.target.value)}
             autoComplete="tel"
             inputMode="tel"
+            maxLength={16}
             aria-describedby="profile-phone-hint"
           />
           <p id="profile-phone-hint" className={fieldHint}>
@@ -507,13 +539,15 @@ function ProfileForm({
               {avatarPreview || avatarUrl ? (
                 <img src={avatarPreview || avatarUrl} alt={text.avatar} className="size-full object-cover" />
               ) : (
-                <Icon name="user" size={22} />
+                <span className="text-lg font-bold text-brand-deep">
+                  {initialOf(profileDisplayName(profile, locale, null) ?? text.account)}
+                </span>
               )}
             </span>
             <input
               ref={avatarInput}
               type="file"
-              accept="image/png,image/jpeg,image/webp"
+              accept="image/png,image/jpeg"
               className="sr-only"
               aria-label={text.avatar}
               onChange={selectAvatar}
@@ -554,7 +588,7 @@ function ProfileForm({
           </div>
         </div>
 
-        {notice && <InlineAlert tone={notice.error ? 'error' : 'success'}>{notice.text}</InlineAlert>}
+        {notice && <InlineAlert tone={notice.error ? 'error' : notice.neutral ? 'neutral' : 'success'}>{notice.text}</InlineAlert>}
 
         <div>
           <button type="submit" disabled={saving || uploading} className={`${btnPrimary} w-full sm:w-auto`}>
@@ -1030,81 +1064,27 @@ function RechargeWhatsAppModal({
 /* ---------------------------------------------------------------- paramètres */
 
 function SettingsPage({ text }: { text: Copy }) {
-  const { locale, setLocale } = useI18n()
-  const { theme, setTheme } = useTheme()
+  const { t } = useI18n()
+  const { profile } = useAccount()
+  const settings = t.settings
+  const spaceHref = profile ? defaultDestinationForRole(profile.role) : null
 
   return (
     <>
-      <PageHeader title={text.settings} text={text.settingsSubtitle} />
+      <PageHeader
+        title={settings.title}
+        text={settings.subtitle}
+        action={spaceHref ? <a href={spaceHref} className={btnGhost}><span className="rtl:rotate-180"><Icon name="arrow" size={16} /></span>{settings.backToMySpace}</a> : undefined}
+      />
 
-      <div className="mt-7 grid gap-5 lg:grid-cols-3 lg:gap-6">
-        <section className={`${card} p-5 sm:p-6 lg:col-span-3`} aria-labelledby="settings-appearance">
-          <SectionTitle title={text.appearance} text={text.appearanceText} />
-          <h2 id="settings-appearance" className="sr-only">
-            {text.appearance}
-          </h2>
-
-          <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:max-w-3xl">
-            <div>
-              <p className={fieldLabel}>{text.language}</p>
-              <div
-                className="grid grid-cols-3 gap-1.5 rounded-xl border border-line bg-page-alt p-1"
-                role="group"
-                aria-label={text.language}
-              >
-                {locales.map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    lang={item}
-                    onClick={() => setLocale(item)}
-                    aria-pressed={item === locale}
-                    className={`min-h-11 rounded-lg px-2 text-sm font-semibold transition-colors ${
-                      item === locale ? 'bg-brand-soft text-brand-deep' : 'text-muted hover:bg-surface-2 hover:text-ink'
-                    }`}
-                  >
-                    {dictionaries[item].meta.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <p className={fieldLabel}>{text.theme}</p>
-              <div
-                className="grid grid-cols-2 gap-1.5 rounded-xl border border-line bg-page-alt p-1"
-                role="group"
-                aria-label={text.theme}
-              >
-                <button
-                  type="button"
-                  onClick={() => setTheme('light')}
-                  aria-pressed={theme === 'light'}
-                  className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors ${
-                    theme === 'light' ? 'bg-brand-soft text-brand-deep' : 'text-muted hover:bg-surface-2 hover:text-ink'
-                  }`}
-                >
-                  <Icon name="sun" size={16} />
-                  {text.light}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTheme('dark')}
-                  aria-pressed={theme === 'dark'}
-                  className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors ${
-                    theme === 'dark' ? 'bg-brand-soft text-brand-deep' : 'text-muted hover:bg-surface-2 hover:text-ink'
-                  }`}
-                >
-                  <Icon name="moon" size={16} />
-                  {text.dark}
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
+      <div className="mt-7 grid gap-5 lg:grid-cols-2 lg:gap-6">
+        {/* Langue, thème, taille du texte et réinitialisation du mot de passe
+            sont partagés avec les espaces admin et super admin : une seule
+            implémentation, trois espaces. */}
+        <AppearanceSettings className="lg:col-span-2" />
+        <PasswordResetSettings className="lg:col-span-2" />
 
         <SettingsCard title={text.accountSection} text={text.accountText} icon="user" href="/profile" linkLabel={text.profile} />
-        <SettingsCard title={text.security} text={text.securityText} icon="shield" />
         <SettingsCard title={text.notifications} text={text.notificationsText} icon="message" />
       </div>
     </>

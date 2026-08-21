@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import { useAccount } from '../hooks/useAccount'
+import { AccountLoading } from './system/AccountLoading'
+import { signOut } from '../lib/auth'
 import {
   adminCreateEstablishment,
   adminUpdateUserStatus,
@@ -11,7 +13,7 @@ import {
   getAdminServices,
   getAdminUsers,
   getAdminWallets,
-  getAdminRechargeRequests,
+  getAdminRechargeStates,
   updateMissingRequestStatus,
   type AdminCreateEstablishmentParams,
   type AdminMissingRequest,
@@ -215,7 +217,9 @@ function ServicesView({
 
 export function AdminPage() {
   const { locale } = useI18n()
-  const { profile } = useAccount()
+  const { profile, loading: accountLoading } = useAccount()
+
+  if (accountLoading) return <AccountLoading />
   const [activeTab, setActiveTab] = useState<AdminTab>(() => {
     const requested = new URLSearchParams(window.location.search).get('tab')
     return tabs.some((tab) => tab.id === requested) ? requested as AdminTab : 'dashboard'
@@ -243,6 +247,7 @@ export function AdminPage() {
   const [rechargeRequested, setRechargeRequested] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
   const isSuperAdmin = profile?.role === 'super_admin'
   const copy = adminCopy[locale]
 
@@ -301,10 +306,8 @@ export function AdminPage() {
       }
     }
     if (target === 'credits') {
-      const [walletResult, rechargeResult] = await Promise.all([
-        getAdminWallets({ page: pages.wallets, pageSize: DEFAULT_PAGE_SIZE }),
-        getAdminRechargeRequests(),
-      ])
+      const walletResult = await getAdminWallets({ page: pages.wallets, pageSize: DEFAULT_PAGE_SIZE })
+      const rechargeResult = await getAdminRechargeStates(walletResult.data.data.map((wallet) => wallet.user_id))
       setWallets(walletResult.data)
       setRecharges(rechargeResult.data)
       setRechargeModule(rechargeResult.module)
@@ -404,6 +407,12 @@ export function AdminPage() {
     setActiveTab('dashboard')
   }
 
+  const endSession = async () => {
+    setSigningOut(true)
+    await signOut()
+    window.location.replace('/')
+  }
+
   return (
     <AppShell
       documentTitle={copy.header.product}
@@ -422,7 +431,7 @@ export function AdminPage() {
       <>
       <main id="app-main" className={`${appWrap} pb-24 pt-4 sm:pt-5 lg:pb-12 lg:pt-5`}>
         <div className={`lg:grid lg:items-start lg:gap-6 ${sidebarCollapsed ? 'lg:grid-cols-[5rem_minmax(0,1fr)]' : 'lg:grid-cols-[17rem_minmax(0,1fr)]'}`}>
-          <AdminSidebar tabs={tabs} activeTab={activeTab} collapsed={sidebarCollapsed} mobileOpen={mobileSidebarOpen} onMobileOpenChange={setMobileSidebarOpen} onSelectTab={setActiveTab} onSelectRecharge={openRechargePanel} superAdminHref={isSuperAdmin ? '/super-admin' : undefined} />
+          <AdminSidebar tabs={tabs} activeTab={activeTab} collapsed={sidebarCollapsed} mobileOpen={mobileSidebarOpen} isSuperAdmin={isSuperAdmin} signingOut={signingOut} onMobileOpenChange={setMobileSidebarOpen} onSelectTab={setActiveTab} onSelectRecharge={openRechargePanel} onSignOut={() => void endSession()} superAdminHref={isSuperAdmin ? '/super-admin' : undefined} />
 
           <section className="min-w-0" aria-label={activeLabel}>
           {errors[activeTab] && <InlineAlert tone="error" title={copy.header.dataErrorTitle} className="mb-5">{errors[activeTab]} {copy.header.dataErrorText}</InlineAlert>}
@@ -436,7 +445,7 @@ export function AdminPage() {
           </section>
         </div>
       </main>
-      <AdminBottomNav activeTab={activeTab} onSelectTab={setActiveTab} />
+      <AdminBottomNav activeTab={activeTab} signingOut={signingOut} onSelectTab={setActiveTab} onSignOut={() => void endSession()} />
       </>
     </AppShell>
   )

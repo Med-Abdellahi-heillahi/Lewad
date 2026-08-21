@@ -1,11 +1,11 @@
 import { LayoutDashboard, LogOut, Settings, User, type LucideIcon } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { adminCopy, type AdminTabId } from './adminCopy'
+import { adminCopy, type SuperAdminTabId } from '../admin/adminCopy'
 
-type AdminBottomNavItem = 'dashboard' | 'profile' | 'settings'
+type SuperAdminBottomNavItem = 'overview' | 'profile' | 'settings'
 
-type AdminBottomNavLink = {
-  id: AdminBottomNavItem
+type SuperAdminBottomNavLink = {
+  id: SuperAdminBottomNavItem
   label: string
   href: string
   icon: LucideIcon
@@ -13,45 +13,46 @@ type AdminBottomNavLink = {
   onClick?: () => void
 }
 
-type AdminBottomNavProps = {
-  activeTab: AdminTabId
+type SuperAdminBottomNavProps = {
+  activeTab: SuperAdminTabId
   signingOut: boolean
-  onSelectTab: (tab: AdminTabId) => void
+  onSelectTab: (tab: SuperAdminTabId) => void
   onSignOut: () => void
   /** When set, overrides tab-based highlighting (used on account pages). */
-  activeItem?: AdminBottomNavItem
+  activeItem?: SuperAdminBottomNavItem
 }
 
 /**
- * Raccourcis réservés au mobile : le tiroir conserve la navigation admin
- * complète, tandis que cette barre garde les quatre destinations fréquentes
- * accessibles au pouce.
+ * Mobile bottom nav for super-admin space.
+ * Four buttons: Profile, Overview (dashboard), Settings, Logout.
  *
- * Lorsqu'un `activeItem` est fourni (pages compte profil/paramètres), il
- * prend le dessus sur la logique par onglet pour le surlignage.
+ * When `activeItem` is provided (account pages profile/settings),
+ * it takes precedence over tab-based highlighting.
  */
-export function AdminBottomNav({ activeTab, signingOut, onSelectTab, onSignOut, activeItem }: AdminBottomNavProps) {
+export function SuperAdminBottomNav({ activeTab, signingOut, onSelectTab, onSignOut, activeItem }: SuperAdminBottomNavProps) {
   const { locale } = useI18n()
   const copy = adminCopy[locale]
 
   const isProfileActive = activeItem === 'profile'
-  const isDashboardActive = activeItem ? activeItem === 'dashboard' : activeTab === 'dashboard'
+  const isOverviewActive = activeItem ? activeItem === 'overview' : activeTab === 'overview'
   const isSettingsActive = activeItem === 'settings'
 
-  const items: AdminBottomNavLink[] = [
-    // Profil et paramètres pointent vers l'espace admin, pas vers l'espace membre.
-    { id: 'profile', label: copy.sidebar.profile, href: '/admin/profile', icon: User, active: isProfileActive },
-    { id: 'dashboard', label: copy.tabs.dashboard, href: '/admin', icon: LayoutDashboard, active: isDashboardActive, onClick: activeItem ? undefined : () => onSelectTab('dashboard') },
-    { id: 'settings', label: copy.sidebar.settings, href: '/admin/settings', icon: Settings, active: isSettingsActive },
+  const items: SuperAdminBottomNavLink[] = [
+    // Profil du super admin, pas le profil membre. Les paramètres de compte
+    // restent dans le tiroir : quatre cibles au maximum ici, sinon elles
+    // deviennent trop étroites au pouce.
+    { id: 'profile', label: copy.sidebar.profile, href: '/super-admin/profile', icon: User, active: isProfileActive },
+    { id: 'overview', label: copy.superSpace.tabs.overview, href: '/super-admin', icon: LayoutDashboard, active: isOverviewActive, onClick: activeItem ? undefined : () => onSelectTab('overview') },
+    { id: 'settings', label: copy.superSpace.tabs.settings, href: '/super-admin?tab=settings', icon: Settings, active: isSettingsActive },
   ]
 
   const itemClass = (active: boolean) =>
     `flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-semibold leading-tight transition-colors ${
-      active ? 'bg-tint-1/60 text-tint-ink-1' : 'text-muted hover:bg-surface-2 hover:text-ink'
+      active ? 'bg-tint-4/60 text-tint-ink-4' : 'text-muted hover:bg-surface-2 hover:text-ink'
     }`
 
   return (
-    <nav aria-label={copy.sidebar.title} className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur-md lg:hidden">
+    <nav aria-label={copy.superSpace.navigation} className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur-md lg:hidden">
       <ul className="mx-auto grid max-w-md grid-cols-4 list-none gap-1 px-2 pt-1 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
         {items.map((item) => {
           const ItemIcon = item.icon

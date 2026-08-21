@@ -234,6 +234,7 @@ export function AdminActionButton({
   icon: LeadIcon,
   label,
   onClick,
+  type = 'button',
   disabled = false,
   title,
   tone = 'neutral',
@@ -243,6 +244,7 @@ export function AdminActionButton({
   icon: AdminIcon
   label: string
   onClick?: () => void
+  type?: 'button' | 'submit'
   disabled?: boolean
   title?: string
   tone?: 'neutral' | 'primary' | 'warning' | 'danger' | 'success'
@@ -260,7 +262,7 @@ export function AdminActionButton({
 
   return (
     <button
-      type="button"
+      type={type}
       onClick={onClick}
       disabled={disabled}
       aria-label={iconOnly ? label : undefined}

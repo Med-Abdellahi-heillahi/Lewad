@@ -39,7 +39,11 @@ export type Db1CreditLedgerEntry = {
   created_at: string
 }
 
-export type SafeProfileUpdate = Pick<Db1Profile, 'full_name' | 'full_name_ar' | 'phone' | 'avatar_url'>
+/**
+ * A deliberately narrow profile patch.  It can never alter identity, role or
+ * account status, and omitting a property leaves its persisted value intact.
+ */
+export type SafeProfileUpdate = Partial<Pick<Db1Profile, 'full_name' | 'full_name_ar' | 'phone' | 'avatar_url'>>
 
 export type ProfileUpdateError = 'duplicate_phone' | 'unauthenticated' | 'unknown'
 
@@ -153,12 +157,7 @@ export async function updateMyProfile(update: SafeProfileUpdate): Promise<Profil
 
   const { data, error } = await supabase
     .from('profiles')
-    .update({
-      full_name: update.full_name,
-      full_name_ar: update.full_name_ar,
-      phone: update.phone,
-      avatar_url: update.avatar_url,
-    })
+    .update(update)
     .eq('id', authData.user.id)
     .select(profileFields)
     .maybeSingle()
@@ -170,10 +169,11 @@ export async function updateMyProfile(update: SafeProfileUpdate): Promise<Profil
   return { data: (data as Db1Profile | null) ?? null, error: null }
 }
 
-function avatarExtension(file: File): 'jpg' | 'png' | 'webp' | null {
+const avatarBucket = 'avatars'
+
+function avatarExtension(file: File): 'jpg' | 'png' | null {
   if (file.type === 'image/jpeg') return 'jpg'
   if (file.type === 'image/png') return 'png'
-  if (file.type === 'image/webp') return 'webp'
   return null
 }
 
@@ -192,14 +192,15 @@ export async function uploadMyAvatar(file: File): Promise<AvatarUploadResult> {
   if (!extension) return { data: null, error: 'invalid_file' }
 
   const path = `${authData.user.id}/avatar-${Date.now()}.${extension}`
-  const { error } = await supabase.storage.from('avatars').upload(path, file, {
+  const contentType = extension === 'jpg' ? 'image/jpeg' : 'image/png'
+  const { error } = await supabase.storage.from(avatarBucket).upload(path, file, {
     cacheControl: '31536000',
-    contentType: file.type,
+    contentType,
     upsert: false,
   })
   if (error) return { data: null, error: 'upload_failed' }
 
-  const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+  const { data } = supabase.storage.from(avatarBucket).getPublicUrl(path)
   return data.publicUrl ? { data: data.publicUrl, error: null } : { data: null, error: 'upload_failed' }
 }
 

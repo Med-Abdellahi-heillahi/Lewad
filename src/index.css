@@ -45,6 +45,13 @@
   --focus: #4d6b0e;
 }
 
+/* La préférence de lecture s'applique au rem racine : Tailwind et les textes
+   de l'application grandissent ensemble, sans transformer les contrôles fixes. */
+html[data-text-size='sm'] { font-size: 15px; }
+html[data-text-size='base'] { font-size: 16px; }
+html[data-text-size='lg'] { font-size: 17px; }
+html[data-text-size='xl'] { font-size: 18px; }
+
 [data-theme='dark'] {
   --page: #0f100f;
   --page-alt: #141614;

@@ -1,7 +1,7 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import { useReducedMotion } from 'framer-motion'
 import { useI18n } from '../../i18n'
-import { formatNumber } from '../../lib/format'
+import { formatDate, formatNumber } from '../../lib/format'
 import type { AdminSeriesPoint } from '../../lib/admin'
 import { card } from '../../lib/ui'
 import { AdminSectionHeader, type AdminIcon } from './AdminUi'
@@ -49,6 +49,11 @@ export function AdminAreaChart({
   const { locale } = useI18n()
   const reduce = useReducedMotion()
   const gradientId = useId()
+  const [hovered, setHovered] = useState<number | null>(null)
+
+  const active = hovered === null ? null : series[hovered] ?? null
+  const pointStep = series.length > 1 ? VIEW_W / (series.length - 1) : VIEW_W
+  const activeX = (hovered ?? 0) * pointStep
 
   const totals = series.map((point) => point.total)
   const secondaries = series.map((point) => point.secondary)
@@ -80,7 +85,7 @@ export function AdminAreaChart({
 
           {/* `dir=ltr` : un axe temporel se lit toujours du passé vers le futur,
               y compris sur une page arabe. */}
-          <div dir="ltr" className="mt-4">
+          <div dir="ltr" className="relative mt-4">
           <svg
             viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
             preserveAspectRatio="none"
@@ -122,9 +127,132 @@ export function AdminAreaChart({
                 className="text-ask"
               />
             )}
+
+            {active && (
+              <line
+                x1={activeX} x2={activeX} y1="0" y2={VIEW_H}
+                stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke"
+                className="text-line-strong"
+              />
+            )}
           </svg>
+
+          {/* Zones de survol en HTML plutôt qu'en SVG : le `preserveAspectRatio="none"`
+              déforme l'axe X, une cible SVG ne tomberait pas là où l'œil la voit. */}
+          <div className="absolute inset-0 flex" aria-hidden="true" onMouseLeave={() => setHovered(null)}>
+            {series.map((point, index) => (
+              <span key={point.date} className="h-full flex-1" onMouseEnter={() => setHovered(index)} />
+            ))}
+          </div>
+
+          {active && (
+            <div
+              className="pointer-events-none absolute -top-1 z-10 -translate-x-1/2 rounded-lg border border-line bg-surface px-2 py-1.5 shadow-lg"
+              style={{ left: `${activeX / VIEW_W * 100}%` }}
+            >
+              <p className="text-[10px] leading-tight whitespace-nowrap text-muted">{formatDate(active.date, locale)}</p>
+              <p className="tabular text-[11px] leading-tight font-bold whitespace-nowrap text-ink">
+                {formatNumber(active.total, locale)} {primaryLabel}
+              </p>
+              {secondaryLabel && (
+                <p className="tabular text-[10px] leading-tight whitespace-nowrap text-ask">
+                  {formatNumber(active.secondary, locale)} {secondaryLabel}
+                </p>
+              )}
+            </div>
+          )}
           </div>
         </>
+      )}
+    </article>
+  )
+}
+
+/**
+ * Répartition en anneau. Un `stroke-dasharray` sur un cercle unique évite de
+ * calculer des arcs : chaque segment avance d'un décalage cumulé.
+ */
+export function AdminDonutChart({
+  icon,
+  title,
+  text,
+  data,
+  emptyLabel,
+  centerLabel,
+}: {
+  icon: AdminIcon
+  title: string
+  text?: string
+  data: AdminBarDatum[]
+  emptyLabel: string
+  centerLabel: string
+}) {
+  const { locale } = useI18n()
+  const reduce = useReducedMotion()
+  const total = data.reduce((acc, item) => acc + item.value, 0)
+  const radius = 42
+  const circumference = 2 * Math.PI * radius
+
+  const strokes = {
+    neutral: 'text-ink',
+    positive: 'text-answer',
+    negative: 'text-ask',
+    accent: 'text-brand-deep',
+  } as const
+
+  let offset = 0
+  const segments = data
+    .filter((item) => item.value > 0)
+    .map((item) => {
+      const fraction = item.value / total
+      const segment = { ...item, fraction, dash: fraction * circumference, offset }
+      offset += fraction * circumference
+      return segment
+    })
+
+  return (
+    <article className={`${card} p-4 sm:p-5`}>
+      <AdminSectionHeader icon={icon} title={title} text={text} />
+
+      {total === 0 ? (
+        <p className="mt-6 rounded-xl border border-line bg-surface-2 px-4 py-6 text-center text-sm text-muted">{emptyLabel}</p>
+      ) : (
+        <div className="mt-5 flex flex-wrap items-center gap-5">
+          <div className="relative shrink-0">
+            <svg viewBox="0 0 100 100" className="size-28" role="img" aria-label={`${title} — ${formatNumber(total, locale)}`}>
+              <circle cx="50" cy="50" r={radius} fill="none" strokeWidth="12" className="stroke-surface-2" />
+              {segments.map((segment) => (
+                <circle
+                  key={segment.label}
+                  cx="50" cy="50" r={radius}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="12"
+                  strokeLinecap="butt"
+                  strokeDasharray={`${segment.dash} ${circumference - segment.dash}`}
+                  strokeDashoffset={-segment.offset}
+                  /* -90° : le premier segment démarre en haut, pas à droite. */
+                  transform="rotate(-90 50 50)"
+                  className={`${strokes[segment.tone ?? 'neutral']} ${reduce ? '' : 'motion-safe:animate-[chartDraw_900ms_ease-out]'}`}
+                />
+              ))}
+            </svg>
+            <span className="pointer-events-none absolute inset-0 grid place-content-center text-center">
+              <span className="tabular block text-lg leading-none font-bold text-ink">{formatNumber(total, locale)}</span>
+              <span className="mt-1 block text-[10px] leading-tight text-muted">{centerLabel}</span>
+            </span>
+          </div>
+
+          <ul className="grid min-w-0 flex-1 list-none gap-2">
+            {data.map((item) => (
+              <li key={item.label} className="flex items-center gap-2 text-[13px]">
+                <span className={`size-2.5 shrink-0 rounded-full bg-current ${strokes[item.tone ?? 'neutral']}`} />
+                <span className="min-w-0 flex-1 truncate text-muted">{item.label}</span>
+                <span className="tabular shrink-0 font-bold text-ink">{formatNumber(item.value, locale)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </article>
   )

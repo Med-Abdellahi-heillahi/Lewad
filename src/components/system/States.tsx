@@ -40,7 +40,7 @@ export function InlineAlert({
       role={tone === 'error' ? 'alert' : 'status'}
       className={`flex flex-col gap-3 rounded-xl border px-4 py-3.5 text-sm leading-6 sm:flex-row sm:items-center sm:justify-between ${toneStyles[tone]} ${className}`}
     >
-      <p className="flex items-start gap-2.5">
+      <div className="flex items-start gap-2.5">
         <span className="mt-0.5 shrink-0">
           <Icon name={toneIcons[tone]} size={17} />
         </span>
@@ -48,7 +48,7 @@ export function InlineAlert({
           {title && <strong className="block font-semibold">{title}</strong>}
           {children}
         </span>
-      </p>
+      </div>
       {action && <span className="shrink-0">{action}</span>}
     </div>
   )

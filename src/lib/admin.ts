@@ -224,6 +224,14 @@ async function enrichWithProfiles<T extends { user_id: string }>(rows: T[]) {
 /** Une journée de la série temporelle du tableau de bord. */
 export type AdminSeriesPoint = { date: string; total: number; secondary: number }
 
+/** Fenêtres d'analyse proposées. Toute autre valeur retombe sur 30 jours. */
+export const ANALYTICS_WINDOWS = [7, 30, 90] as const
+export type AdminAnalyticsWindow = (typeof ANALYTICS_WINDOWS)[number]
+
+export function resolveAnalyticsWindow(days: number): AdminAnalyticsWindow {
+  return (ANALYTICS_WINDOWS as readonly number[]).includes(days) ? days as AdminAnalyticsWindow : 30
+}
+
 export type AdminAnalytics = {
   searchesToday: number
   searchesThisMonth: number
@@ -231,26 +239,39 @@ export type AdminAnalytics = {
   usersByStatus: { active: number; suspended: number }
   requestsByStatus: { pending: number; reviewed: number; added: number; rejected: number; duplicate: number }
   verifiedEstablishments: number
-  /** 30 derniers jours : `secondary` = recherches sans résultat. */
+  /** Fenêtre effectivement appliquée aux séries et aux compteurs de période. */
+  windowDays: AdminAnalyticsWindow
+  /** Sur la fenêtre : `secondary` = recherches sans résultat. */
   searchSeries: AdminSeriesPoint[]
-  /** 30 derniers jours : `secondary` reste à 0, la série ne compte que les inscriptions. */
+  /** Sur la fenêtre : `secondary` reste à 0, la série ne compte que les inscriptions. */
   userSeries: AdminSeriesPoint[]
+  /** Sur la fenêtre : `total` = demandes créées, `secondary` = demandes approuvées. */
+  rechargeSeries: AdminSeriesPoint[]
+  /** `not-connected` quand la migration recharge n'est pas appliquée. */
+  rechargeModule: AdminRechargeModule
+  /** Recharges encore en attente parmi celles créées sur la fenêtre. */
+  pendingRecharges: number
+  /** Recharges approuvées parmi celles créées sur la fenêtre. */
+  approvedRecharges: number
+  /** Points crédités sur la fenêtre (entrées positives du grand livre). */
+  creditsIssued: number
+  /** `true` si le plafond de lecture a été atteint : le total affiché est alors un minimum. */
+  creditsTruncated: boolean
   /** Début de la fenêtre glissante, pour afficher la période couverte. */
   seriesFrom: string
 }
 
-const SERIES_DAYS = 30
 /** Plafond de lignes lues pour les séries : borne le coût, jamais la justesse des compteurs. */
-const SERIES_ROW_LIMIT = 2000
+const SERIES_ROW_LIMIT = 4000
 
 function dayKey(value: string) {
   return value.slice(0, 10)
 }
 
-/** Construit 30 jours pleins, y compris ceux sans activité, pour un axe régulier. */
-function buildSeries(rows: { created_at: string; flagged?: boolean }[], from: Date): AdminSeriesPoint[] {
+/** Construit la fenêtre en jours pleins, y compris ceux sans activité, pour un axe régulier. */
+function buildSeries(rows: { created_at: string; flagged?: boolean }[], from: Date, days: number): AdminSeriesPoint[] {
   const buckets = new Map<string, AdminSeriesPoint>()
-  for (let index = 0; index < SERIES_DAYS; index += 1) {
+  for (let index = 0; index < days; index += 1) {
     const day = new Date(from)
     day.setUTCDate(day.getUTCDate() + index)
     const key = day.toISOString().slice(0, 10)
@@ -267,20 +288,44 @@ function buildSeries(rows: { created_at: string; flagged?: boolean }[], from: Da
   return [...buckets.values()]
 }
 
+/** Série de recharges : une entrée par jour de création, `secondary` sur la date d'approbation. */
+function buildRechargeSeries(rows: RechargeSeriesRow[], from: Date, days: number): AdminSeriesPoint[] {
+  const series = buildSeries(rows.map((row) => ({ created_at: row.created_at })), from, days)
+  const byDay = new Map(series.map((point) => [point.date, point]))
+
+  for (const row of rows) {
+    if (!row.approved_at) continue
+    const bucket = byDay.get(dayKey(row.approved_at))
+    if (bucket) bucket.secondary += 1
+  }
+
+  return series
+}
+
+type RechargeSeriesRow = { created_at: string; approved_at: string | null; status: string }
+
 /**
  * Statistiques du tableau de bord.
  *
- * Les compteurs sont des `count: exact` : ils portent sur l'ensemble des lignes
- * visibles par la RLS de l'admin, pas sur la page courante. Les deux séries
- * lisent une seule colonne sur une fenêtre de 30 jours puis regroupent côté
- * client — PostgREST n'expose pas de `group by` sans RPC dédiée.
+ * Les compteurs de rôle, de statut et de demande sont des `count: exact` : ils
+ * portent sur l'ensemble des lignes visibles par la RLS de l'admin, pas sur la
+ * page courante. Les séries lisent une ou deux colonnes sur la fenêtre demandée
+ * puis regroupent côté client — PostgREST n'expose pas de `group by` sans RPC
+ * dédiée, et cette lecture reste dans la portée RLS admin déjà en place. Aucune
+ * policy n'est élargie et aucune donnée personnelle n'est chargée ici.
+ *
+ * Toutes les lectures de lignes sont plafonnées par `SERIES_ROW_LIMIT` : sur 90
+ * jours d'activité intense la série peut donc être partielle. C'est un choix
+ * assumé de coût — `creditsTruncated` le signale à l'interface pour le total de
+ * points, le seul chiffre où une troncature se lirait comme un faux montant.
  */
-export async function getAdminAnalytics(): Promise<AdminResult<AdminAnalytics | null>> {
+async function getAdminAnalyticsFallback(windowDays: AdminAnalyticsWindow): Promise<AdminResult<AdminAnalytics | null>> {
   const now = new Date()
   const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
   const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
   const seriesFrom = new Date(startOfToday)
-  seriesFrom.setUTCDate(seriesFrom.getUTCDate() - (SERIES_DAYS - 1))
+  seriesFrom.setUTCDate(seriesFrom.getUTCDate() - (windowDays - 1))
+  const from = seriesFrom.toISOString()
 
   const countOf = (table: string) => supabase.from(table).select('*', { count: 'exact', head: true })
 
@@ -288,7 +333,7 @@ export async function getAdminAnalytics(): Promise<AdminResult<AdminAnalytics | 
     searchesToday, searchesThisMonth,
     roleUser, roleAdmin, roleSuperAdmin, statusActive, statusSuspended,
     reqPending, reqReviewed, reqAdded, reqRejected, reqDuplicate,
-    verified, searchRows, userRows,
+    verified, searchRows, userRows, ledgerRows, rechargeRows,
   ] = await Promise.all([
     countOf('search_logs').gte('created_at', startOfToday.toISOString()),
     countOf('search_logs').gte('created_at', startOfMonth.toISOString()),
@@ -303,22 +348,32 @@ export async function getAdminAnalytics(): Promise<AdminResult<AdminAnalytics | 
     countOf('missing_service_requests').eq('status', 'rejected'),
     countOf('missing_service_requests').eq('status', 'duplicate'),
     countOf('establishments').eq('is_verified', true),
-    supabase.from('search_logs').select('created_at, status').gte('created_at', seriesFrom.toISOString()).limit(SERIES_ROW_LIMIT),
-    supabase.from('profiles').select('created_at').gte('created_at', seriesFrom.toISOString()).limit(SERIES_ROW_LIMIT),
+    supabase.from('search_logs').select('created_at, status').gte('created_at', from).limit(SERIES_ROW_LIMIT),
+    supabase.from('profiles').select('created_at').gte('created_at', from).limit(SERIES_ROW_LIMIT),
+    // Seul le montant est lu : ni utilisateur, ni motif, ni référence.
+    supabase.from('credit_ledger').select('amount').gte('created_at', from).gt('amount', 0).limit(SERIES_ROW_LIMIT),
+    supabase.from('recharge_requests').select('created_at, approved_at, status').gte('created_at', from).limit(SERIES_ROW_LIMIT),
   ])
 
-  const results = [
+  const required = [
     searchesToday, searchesThisMonth, roleUser, roleAdmin, roleSuperAdmin,
     statusActive, statusSuspended, reqPending, reqReviewed, reqAdded,
-    reqRejected, reqDuplicate, verified, searchRows, userRows,
+    reqRejected, reqDuplicate, verified, searchRows, userRows, ledgerRows,
   ]
-  const failure = results.map((result) => errorMessage(result.error)).find(Boolean)
+  const failure = required.map((result) => errorMessage(result.error)).find(Boolean)
   if (failure) return { data: null, error: failure }
+
+  // La table de recharge peut ne pas être déployée : son absence dégrade le
+  // module, elle ne casse pas le reste du tableau de bord.
+  const rechargeMissing = isMissingBackend(rechargeRows.error)
+  if (rechargeRows.error && !rechargeMissing) return { data: null, error: errorMessage(rechargeRows.error) }
 
   const searchRaw = ((searchRows.data as { created_at: string; status: string }[] | null) ?? [])
     .map((row) => ({ created_at: row.created_at, flagged: row.status === 'not_found' }))
   const userRaw = ((userRows.data as { created_at: string }[] | null) ?? [])
     .map((row) => ({ created_at: row.created_at }))
+  const ledgerRaw = (ledgerRows.data as { amount: number }[] | null) ?? []
+  const rechargeRaw = rechargeMissing ? [] : ((rechargeRows.data as RechargeSeriesRow[] | null) ?? [])
 
   return {
     data: {
@@ -331,16 +386,23 @@ export async function getAdminAnalytics(): Promise<AdminResult<AdminAnalytics | 
         rejected: reqRejected.count ?? 0, duplicate: reqDuplicate.count ?? 0,
       },
       verifiedEstablishments: verified.count ?? 0,
-      searchSeries: buildSeries(searchRaw, seriesFrom),
-      userSeries: buildSeries(userRaw, seriesFrom),
-      seriesFrom: seriesFrom.toISOString(),
+      windowDays,
+      searchSeries: buildSeries(searchRaw, seriesFrom, windowDays),
+      userSeries: buildSeries(userRaw, seriesFrom, windowDays),
+      rechargeSeries: buildRechargeSeries(rechargeRaw, seriesFrom, windowDays),
+      rechargeModule: rechargeMissing ? 'not-connected' : 'connected',
+      pendingRecharges: rechargeRaw.filter((row) => row.status === 'pending').length,
+      approvedRecharges: rechargeRaw.filter((row) => row.status === 'approved').length,
+      creditsIssued: ledgerRaw.reduce((sum, row) => sum + (Number(row.amount) || 0), 0),
+      creditsTruncated: ledgerRaw.length >= SERIES_ROW_LIMIT,
+      seriesFrom: from,
     },
     error: null,
   }
 }
 
 /** Reads the dashboard counters through the logged-in administrator RLS scope. */
-export async function getAdminOverview(): Promise<AdminResult<AdminOverview | null>> {
+async function getAdminOverviewFallback(): Promise<AdminResult<AdminOverview | null>> {
   const [
     requests, users, activeUsers, wallets, balances, emptyWallets,
     searches, successful, notFound, errored, establishments, categories, branches,
@@ -391,6 +453,168 @@ export async function getAdminOverview(): Promise<AdminResult<AdminOverview | nu
     },
     error: null,
   }
+}
+
+function summaryRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null
+}
+
+function summaryNumber(source: Record<string, unknown>, key: string) {
+  const value = source[key]
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function summaryString(source: Record<string, unknown>, key: string) {
+  const value = source[key]
+  return typeof value === 'string' ? value : null
+}
+
+function summarySeries(value: unknown): AdminSeriesPoint[] | null {
+  if (!Array.isArray(value)) return null
+
+  const series: AdminSeriesPoint[] = []
+  for (const point of value) {
+    const record = summaryRecord(point)
+    if (!record) return null
+    const date = summaryString(record, 'date')
+    const total = summaryNumber(record, 'total')
+    const secondary = summaryNumber(record, 'secondary')
+    if (date === null || total === null || secondary === null) return null
+    series.push({ date, total, secondary })
+  }
+
+  return series
+}
+
+function readAdminOverviewSummary(value: unknown): AdminOverview | null {
+  const source = summaryRecord(value)
+  if (!source) return null
+
+  const pendingRequests = summaryNumber(source, 'pending_requests')
+  const totalUsers = summaryNumber(source, 'total_users')
+  const activeUsers = summaryNumber(source, 'active_users')
+  const totalWallets = summaryNumber(source, 'total_wallets')
+  const totalPoints = summaryNumber(source, 'total_points')
+  const emptyWallets = summaryNumber(source, 'empty_wallets')
+  const totalSearches = summaryNumber(source, 'total_searches')
+  const successfulSearches = summaryNumber(source, 'successful_searches')
+  const notFoundSearches = summaryNumber(source, 'not_found_searches')
+  const errorSearches = summaryNumber(source, 'error_searches')
+  const approvedEstablishments = summaryNumber(source, 'approved_establishments')
+  const activeCategories = summaryNumber(source, 'active_categories')
+  const activeBranches = summaryNumber(source, 'active_branches')
+
+  if (
+    pendingRequests === null || totalUsers === null || activeUsers === null || totalWallets === null || totalPoints === null
+    || emptyWallets === null || totalSearches === null || successfulSearches === null || notFoundSearches === null
+    || errorSearches === null || approvedEstablishments === null || activeCategories === null || activeBranches === null
+  ) return null
+
+  return {
+    pendingRequests,
+    totalUsers,
+    activeUsers,
+    totalWallets,
+    totalPoints,
+    emptyWallets,
+    totalSearches,
+    successfulSearches,
+    notFoundSearches,
+    errorSearches,
+    approvedEstablishments,
+    activeCategories,
+    activeBranches,
+  }
+}
+
+function readAdminAnalyticsSummary(value: unknown): AdminAnalytics | null {
+  const source = summaryRecord(value)
+  if (!source) return null
+
+  const searchesToday = summaryNumber(source, 'searches_today')
+  const searchesThisMonth = summaryNumber(source, 'searches_this_month')
+  const userCount = summaryNumber(source, 'users_user')
+  const adminCount = summaryNumber(source, 'users_admin')
+  const superAdminCount = summaryNumber(source, 'users_super_admin')
+  const activeUsers = summaryNumber(source, 'users_active')
+  const suspendedUsers = summaryNumber(source, 'users_suspended')
+  const pending = summaryNumber(source, 'requests_pending')
+  const reviewed = summaryNumber(source, 'requests_reviewed')
+  const added = summaryNumber(source, 'requests_added')
+  const rejected = summaryNumber(source, 'requests_rejected')
+  const duplicate = summaryNumber(source, 'requests_duplicate')
+  const verifiedEstablishments = summaryNumber(source, 'verified_establishments')
+  const windowDays = summaryNumber(source, 'window_days')
+  const pendingRecharges = summaryNumber(source, 'pending_recharges')
+  const approvedRecharges = summaryNumber(source, 'approved_recharges')
+  const creditsIssued = summaryNumber(source, 'credits_issued')
+  const rechargeModule = summaryString(source, 'recharge_module')
+  const seriesFrom = summaryString(source, 'series_from')
+  const searchSeries = summarySeries(source.search_series)
+  const userSeries = summarySeries(source.user_series)
+  const rechargeSeries = summarySeries(source.recharge_series)
+
+  if (
+    searchesToday === null || searchesThisMonth === null || userCount === null || adminCount === null || superAdminCount === null
+    || activeUsers === null || suspendedUsers === null || pending === null || reviewed === null || added === null || rejected === null
+    || duplicate === null || verifiedEstablishments === null || pendingRecharges === null || approvedRecharges === null
+    || creditsIssued === null || seriesFrom === null || searchSeries === null || userSeries === null || rechargeSeries === null
+    || rechargeModule !== 'connected' || !(ANALYTICS_WINDOWS as readonly number[]).includes(windowDays ?? 0)
+  ) return null
+
+  return {
+    searchesToday,
+    searchesThisMonth,
+    usersByRole: { user: userCount, admin: adminCount, superAdmin: superAdminCount },
+    usersByStatus: { active: activeUsers, suspended: suspendedUsers },
+    requestsByStatus: { pending, reviewed, added, rejected, duplicate },
+    verifiedEstablishments,
+    windowDays: windowDays as AdminAnalyticsWindow,
+    searchSeries,
+    userSeries,
+    rechargeSeries,
+    rechargeModule,
+    pendingRecharges,
+    approvedRecharges,
+    creditsIssued,
+    creditsTruncated: false,
+    seriesFrom,
+  }
+}
+
+/**
+ * Loads one restricted PostgreSQL aggregate instead of downloading dashboard
+ * rows to the browser. A remote that has not yet applied CA-1 keeps the prior
+ * RLS-scoped behaviour as a temporary compatibility fallback.
+ */
+export async function getAdminOverview(): Promise<AdminResult<AdminOverview | null>> {
+  const { data, error } = await supabase.rpc('admin_get_overview_summary')
+  if (error) {
+    if (isMissingBackend(error)) return getAdminOverviewFallback()
+    return { data: null, error: errorMessage(error) }
+  }
+
+  const overview = readAdminOverviewSummary(data as unknown)
+  return overview
+    ? { data: overview, error: null }
+    : { data: null, error: 'The admin overview summary returned an invalid response.' }
+}
+
+/** See `admin_get_analytics_summary` in the CA-1 aggregate migration. */
+export async function getAdminAnalytics(days: number = 30): Promise<AdminResult<AdminAnalytics | null>> {
+  const windowDays = resolveAnalyticsWindow(days)
+  const { data, error } = await supabase.rpc('admin_get_analytics_summary', { p_days: windowDays })
+  if (error) {
+    if (isMissingBackend(error)) return getAdminAnalyticsFallback(windowDays)
+    return { data: null, error: errorMessage(error) }
+  }
+
+  const analytics = readAdminAnalyticsSummary(data as unknown)
+  return analytics
+    ? { data: analytics, error: null }
+    : { data: null, error: 'The admin analytics summary returned an invalid response.' }
 }
 
 /** Identifiant d'alerte ; le libellé vit dans `adminCopy`, pas ici. */
@@ -751,20 +975,81 @@ function isMissingBackend(error: { code?: string; message?: string } | null) {
   return message.includes('could not find the table') || message.includes('could not find the function')
 }
 
-export type AdminRechargeResult = AdminResult<AdminRechargeRequest[]> & { module: AdminRechargeModule }
+export type AdminRechargeQuery = PaginationParams & {
+  status?: 'all' | AdminRechargeStatus
+  userId?: string
+}
 
-export async function getAdminRechargeRequests(): Promise<AdminRechargeResult> {
-  const { data, error } = await supabase
+export type AdminRechargeResult = AdminResult<PaginatedResult<AdminRechargeRequest>> & { module: AdminRechargeModule }
+
+/**
+ * Server-paginated recharge history. It deliberately returns only one stable
+ * page, never the full financial history, and stays within the existing admin
+ * RLS read scope.
+ */
+export async function getAdminRechargeRequests(params: AdminRechargeQuery = {}): Promise<AdminRechargeResult> {
+  const { page, pageSize, from, to } = resolvePagination(params)
+  let query = supabase
     .from('recharge_requests')
-    .select(rechargeFields)
+    .select(rechargeFields, { count: 'exact' })
     .order('created_at', { ascending: false })
+    .range(from, to)
 
+  if (params.status && params.status !== 'all') query = query.eq('status', params.status)
+  if (params.userId?.trim()) query = query.eq('user_id', params.userId.trim())
+
+  const { data, error, count } = await query
   if (error) {
-    if (isMissingBackend(error)) return { data: [], error: null, module: 'not-connected' }
-    return { data: [], error: errorMessage(error), module: 'connected' }
+    if (isMissingBackend(error)) return { data: emptyPage({ page, pageSize }), error: null, module: 'not-connected' }
+    return { data: emptyPage({ page, pageSize }), error: errorMessage(error), module: 'connected' }
   }
 
-  return { data: (data as AdminRechargeRequest[] | null) ?? [], error: null, module: 'connected' }
+  return {
+    data: paginatedResult((data as AdminRechargeRequest[] | null) ?? [], count, { page, pageSize }),
+    error: null,
+    module: 'connected',
+  }
+}
+
+export type AdminRechargeStateResult = AdminResult<AdminRechargeRequest[]> & { module: AdminRechargeModule }
+
+/**
+ * Retrieves at most one current recharge state for each visible wallet. The
+ * CA-1 RPC avoids a history scan; a bounded compatibility fallback is used
+ * only while that new migration is absent from an otherwise connected project.
+ */
+export async function getAdminRechargeStates(userIds: string[]): Promise<AdminRechargeStateResult> {
+  const uniqueUserIds = [...new Set(userIds.filter(Boolean))].slice(0, 100)
+  if (uniqueUserIds.length === 0) return { data: [], error: null, module: 'connected' }
+
+  const { data, error } = await supabase.rpc('admin_get_recharge_states', { p_user_ids: uniqueUserIds })
+  if (!error) {
+    return { data: (data as AdminRechargeRequest[] | null) ?? [], error: null, module: 'connected' }
+  }
+
+  if (!isMissingBackend(error)) return { data: [], error: errorMessage(error), module: 'connected' }
+
+  const fallback = await Promise.all(uniqueUserIds.map(async (userId) => {
+    const result = await supabase
+      .from('recharge_requests')
+      .select(rechargeFields)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+    return result
+  }))
+
+  const failure = fallback.map((result) => result.error).find((result) => result !== null) ?? null
+  if (failure) {
+    if (isMissingBackend(failure)) return { data: [], error: null, module: 'not-connected' }
+    return { data: [], error: errorMessage(failure), module: 'connected' }
+  }
+
+  return {
+    data: fallback.flatMap((result) => (result.data as AdminRechargeRequest[] | null) ?? []),
+    error: null,
+    module: 'connected',
+  }
 }
 
 export type AdminRechargeDecision = {
@@ -839,7 +1124,7 @@ const financeLedgerWindow = 1000
  * two cases stay distinguishable (`null` means no wallet row at all).
  */
 export async function getAdminUserFinance(userId: string): Promise<AdminResult<AdminUserFinance>> {
-  const [walletResult, ledgerResult, searchCountResult, recentSearchResult] = await Promise.all([
+  const [walletResult, ledgerResult, searchCountResult, recentSearchResult, rechargeCountResult] = await Promise.all([
     supabase.from('wallets').select('balance').eq('user_id', userId).maybeSingle(),
     supabase
       .from('credit_ledger')
@@ -854,17 +1139,14 @@ export async function getAdminUserFinance(userId: string): Promise<AdminResult<A
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(2),
+    supabase.from('recharge_requests').select('id', { count: 'exact', head: true }).eq('user_id', userId),
   ])
 
-  const error = errorMessage(walletResult.error ?? ledgerResult.error ?? recentSearchResult.error)
+  const rechargeError = isMissingBackend(rechargeCountResult.error) ? null : rechargeCountResult.error
+  const error = errorMessage(walletResult.error ?? ledgerResult.error ?? searchCountResult.error ?? recentSearchResult.error ?? rechargeError)
   const movements = (ledgerResult.data as { amount: number }[] | null) ?? []
   const creditsReceived = movements.reduce((total, row) => (row.amount > 0 ? total + row.amount : total), 0)
   const creditsSpent = movements.reduce((total, row) => (row.amount < 0 ? total + Math.abs(row.amount) : total), 0)
-
-  const recharges = await getAdminRechargeRequests()
-  const rechargeCount = recharges.module === 'connected'
-    ? recharges.data.filter((request) => request.user_id === userId).length
-    : 0
 
   return {
     data: {
@@ -872,7 +1154,7 @@ export async function getAdminUserFinance(userId: string): Promise<AdminResult<A
       creditsReceived,
       creditsSpent,
       searchCount: searchCountResult.count ?? 0,
-      rechargeCount,
+      rechargeCount: rechargeCountResult.count ?? 0,
       recentSearches: (recentSearchResult.data as AdminUserSearch[] | null) ?? [],
       totalsTruncated: (ledgerResult.count ?? 0) > movements.length,
     },

@@ -2,7 +2,7 @@ import type { Locale } from '../../i18n'
 import type { AdminAlertId } from '../../lib/admin'
 
 export type AdminTabId = 'dashboard' | 'requests' | 'users' | 'credits' | 'search-logs' | 'services' | 'system'
-export type SuperAdminTabId = 'overview' | 'admins' | 'users' | 'audit' | 'security' | 'settings'
+export type SuperAdminTabId = 'overview' | 'admins' | 'users' | 'audit' | 'settings'
 
 type AlertText = { title: string; text: string }
 
@@ -37,12 +37,6 @@ type AdminRechargeCopy = {
   emptyText: string
   badge: string
   placeholderNotice: string
-  totalRequests: string
-  pending: string
-  confirmed: string
-  amountExpected: string
-  amountCollected: string
-  manualPayments: string
 }
 
 type AdminChartsCopy = {
@@ -277,6 +271,12 @@ type AdminSidebarCopy = {
   settings: string
   contact: string
   superAdminSpace: string
+  adminBadge: string
+  adminSubtitle: string
+  superAdminBadge: string
+  logout: string
+  loggingOut: string
+  switchLang: string
 }
 
 type SuperAdminCopy = {
@@ -287,6 +287,8 @@ type SuperAdminCopy = {
   tabs: Record<SuperAdminTabId, string>
   goToAdmin: string
   backToApp: string
+  badge: string
+  subtitle: string
   overview: {
     title: string
     text: string
@@ -302,6 +304,50 @@ type SuperAdminCopy = {
     unavailable: string
   }
   platformAnalytics: { title: string; text: string }
+  dashboard: {
+    title: string
+    text: string
+    filterLabel: string
+    windows: { d7: string; d30: string; d90: string }
+    windowHint: string
+    refresh: string
+    retry: string
+    noData: string
+    loading: string
+    kpiTitle: string
+    kpi: {
+      totalUsers: string
+      activeUsers: string
+      suspendedUsers: string
+      admins: string
+      superAdmins: string
+      totalSearches: string
+      searchesToday: string
+      searchesThisMonth: string
+      pendingRequests: string
+      approvedServices: string
+      pendingRecharges: string
+      approvedRecharges: string
+      creditsIssued: string
+    }
+    charts: {
+      searchesTitle: string
+      searchesText: string
+      growthTitle: string
+      growthText: string
+      rolesTitle: string
+      rolesText: string
+      rolesCenter: string
+      requestsTitle: string
+      requestsText: string
+      rechargesTitle: string
+      rechargesText: string
+    }
+    legend: { searches: string; notFound: string; signups: string; created: string; approved: string }
+    creditsApprox: string
+    rechargesUnavailable: string
+    remindersTitle: string
+  }
   people: {
     adminsTitle: string
     adminsText: string
@@ -428,6 +474,30 @@ type AdminCopy = {
   credits: AdminCreditsCopy
   requests: AdminRequestsCopy
   establishmentForm: AdminEstablishmentFormCopy
+  /** Pages compte de l'espace admin : profil et paramètres, hors espace membre. */
+  account: {
+    adminProfile: string
+    superAdminProfile: string
+    adminSettings: string
+    superAdminSettings: string
+    profileSubtitle: string
+    settingsSubtitle: string
+    backToAdmin: string
+    backToSuperAdmin: string
+    userSpace: string
+    identity: string
+    fullName: string
+    arabicName: string
+    email: string
+    phone: string
+    role: string
+    status: string
+    createdAt: string
+    notProvided: string
+    editHint: string
+    platformRole: string
+    platformRoleText: string
+  }
   content: AdminContentCopy
   mobile: {
     user: string
@@ -526,19 +596,17 @@ export const adminCopy: Record<Locale, AdminCopy> = {
         searchErrors: { title: 'Erreurs de recherche', text: 'Des recherches se sont terminées en erreur. À vérifier côté base.' },
         establishmentsWithoutBranch: { title: 'Établissements sans agence', text: 'Approuvés mais sans agence : introuvables sur la carte.' },
         branchesWithoutCoordinates: { title: 'Agences sans coordonnées', text: 'Sans latitude ni longitude, l’itinéraire reste indisponible.' },
-        rechargeManual: { title: 'Recharge encore manuelle', text: 'La validation des recharges se fait par WhatsApp, sans workflow automatisé.' },
+        rechargeManual: { title: 'Paiement de recharge à confirmer', text: 'Les demandes sont suivies dans Crédits ; l’encaissement reste vérifié manuellement.' },
         businessSubmissions: { title: 'Dépôt d’établissement non actif', text: 'La soumission par les professionnels n’est pas encore connectée.' },
         backupCheck: { title: 'Sauvegarde à vérifier', text: 'Testez une restauration avant la mise en production.' },
       },
     },
     recharge: {
-      title: 'Recharges', subtitle: 'Suivi des demandes de recharge et des montants.',
-      emptyTitle: 'Le module de recharge réelle n’est pas encore connecté.',
-      emptyText: 'Les montants encaissés et les demandes de recharge seront disponibles après la création du workflow de paiement/recharge.',
-      badge: 'Prévu pour la phase DB4 / Paiement',
-      placeholderNotice: 'Les montants seront calculés après l’ajout du système réel de recharge. Aucun chiffre financier n’est affiché ici.',
-      totalRequests: 'Demandes de recharge', pending: 'En attente', confirmed: 'Confirmées',
-      amountExpected: 'Montant attendu', amountCollected: 'Montant encaissé', manualPayments: 'Paiements WhatsApp manuels',
+      title: 'Recharges', subtitle: 'Les demandes et leurs décisions sont gérées dans Crédits.',
+      emptyTitle: 'Le workflow de recharge est actif.',
+      emptyText: 'Consultez un compte dans Crédits pour examiner sa demande puis l’approuver ou la rejeter.',
+      badge: 'Décision de recharge dans Crédits',
+      placeholderNotice: 'Le paiement est confirmé manuellement. Les montants affichés dans la fiche utilisateur restent la source de vérité.',
     },
     actions: {
       view: 'Voir', edit: 'Modifier', add: 'Ajouter', remove: 'Supprimer', adjust: 'Ajuster',
@@ -557,7 +625,9 @@ export const adminCopy: Record<Locale, AdminCopy> = {
     },
     sidebar: {
       menu: 'Ouvrir la navigation admin', collapse: 'Réduire la navigation admin', expand: 'Développer la navigation admin', title: 'Navigation admin', adminNavigation: 'Administration', recharges: 'Recharges et paiements',
-      userNavigation: 'Espace utilisateur', userSpace: 'Espace utilisateur', search: 'Recherche', profile: 'Profil', credits: 'Mes crédits', recharge: 'Recharger', settings: 'Paramètres', contact: 'Contact', superAdminSpace: 'Aller à Super Admin',
+      userNavigation: 'Espace utilisateur', userSpace: 'Espace utilisateur', search: 'Recherche', profile: 'Profil', credits: 'Mes crédits', recharge: 'Recharger', settings: 'Paramètres', contact: 'Contact', superAdminSpace: 'Espace Super Admin',
+      adminBadge: 'Admin', adminSubtitle: 'Gestion opérationnelle', superAdminBadge: 'Super Admin',
+      logout: 'Déconnexion', loggingOut: 'Déconnexion…', switchLang: 'Changer la langue',
     },
     users: {
       title: 'Utilisateurs', subtitle: 'Gérez les comptes, les rôles et les statuts des utilisateurs Lewad.',
@@ -617,6 +687,19 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       errorNameFr: 'Le nom en français est obligatoire.', errorNameAr: 'Le nom en arabe est obligatoire.', errorNameArScript: 'Le nom en arabe doit être écrit en caractères arabes.',
       errorPhone: 'Numéro invalide : 8 chiffres commençant par 2, 3 ou 4.', errorImage: 'Format d’image accepté : .png, .jpg ou .jpeg.',
     },
+    account: {
+      adminProfile: 'Profil Admin', superAdminProfile: 'Profil Super Admin',
+      adminSettings: 'Paramètres Admin', superAdminSettings: 'Paramètres Super Admin',
+      profileSubtitle: 'Votre compte d’équipe Lewad, tel qu’il est enregistré côté base.',
+      settingsSubtitle: 'Langue, apparence et sécurité de votre compte d’équipe.',
+      backToAdmin: 'Retour Admin', backToSuperAdmin: 'Retour Super Admin', userSpace: 'Espace user',
+      identity: 'Identité',
+      fullName: 'Nom complet', arabicName: 'Nom en arabe', email: 'Adresse e-mail', phone: 'Téléphone',
+      role: 'Rôle', status: 'Statut', createdAt: 'Compte créé le', notProvided: 'Non renseigné',
+      editHint: 'La modification de vos informations personnelles se fait dans l’espace user.',
+      platformRole: 'Portée plateforme',
+      platformRoleText: 'Le rôle super admin ouvre la vue globale, la gestion des admins et l’audit. Les droits réels sont vérifiés côté base à chaque appel.',
+    },
     content: {
       unknownUser: 'Utilisateur inconnu', unnamedUser: 'Utilisateur sans nom', partialProfilesUnavailable: 'Profils partiellement indisponibles',
       loading: { requests: 'Chargement des demandes', users: 'Chargement des utilisateurs', credits: 'Chargement des crédits', searches: 'Chargement des recherches', services: 'Chargement des services' },
@@ -641,10 +724,34 @@ export const adminCopy: Record<Locale, AdminCopy> = {
     pagination: { previous: 'Précédent', next: 'Suivant', page: 'Page', of: 'sur', items: 'éléments' },
     superSpace: {
       title: 'Espace Super Admin', intro: 'Pilotage global, sécurité et gestion des accès de la plateforme.', navigation: 'Navigation Super Admin', accessOnly: 'Accès réservé au super admin',
-      tabs: { overview: 'Vue globale', admins: 'Gestion des admins', users: 'Utilisateurs', audit: 'Audit', security: 'Sécurité', settings: 'Paramètres système' },
-      goToAdmin: 'Retour Admin', backToApp: 'Retour App',
+      tabs: { overview: 'Vue globale', admins: 'Gestion des admins', users: 'Utilisateurs', audit: 'Audit', settings: 'Paramètres système' },
+      goToAdmin: 'Retour Admin', backToApp: 'Retour App', badge: 'Super Admin', subtitle: 'Pilotage plateforme',
       overview: { title: 'Vue globale de la plateforme', text: 'Indicateurs issus de votre portée d’administration existante.', totalUsers: 'Total utilisateurs', admins: 'Admins', superAdmins: 'Super admins', activeUsers: 'Utilisateurs actifs', suspendedUsers: 'Utilisateurs suspendus', totalSearches: 'Total recherches', pendingRequests: 'Demandes en attente', pendingRecharges: 'Recharges en attente', approvedServices: 'Services approuvés', unavailable: 'Indisponible' },
       platformAnalytics: { title: 'Analytique plateforme', text: 'Lecture globale des opérations Lewad.' },
+      dashboard: {
+        title: 'Statistiques plateforme', text: 'Lecture globale des opérations Lewad, dans votre portée d’administration.',
+        filterLabel: 'Période', windows: { d7: '7 jours', d30: '30 jours', d90: '90 jours' },
+        windowHint: 'Période analysée', refresh: 'Actualiser', retry: 'Réessayer', noData: 'Aucune donnée', loading: 'Chargement des statistiques',
+        kpiTitle: 'Vue globale',
+        kpi: {
+          totalUsers: 'Total utilisateurs', activeUsers: 'Utilisateurs actifs', suspendedUsers: 'Utilisateurs suspendus',
+          admins: 'Admins', superAdmins: 'Super admins',
+          totalSearches: 'Total recherches', searchesToday: 'Recherches aujourd’hui', searchesThisMonth: 'Recherches ce mois',
+          pendingRequests: 'Demandes en attente', approvedServices: 'Services approuvés',
+          pendingRecharges: 'Recharges en attente', approvedRecharges: 'Recharges approuvées', creditsIssued: 'Crédits distribués',
+        },
+        charts: {
+          searchesTitle: 'Recherches', searchesText: 'Volume quotidien et recherches sans résultat.',
+          growthTitle: 'Croissance des comptes', growthText: 'Inscriptions par jour sur la période.',
+          rolesTitle: 'Répartition des rôles', rolesText: 'Comptes par niveau d’accès.', rolesCenter: 'comptes',
+          requestsTitle: 'Demandes par état', requestsText: 'Suivi du traitement des services manquants.',
+          rechargesTitle: 'Recharges', rechargesText: 'Demandes créées et approbations sur la période.',
+        },
+        legend: { searches: 'recherches', notFound: 'sans résultat', signups: 'inscriptions', created: 'créées', approved: 'approuvées' },
+        creditsApprox: 'Lecture plafonnée : ce total est un minimum.',
+        rechargesUnavailable: 'Module recharge non déployé sur cette base.',
+        remindersTitle: 'Rappels sécurité',
+      },
       people: { adminsTitle: 'Gestion des admins', adminsText: 'Promouvez, rétrogradez ou suspendez les comptes autorisés via les RPC sécurisées.', usersTitle: 'Utilisateurs', usersText: 'Gérez les rôles et états des comptes dans les limites appliquées par la base.' },
       audit: { title: 'Journal d’audit', text: 'Les événements d’administration sont conservés côté base.', unavailable: 'Journal d’audit bientôt disponible dans cette interface.' },
       security: { title: 'Sécurité', text: 'Rappels opérationnels sans exposer de secret ni de configuration distante.', checklist: ['Les changements de rôle passent par une RPC super-admin', 'Les changements de statut sont contrôlés par la base', 'Les actions sensibles produisent un événement d’audit', 'La migration et les réglages Auth distants restent à vérifier par l’équipe'] },
@@ -702,19 +809,17 @@ export const adminCopy: Record<Locale, AdminCopy> = {
         searchErrors: { title: 'أخطاء في البحث', text: 'انتهت بعض عمليات البحث بخطأ. يلزم التحقق من جهة القاعدة.' },
         establishmentsWithoutBranch: { title: 'مؤسسات بلا وكالة', text: 'معتمدة لكن بلا وكالة: لا تظهر على الخريطة.' },
         branchesWithoutCoordinates: { title: 'وكالات بلا إحداثيات', text: 'بدون خط الطول والعرض يبقى الطريق غير متاح.' },
-        rechargeManual: { title: 'الشحن ما زال يدوياً', text: 'تتم المصادقة على الشحن عبر واتساب، دون مسار آلي.' },
+        rechargeManual: { title: 'تأكيد دفع الشحن', text: 'تُتابَع الطلبات في قسم النقاط، بينما يبقى التحقق من الدفع يدوياً.' },
         businessSubmissions: { title: 'إضافة المؤسسات غير مفعّلة', text: 'لم يُربط بعد إرسال الطلبات من أصحاب المؤسسات.' },
         backupCheck: { title: 'النسخ الاحتياطي يحتاج تحققاً', text: 'اختبر عملية استعادة قبل الإطلاق.' },
       },
     },
     recharge: {
-      title: 'الشحن', subtitle: 'متابعة طلبات الشحن والمبالغ.',
-      emptyTitle: 'وحدة الشحن الحقيقية غير مرتبطة بعد.',
-      emptyText: 'ستتوفر المبالغ المحصّلة وطلبات الشحن بعد إنشاء مسار الدفع والشحن.',
-      badge: 'مبرمج لمرحلة DB4 / الدفع',
-      placeholderNotice: 'ستُحتسب المبالغ بعد إضافة نظام الشحن الفعلي. لا يُعرض هنا أي رقم مالي.',
-      totalRequests: 'طلبات الشحن', pending: 'معلقة', confirmed: 'مؤكدة',
-      amountExpected: 'المبلغ المتوقع', amountCollected: 'المبلغ المحصّل', manualPayments: 'مدفوعات واتساب يدوية',
+      title: 'إعادة الشحن', subtitle: 'تُدار الطلبات وقراراتها في قسم النقاط.',
+      emptyTitle: 'مسار إعادة الشحن نشط.',
+      emptyText: 'افتح حساباً في قسم النقاط لمراجعة طلبه ثم تأكيده أو رفضه.',
+      badge: 'قرار الشحن في قسم النقاط',
+      placeholderNotice: 'يتم تأكيد الدفع يدوياً. تبقى المبالغ المعروضة في تفاصيل المستخدم هي المصدر المعتمد.',
     },
     actions: {
       view: 'عرض', edit: 'تعديل', add: 'إضافة', remove: 'حذف', adjust: 'تعديل الرصيد',
@@ -733,7 +838,9 @@ export const adminCopy: Record<Locale, AdminCopy> = {
     },
     sidebar: {
       menu: 'فتح تنقل الإدارة', collapse: 'طيّ تنقل الإدارة', expand: 'توسيع تنقل الإدارة', title: 'تنقل الإدارة', adminNavigation: 'الإدارة', recharges: 'الشحن والمدفوعات',
-      userNavigation: 'مساحة المستخدم', userSpace: 'مساحة المستخدم', search: 'البحث', profile: 'الملف الشخصي', credits: 'نقاطي', recharge: 'شحن', settings: 'الإعدادات', contact: 'التواصل', superAdminSpace: 'الانتقال إلى المدير الأعلى',
+      userNavigation: 'مساحة المستخدم', userSpace: 'مساحة المستخدم', search: 'البحث', profile: 'الملف الشخصي', credits: 'نقاطي', recharge: 'شحن', settings: 'الإعدادات', contact: 'التواصل', superAdminSpace: 'مساحة المدير الأعلى',
+      adminBadge: 'مشرف', adminSubtitle: 'الإدارة التشغيلية', superAdminBadge: 'مشرف عام',
+      logout: 'تسجيل الخروج', loggingOut: 'جارٍ تسجيل الخروج…', switchLang: 'تغيير اللغة',
     },
     users: {
       title: 'المستخدمون', subtitle: 'أدر حسابات مستخدمي لواد وأدوارهم وحالاتهم.',
@@ -817,10 +924,34 @@ export const adminCopy: Record<Locale, AdminCopy> = {
     pagination: { previous: 'السابق', next: 'التالي', page: 'الصفحة', of: 'من', items: 'عنصر' },
     superSpace: {
       title: 'مساحة المدير الأعلى', intro: 'إدارة شاملة للمنصة والأمان وصلاحيات الوصول.', navigation: 'تنقل المدير الأعلى', accessOnly: 'الوصول مخصص للمدير الأعلى فقط',
-      tabs: { overview: 'نظرة عامة', admins: 'إدارة المدراء', users: 'المستخدمون', audit: 'سجل التدقيق', security: 'الأمان', settings: 'إعدادات النظام' },
-      goToAdmin: 'العودة إلى الإدارة', backToApp: 'العودة إلى التطبيق',
+      tabs: { overview: 'نظرة عامة', admins: 'إدارة المدراء', users: 'المستخدمون', audit: 'سجل التدقيق', settings: 'إعدادات النظام' },
+      goToAdmin: 'العودة إلى الإدارة', backToApp: 'العودة إلى التطبيق', badge: 'مشرف عام', subtitle: 'إدارة المنصة',
       overview: { title: 'نظرة عامة على المنصة', text: 'مؤشرات من نطاق الإدارة المتاح لحسابك.', totalUsers: 'إجمالي المستخدمين', admins: 'المدراء', superAdmins: 'المدراء الأعلى', activeUsers: 'المستخدمون النشطون', suspendedUsers: 'المستخدمون الموقوفون', totalSearches: 'إجمالي عمليات البحث', pendingRequests: 'طلبات معلقة', pendingRecharges: 'عمليات شحن معلقة', approvedServices: 'خدمات معتمدة', unavailable: 'غير متاح' },
       platformAnalytics: { title: 'تحليلات المنصة', text: 'عرض شامل لعمليات لواد.' },
+      dashboard: {
+        title: 'إحصائيات المنصة', text: 'عرض شامل لعمليات لواد ضمن نطاق إدارتك.',
+        filterLabel: 'الفترة', windows: { d7: '7 أيام', d30: '30 يوماً', d90: '90 يوماً' },
+        windowHint: 'الفترة المحللة', refresh: 'تحديث', retry: 'إعادة المحاولة', noData: 'لا توجد بيانات', loading: 'جارٍ تحميل الإحصائيات',
+        kpiTitle: 'نظرة عامة',
+        kpi: {
+          totalUsers: 'إجمالي المستخدمين', activeUsers: 'المستخدمون النشطون', suspendedUsers: 'المستخدمون المعلقون',
+          admins: 'المدراء', superAdmins: 'المدراء الأعلى',
+          totalSearches: 'إجمالي عمليات البحث', searchesToday: 'عمليات البحث اليوم', searchesThisMonth: 'عمليات البحث هذا الشهر',
+          pendingRequests: 'الطلبات المعلقة', approvedServices: 'الخدمات المعتمدة',
+          pendingRecharges: 'عمليات إعادة الشحن المعلقة', approvedRecharges: 'عمليات إعادة الشحن المعتمدة', creditsIssued: 'النقاط الموزعة',
+        },
+        charts: {
+          searchesTitle: 'عمليات البحث', searchesText: 'الحجم اليومي وعمليات البحث بلا نتيجة.',
+          growthTitle: 'نمو الحسابات', growthText: 'التسجيلات اليومية خلال الفترة.',
+          rolesTitle: 'توزيع الأدوار', rolesText: 'الحسابات حسب مستوى الوصول.', rolesCenter: 'حساب',
+          requestsTitle: 'الطلبات حسب الحالة', requestsText: 'متابعة معالجة الخدمات الناقصة.',
+          rechargesTitle: 'إعادة الشحن', rechargesText: 'الطلبات المنشأة والاعتمادات خلال الفترة.',
+        },
+        legend: { searches: 'عملية بحث', notFound: 'بلا نتيجة', signups: 'تسجيل', created: 'منشأة', approved: 'معتمدة' },
+        creditsApprox: 'القراءة محدودة: هذا المجموع حد أدنى.',
+        rechargesUnavailable: 'وحدة إعادة الشحن غير منشورة على هذه القاعدة.',
+        remindersTitle: 'تذكيرات أمنية',
+      },
       people: { adminsTitle: 'إدارة المدراء', adminsText: 'يمكن ترقية الحسابات أو خفض دورها أو تعليقها عبر عمليات RPC الآمنة.', usersTitle: 'المستخدمون', usersText: 'أدر الأدوار والحالات ضمن الحدود التي تفرضها قاعدة البيانات.' },
       audit: { title: 'سجل التدقيق', text: 'تُحفَظ أحداث الإدارة في قاعدة البيانات.', unavailable: 'سجل التدقيق سيتوفر قريباً في هذه الواجهة.' },
       security: { title: 'الأمان', text: 'تذكيرات تشغيلية من دون كشف أسرار أو إعدادات بعيدة.', checklist: ['تغييرات الأدوار تمر عبر RPC للمدير الأعلى', 'تغييرات الحالة تخضع للتحقق في قاعدة البيانات', 'الإجراءات الحساسة تنتج حدث تدقيق', 'يجب أن يتحقق الفريق من الترحيلات وإعدادات Auth البعيدة'] },
@@ -842,6 +973,19 @@ export const adminCopy: Record<Locale, AdminCopy> = {
         dangerousActions: { title: 'إجراءات حساسة', text: 'لا يوجد أي إجراء غير قابل للعكس أو تدميري في هذه النسخة.' },
       },
       securityChecklist: ['سياسات RLS مفعّلة على الجداول الإدارية', 'لا توجد خدمة-role key في العميل', 'قراءات الإدارة تعمل بأقل قدر من الصلاحيات', 'دالة is_admin() لا تميّز super_admin بعد'],
+    },
+    account: {
+      adminProfile: 'ملف الإدارة', superAdminProfile: 'ملف المدير الأعلى',
+      adminSettings: 'إعدادات الإدارة', superAdminSettings: 'إعدادات المدير الأعلى',
+      profileSubtitle: 'حساب فريق لواد الخاص بك كما هو مسجّل في قاعدة البيانات.',
+      settingsSubtitle: 'اللغة والمظهر وأمان حساب الفريق الخاص بك.',
+      backToAdmin: 'العودة إلى الإدارة', backToSuperAdmin: 'العودة إلى المدير الأعلى', userSpace: 'مساحة المستخدم',
+      identity: 'الهوية',
+      fullName: 'الاسم الكامل', arabicName: 'الاسم بالعربية', email: 'البريد الإلكتروني', phone: 'الهاتف',
+      role: 'الدور', status: 'الحالة', createdAt: 'تاريخ إنشاء الحساب', notProvided: 'غير محدد',
+      editHint: 'يتم تعديل معلوماتك الشخصية من مساحة المستخدم.',
+      platformRole: 'نطاق المنصة',
+      platformRoleText: 'يفتح دور المدير الأعلى النظرة العامة وإدارة المدراء وسجل التدقيق. تُتحقق الصلاحيات الفعلية في قاعدة البيانات عند كل طلب.',
     },
   },
   en: {
@@ -878,19 +1022,17 @@ export const adminCopy: Record<Locale, AdminCopy> = {
         searchErrors: { title: 'Search errors', text: 'Some searches ended in an error. Worth checking on the database side.' },
         establishmentsWithoutBranch: { title: 'Establishments without a branch', text: 'Approved but with no branch: not findable on the map.' },
         branchesWithoutCoordinates: { title: 'Branches without coordinates', text: 'Without latitude and longitude, directions stay unavailable.' },
-        rechargeManual: { title: 'Recharge is still manual', text: 'Recharges are validated over WhatsApp, with no automated workflow.' },
+        rechargeManual: { title: 'Recharge payment needs confirmation', text: 'Requests are managed in Credits; payment collection is still verified manually.' },
         businessSubmissions: { title: 'Business submission not active', text: 'Submission by business owners is not connected yet.' },
         backupCheck: { title: 'Backup needs verifying', text: 'Run a restore test before going to production.' },
       },
     },
     recharge: {
-      title: 'Recharges', subtitle: 'Recharge requests and amounts.',
-      emptyTitle: 'The real recharge module is not connected yet.',
-      emptyText: 'Collected amounts and recharge requests will be available once the payment/recharge workflow exists.',
-      badge: 'Planned for the DB4 / Payment phase',
-      placeholderNotice: 'Amounts will be computed once the real recharge system is added. No financial figure is shown here.',
-      totalRequests: 'Recharge requests', pending: 'Pending', confirmed: 'Confirmed',
-      amountExpected: 'Expected amount', amountCollected: 'Collected amount', manualPayments: 'Manual WhatsApp payments',
+      title: 'Recharges', subtitle: 'Requests and decisions are managed in Credits.',
+      emptyTitle: 'The recharge workflow is active.',
+      emptyText: 'Open an account in Credits to review its request, then approve or reject it.',
+      badge: 'Recharge decisions in Credits',
+      placeholderNotice: 'Payment collection is confirmed manually. Amounts shown in the user finance view remain the source of truth.',
     },
     actions: {
       view: 'View', edit: 'Edit', add: 'Add', remove: 'Delete', adjust: 'Adjust',
@@ -909,7 +1051,9 @@ export const adminCopy: Record<Locale, AdminCopy> = {
     },
     sidebar: {
       menu: 'Open admin navigation', collapse: 'Collapse admin navigation', expand: 'Expand admin navigation', title: 'Admin navigation', adminNavigation: 'Administration', recharges: 'Recharges & payments',
-      userNavigation: 'User space', userSpace: 'User space', search: 'Search', profile: 'Profile', credits: 'My credits', recharge: 'Recharge', settings: 'Settings', contact: 'Contact', superAdminSpace: 'Go to Super Admin',
+      userNavigation: 'User space', userSpace: 'User space', search: 'Search', profile: 'Profile', credits: 'My credits', recharge: 'Recharge', settings: 'Settings', contact: 'Contact', superAdminSpace: 'Super Admin Space',
+      adminBadge: 'Admin', adminSubtitle: 'Operational management', superAdminBadge: 'Super Admin',
+      logout: 'Sign out', loggingOut: 'Signing out…', switchLang: 'Switch language',
     },
     users: {
       title: 'Users', subtitle: 'Manage Lewad user accounts, roles and statuses.',
@@ -993,10 +1137,34 @@ export const adminCopy: Record<Locale, AdminCopy> = {
     pagination: { previous: 'Previous', next: 'Next', page: 'Page', of: 'of', items: 'items' },
     superSpace: {
       title: 'Super Admin Space', intro: 'Platform control, security and access management.', navigation: 'Super Admin navigation', accessOnly: 'Super admin access only',
-      tabs: { overview: 'Overview', admins: 'Admin Management', users: 'Users', audit: 'Audit', security: 'Security', settings: 'System Settings' },
-      goToAdmin: 'Back to Admin', backToApp: 'Back to App',
+      tabs: { overview: 'Overview', admins: 'Admin Management', users: 'Users', audit: 'Audit', settings: 'System Settings' },
+      goToAdmin: 'Back to Admin', backToApp: 'Back to App', badge: 'Super Admin', subtitle: 'Platform control',
       overview: { title: 'Platform overview', text: 'Counters from your existing administration scope.', totalUsers: 'Total users', admins: 'Admins', superAdmins: 'Super admins', activeUsers: 'Active users', suspendedUsers: 'Suspended users', totalSearches: 'Total searches', pendingRequests: 'Pending requests', pendingRecharges: 'Pending recharges', approvedServices: 'Approved services', unavailable: 'Unavailable' },
       platformAnalytics: { title: 'Platform analytics', text: 'Global view of Lewad operations.' },
+      dashboard: {
+        title: 'Platform statistics', text: 'Global view of Lewad operations, within your administration scope.',
+        filterLabel: 'Period', windows: { d7: '7 days', d30: '30 days', d90: '90 days' },
+        windowHint: 'Analysed period', refresh: 'Refresh', retry: 'Retry', noData: 'No data', loading: 'Loading statistics',
+        kpiTitle: 'Overview',
+        kpi: {
+          totalUsers: 'Total users', activeUsers: 'Active users', suspendedUsers: 'Suspended users',
+          admins: 'Admins', superAdmins: 'Super admins',
+          totalSearches: 'Total searches', searchesToday: 'Searches today', searchesThisMonth: 'Searches this month',
+          pendingRequests: 'Pending requests', approvedServices: 'Approved services',
+          pendingRecharges: 'Pending recharges', approvedRecharges: 'Approved recharges', creditsIssued: 'Credits issued',
+        },
+        charts: {
+          searchesTitle: 'Searches', searchesText: 'Daily volume and searches with no result.',
+          growthTitle: 'Account growth', growthText: 'Sign-ups per day over the period.',
+          rolesTitle: 'Role distribution', rolesText: 'Accounts by access level.', rolesCenter: 'accounts',
+          requestsTitle: 'Requests by status', requestsText: 'Missing-service handling progress.',
+          rechargesTitle: 'Recharges', rechargesText: 'Requests created and approvals over the period.',
+        },
+        legend: { searches: 'searches', notFound: 'no result', signups: 'sign-ups', created: 'created', approved: 'approved' },
+        creditsApprox: 'Bounded read: this total is a minimum.',
+        rechargesUnavailable: 'Recharge module is not deployed on this database.',
+        remindersTitle: 'Security reminders',
+      },
       people: { adminsTitle: 'Admin management', adminsText: 'Promote, demote or suspend permitted accounts through the secure RPCs.', usersTitle: 'Users', usersText: 'Manage account roles and states within the limits enforced by the database.' },
       audit: { title: 'Audit events', text: 'Administrative events are retained in the database.', unavailable: 'Audit log coming soon in this interface.' },
       security: { title: 'Security', text: 'Operational reminders without exposing secrets or remote configuration.', checklist: ['Role changes use a super-admin RPC', 'Status changes are controlled by the database', 'Sensitive actions create an audit event', 'The team must still verify remote migrations and Auth settings'] },
@@ -1018,6 +1186,19 @@ export const adminCopy: Record<Locale, AdminCopy> = {
         dangerousActions: { title: 'Dangerous actions', text: 'No irreversible or destructive action is available in this version.' },
       },
       securityChecklist: ['RLS is active on administered tables', 'No service-role key in the client', 'Admin reads use least privilege', 'is_admin() does not yet separate super_admin'],
+    },
+    account: {
+      adminProfile: 'Admin Profile', superAdminProfile: 'Super Admin Profile',
+      adminSettings: 'Admin Settings', superAdminSettings: 'Super Admin Settings',
+      profileSubtitle: 'Your Lewad team account, as stored in the database.',
+      settingsSubtitle: 'Language, appearance and security for your team account.',
+      backToAdmin: 'Back to Admin', backToSuperAdmin: 'Back to Super Admin', userSpace: 'User space',
+      identity: 'Identity',
+      fullName: 'Full name', arabicName: 'Arabic name', email: 'Email address', phone: 'Phone',
+      role: 'Role', status: 'Status', createdAt: 'Account created', notProvided: 'Not provided',
+      editHint: 'Personal details are edited in the user space.',
+      platformRole: 'Platform scope',
+      platformRoleText: 'The super admin role opens the global overview, admin management and the audit log. Real permissions are checked in the database on every call.',
     },
   },
 }

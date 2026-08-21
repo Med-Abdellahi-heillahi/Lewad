@@ -13,18 +13,20 @@ import { Drawer } from './Drawer'
 import { LanguageMenu } from './LanguageMenu'
 import { ThemeToggle } from './ThemeToggle'
 import { UserArea } from './UserArea'
+import { AdminLanguageToggle } from '../admin/AdminLanguageToggle'
 import { appNavItems, appShellCopy, type AppNavId } from './appNav'
 
+/** Controls for the contextual admin/super-admin sidebar. */
 export type AdminBarProps = {
   productLabel: string
   sectionLabel: string
   roleLabel: string
-  sidebarCollapsed: boolean
-  mobileSidebarOpen: boolean
-  desktopToggleLabel: string
-  mobileToggleLabel: string
-  onDesktopSidebarToggle: () => void
-  onMobileSidebarToggle: () => void
+  sidebarCollapsed?: boolean
+  mobileSidebarOpen?: boolean
+  desktopToggleLabel?: string
+  mobileToggleLabel?: string
+  onDesktopSidebarToggle?: () => void
+  onMobileSidebarToggle?: () => void
 }
 
 type AppBarProps = {
@@ -103,16 +105,19 @@ export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
       : []
 
     return (
-      <header className="sticky top-0 z-40 border-b border-line bg-page/85 backdrop-blur-md">
+      <header className={`sticky top-0 z-40 border-b-2 backdrop-blur-md ${isSuperAdmin ? 'border-indigo-400/50 bg-gradient-to-r from-indigo-50/80 via-page/85 to-violet-50/60 dark:from-indigo-950/40 dark:via-page/85 dark:to-violet-950/30' : 'border-sky-300/50 bg-gradient-to-r from-sky-50/80 via-page/85 to-cyan-50/60 dark:from-sky-950/40 dark:via-page/85 dark:to-cyan-950/30'}`}>
         <div className={`${appWrap} flex h-16 items-center gap-2 sm:h-[72px] sm:gap-3`}>
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-            <button type="button" className={`${iconBtn} lg:hidden`} aria-label={admin.mobileToggleLabel} title={admin.mobileToggleLabel} aria-expanded={admin.mobileSidebarOpen} aria-haspopup="dialog" onClick={admin.onMobileSidebarToggle}><Menu size={19} aria-hidden /></button>
+            {admin.onMobileSidebarToggle && <button type="button" className={`${iconBtn} lg:hidden`} aria-label={admin.mobileToggleLabel} title={admin.mobileToggleLabel} aria-expanded={admin.mobileSidebarOpen} aria-haspopup="dialog" onClick={admin.onMobileSidebarToggle}><Menu size={19} aria-hidden /></button>}
             {/* Enveloppe nécessaire : `iconBtn` pose déjà `inline-flex`, qui l'emporte
                 sur un `hidden` appliqué au même élément. Le bouton restait donc
                 visible sur mobile, à côté du bouton menu. */}
-            <span className="hidden lg:inline-flex">
-              <button type="button" className={iconBtn} aria-label={admin.desktopToggleLabel} title={admin.desktopToggleLabel} aria-pressed={admin.sidebarCollapsed} onClick={admin.onDesktopSidebarToggle}>{admin.sidebarCollapsed ? <PanelLeftOpen size={19} aria-hidden /> : <PanelLeftClose size={19} aria-hidden />}</button>
-            </span>
+            {admin.onDesktopSidebarToggle && (
+              <span className="hidden lg:inline-flex">
+                <button type="button" className={iconBtn} aria-label={admin.desktopToggleLabel} title={admin.desktopToggleLabel} aria-pressed={admin.sidebarCollapsed} onClick={admin.onDesktopSidebarToggle}>{admin.sidebarCollapsed ? <PanelLeftOpen size={19} aria-hidden /> : <PanelLeftClose size={19} aria-hidden />}</button>
+              </span>
+            )}
+            <p className="min-w-0 truncate text-sm font-bold text-ink lg:hidden">{admin.sectionLabel}</p>
             <div className="hidden min-w-0 lg:block">
               <p className="truncate text-[11px] font-bold tracking-[0.09em] text-muted uppercase rtl:tracking-normal rtl:normal-case">{admin.productLabel}</p>
               <h1 className="truncate text-base font-bold text-ink sm:text-lg">{admin.sectionLabel}</h1>
@@ -121,7 +126,7 @@ export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            <LanguageMenu align="end" />
+            <AdminLanguageToggle />
             <ThemeToggle />
             {isAuthenticated ? <div className="hidden lg:block"><UserArea user={{ name: displayName, email: user?.email }} items={adminAccountItems} /></div> : <a href="/auth" className={`${btnPrimary} hidden lg:inline-flex`}>{copy.signIn}</a>}
           </div>

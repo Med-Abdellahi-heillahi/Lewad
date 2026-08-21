@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, type ReactNode } from 'reac
 import { LazyMotion, domAnimation } from 'framer-motion'
 import { I18nProvider, useI18n } from './i18n'
 import { ThemeProvider } from './lib/theme'
+import { TextSizeProvider } from './lib/textSize'
 import { useOnlineStatus } from './lib/useOnlineStatus'
 import { Navbar } from './components/Navbar'
 import { Footer } from './components/Footer'
@@ -62,7 +63,45 @@ const LazySuperAdminRoute = lazy(() =>
   })),
 )
 
-type Route = ErrorCode | 'admin' | 'super-admin' | 'app' | 'auth' | 'contact' | 'add-business' | PrivatePageName | null
+type AdminAccountRoute = 'admin-profile' | 'admin-settings' | 'super-admin-profile' | 'super-admin-settings'
+
+type Route = ErrorCode | 'admin' | 'super-admin' | AdminAccountRoute | 'app' | 'auth' | 'contact' | 'add-business' | PrivatePageName | null
+
+/**
+ * Profil et paramètres des espaces d'équipe. Le garde de rôle voyage dans le
+ * même lot que la page : `/admin/*` accepte admin et super admin, tandis que
+ * `/super-admin/*` reste réservé au super admin. Ces gardes restent du confort
+ * de navigation — la RLS et les RPC décident réellement de l'accès aux données.
+ */
+const adminAccountRoutes: Record<AdminAccountRoute, { space: 'admin' | 'super-admin'; page: 'profile' | 'settings' }> = {
+  'admin-profile': { space: 'admin', page: 'profile' },
+  'admin-settings': { space: 'admin', page: 'settings' },
+  'super-admin-profile': { space: 'super-admin', page: 'profile' },
+  'super-admin-settings': { space: 'super-admin', page: 'settings' },
+}
+
+function isAdminAccountRoute(route: Route): route is AdminAccountRoute {
+  return route !== null && route in adminAccountRoutes
+}
+
+const LazyAdminAccountRoute = lazy(async () => {
+  const [{ AdminAccountPage }, { RequireAdmin, RequireSuperAdmin }] = await Promise.all([
+    import('./components/admin/AdminAccountPages'),
+    import('./components/admin/AdminAccess'),
+  ])
+
+  return {
+    default: function AdminAccountRouteView({ route }: { route: AdminAccountRoute }) {
+      const { space, page } = adminAccountRoutes[route]
+      const Guard = space === 'super-admin' ? RequireSuperAdmin : RequireAdmin
+      return (
+        <Guard>
+          <AdminAccountPage space={space} page={page} />
+        </Guard>
+      )
+    },
+  }
+})
 
 function RequireAuthentication({ children }: { children: ReactNode }) {
   const { loading, isAuthenticated } = useAuthSession()
@@ -100,6 +139,12 @@ function useRoute(): Route {
   return useMemo(() => {
     const path = window.location.pathname.replace(/\/+$/, '')
     if (path === '' || path === '/index.html') return null
+    // Les pages compte des espaces d'équipe passent avant les préfixes
+    // fourre-tout : `/admin/profile` ne doit pas retomber sur `/admin`.
+    if (path === '/super-admin/profile') return 'super-admin-profile'
+    if (path === '/super-admin/settings') return 'super-admin-settings'
+    if (path === '/admin/profile') return 'admin-profile'
+    if (path === '/admin/settings') return 'admin-settings'
     if (path === '/super-admin' || path.startsWith('/super-admin/')) return 'super-admin'
     if (path === '/admin' || path.startsWith('/admin/')) return 'admin'
     if (path === '/app') return 'app'
@@ -158,6 +203,7 @@ function Shell() {
   if (route === 'app') return <RequireAuthentication><AccountProvider><PublicSearchDemo /></AccountProvider></RequireAuthentication>
   if (route === 'admin') return <RequireAuthentication><AccountProvider><ChunkErrorBoundary><Suspense fallback={<AdminLoading />}><LazyAdminRoute /></Suspense></ChunkErrorBoundary></AccountProvider></RequireAuthentication>
   if (route === 'super-admin') return <RequireAuthentication><AccountProvider><ChunkErrorBoundary><Suspense fallback={<AdminLoading />}><LazySuperAdminRoute /></Suspense></ChunkErrorBoundary></AccountProvider></RequireAuthentication>
+  if (isAdminAccountRoute(route)) return <RequireAuthentication><AccountProvider><ChunkErrorBoundary><Suspense fallback={<AdminLoading />}><LazyAdminAccountRoute route={route} /></Suspense></ChunkErrorBoundary></AccountProvider></RequireAuthentication>
   if (route === 'auth') return <AuthPage />
   if (route === 'contact') return <AccountProvider><ContactPage /></AccountProvider>
   if (route === 'add-business') return <RequireAuthentication><AccountProvider><AddBusinessPage /></AccountProvider></RequireAuthentication>
@@ -169,13 +215,15 @@ function Shell() {
 export default function App() {
   return (
     <ThemeProvider>
-      <I18nProvider>
-        {/* `domAnimation` + composants `m` : on embarque les animations et les
-            variantes, sans le layout/drag dont la landing n'a pas besoin. */}
-        <LazyMotion features={domAnimation} strict>
-          <Shell />
-        </LazyMotion>
-      </I18nProvider>
+      <TextSizeProvider>
+        <I18nProvider>
+          {/* `domAnimation` + composants `m` : on embarque les animations et les
+              variantes, sans le layout/drag dont la landing n'a pas besoin. */}
+          <LazyMotion features={domAnimation} strict>
+            <Shell />
+          </LazyMotion>
+        </I18nProvider>
+      </TextSizeProvider>
     </ThemeProvider>
   )
 }

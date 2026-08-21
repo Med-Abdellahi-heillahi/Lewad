@@ -24,6 +24,13 @@ export async function signOut() {
   return supabase.auth.signOut()
 }
 
+/** Sends the signed-in member a recovery link without exposing Auth errors to the UI. */
+export async function requestPasswordReset(email: string) {
+  return supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/auth`,
+  })
+}
+
 export async function getCurrentUser() {
   const { data, error } = await supabase.auth.getUser()
   return error ? null : data.user

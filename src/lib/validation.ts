@@ -1,10 +1,10 @@
 export const mauritanianPhonePattern = /^[234][0-9]{7}$/
 export const arabicNamePattern = /^[\u0600-\u06FF\s]+$/
-export const avatarPathPattern = /\.(png|jpg|jpeg|webp)$/i
+export const avatarPathPattern = /\.(png|jpg|jpeg)$/i
 export const establishmentImagePattern = /\.(png|jpg|jpeg)$/i
 export const maxAvatarFileSizeBytes = 2 * 1024 * 1024
 
-const allowedAvatarMimeTypes = new Set(['image/png', 'image/jpeg', 'image/webp'])
+const allowedAvatarMimeTypes = new Set(['image/png', 'image/jpeg'])
 
 /** Stores the local Mauritanian number in its canonical eight-digit form. */
 export function normalizeMauritanianPhone(value: string) {
