@@ -69,10 +69,18 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5174/)",
       "Bash(sed -i \"s/waitUntil: 'networkidle'/waitUntil: 'domcontentloaded'/\" chartcheck.mjs)",
       "Bash(sed -i \"s/await page.waitForTimeout\\(1600\\)/await page.waitForTimeout\\(3000\\)/\" chartcheck.mjs)",
-      "Bash(grep -rn \"Do not create this table\\\\|future \\\\`recharge_requests\\\\`\\\\|appear only after a real table\" agent/ CODEX.md CLAUDE.md)"
+      "Bash(grep -rn \"Do not create this table\\\\|future \\\\`recharge_requests\\\\`\\\\|appear only after a real table\" agent/ CODEX.md CLAUDE.md)",
+      "Bash(cd \"c:/dev/Lewad\" && sed -n '/^type AdminSuperSpaceCopy\\\\|^type AdminChartsCopy/,/^}/p' src/components/admin/adminCopy.ts | head -90; echo \"=== SuperAdminTabId ===\"; grep -n \"SuperAdminTabId\" src/components/admin/adminCopy.ts)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(sed -n '/^type AdminSidebarCopy = {/,/^}/p' src/components/admin/adminCopy.ts)",
+      "Bash(sed -n '/^  settings: {/,/^  },/p' src/i18n/fr.ts)",
+      "Bash(echo \"after-revert exit=$?\")",
+      "Bash(echo \"typecheck-exit=$?\")",
+      "Bash(grep -RIn --exclude-dir=node_modules -E \"eyJ[A-Za-z0-9_-]{10,}\" src supabase public docs agent)"
     ],
     "additionalDirectories": [
-      "C:\\dev\\Lewad\\src\\components\\admin"
+      "C:\\dev\\Lewad\\src\\components\\admin",
+      "c:\\dev\\Lewad\\src\\components\\admin"
     ]
   }
 }
