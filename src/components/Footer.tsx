@@ -2,7 +2,7 @@ import { useI18n } from '../i18n'
 import { contact, sectionIds } from '../lib/content'
 import { wrap } from '../lib/ui'
 import { Icon, type IconName } from './Icon'
-import { Logo } from './Logo'
+import { LogoLockup } from './Logo'
 import { LanguageMenu } from './shell/LanguageMenu'
 
 /**
@@ -25,10 +25,10 @@ export function Footer() {
     <footer className="border-t border-line bg-page-alt">
       <div className={`${wrap} py-12 lg:py-16`}>
         <div className="grid gap-9 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr] lg:gap-8">
-          {/* Marque */}
+          {/* Marque : le pied de page a la hauteur nécessaire au verrouillage complet. */}
           <div>
-            <Logo />
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">{t.footer.tagline}</p>
+            <LogoLockup className="h-20 sm:h-24" />
+            <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted">{t.footer.tagline}</p>
             <div className="mt-5">
               <LanguageMenu />
             </div>

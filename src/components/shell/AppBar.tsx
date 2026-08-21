@@ -7,6 +7,7 @@ import { isAdminRole } from '../../lib/routeAuth'
 import { formatNumber, initialOf, profileDisplayName } from '../../lib/format'
 import { useTheme } from '../../lib/theme'
 import { appWrap, btnGhost, btnPrimary, iconBtn } from '../../lib/ui'
+import { FlagIcon } from '../FlagIcon'
 import { Icon } from '../Icon'
 import { Logo } from '../Logo'
 import { Drawer } from './Drawer'
@@ -312,10 +313,11 @@ export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
                 lang={item}
                 onClick={() => chooseLocale(item)}
                 aria-pressed={item === locale}
-                className={`min-h-10 rounded-lg text-sm font-semibold transition-colors ${
+                className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg text-sm font-semibold transition-colors ${
                   item === locale ? 'bg-brand-soft text-brand-deep' : 'text-muted hover:bg-surface-2'
                 }`}
               >
+                <FlagIcon locale={item} decorative />
                 {dictionaries[item].meta.short}
               </button>
             ))}

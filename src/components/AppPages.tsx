@@ -30,6 +30,7 @@ import type { AppNavId } from './shell/appNav'
 import { EmptyState, InlineAlert, Skeleton } from './system/States'
 import { AppearanceSettings, PasswordResetSettings } from './settings/SettingsControls'
 import { PaginationControls } from './ui/PaginationControls'
+import { BusinessSubmissionForm } from './BusinessSubmissionForm'
 
 export type PrivatePageName = 'profile' | 'credits' | 'settings' | 'recharge'
 
@@ -1227,22 +1228,24 @@ export function ContactPage() {
   )
 }
 
-/** Placeholder intentionally kept free of a form or persistence until the establishment flow is specified. */
 export function AddBusinessPage() {
   const { t } = useI18n()
-  const text = t.appSearch
+  const copy = t.businessSubmission
 
   return (
-    <AppShell documentTitle={text.addEstablishment} skipLabel={text.addEstablishment}>
+    <AppShell documentTitle={copy.title} skipLabel={copy.title}>
       <main id="app-main" className={`${appWrap} ${appPad}`}>
-        <section className={`${card} mx-auto max-w-2xl p-6 sm:p-8`} aria-labelledby="add-business-title">
-          <span className="grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand-deep dark:text-brand">
-            <Icon name="plus" size={24} />
-          </span>
-          <h1 id="add-business-title" className="mt-5 text-2xl font-bold tracking-tight sm:text-3xl">
-            {text.addEstablishment}
-          </h1>
-          <p className="mt-3 text-sm leading-7 text-muted sm:text-base">{text.addEstablishmentMessage}</p>
+        <BusinessSubmissionForm />
+
+        {/* L'historique reste un espace réservé : la couche de données n'expose
+            aucune lecture « mes soumissions », et interroger la table depuis un
+            composant contournerait la frontière RPC de DB4. */}
+        <section className={`${card} mx-auto mt-5 max-w-2xl p-5 sm:p-6`} aria-labelledby="business-history-title">
+          <h2 id="business-history-title" className="text-base font-bold text-ink">{copy.historyTitle}</h2>
+          <p className="mt-2 flex items-center gap-2 text-sm leading-6 text-muted">
+            <Icon name="clock" size={16} />
+            {copy.historySoon}
+          </p>
         </section>
       </main>
     </AppShell>

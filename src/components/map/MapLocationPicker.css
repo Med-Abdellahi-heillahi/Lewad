@@ -1,0 +1,30 @@
+.lewad-map-picker {
+  background: var(--map-bg);
+  font-family: var(--font-sans);
+}
+
+.lewad-map-picker .leaflet-control-zoom,
+.lewad-map-picker .leaflet-control-zoom a,
+.lewad-map-picker .leaflet-control-attribution {
+  border-color: var(--line);
+}
+
+.lewad-map-picker .leaflet-control-zoom a {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.lewad-map-picker .leaflet-control-zoom a:hover,
+.lewad-map-picker .leaflet-control-zoom a:focus-visible {
+  background: var(--page-alt);
+  color: var(--ink);
+}
+
+.lewad-map-picker .leaflet-control-attribution {
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  color: var(--muted);
+}
+
+.lewad-map-picker .leaflet-control-attribution a {
+  color: inherit;
+}

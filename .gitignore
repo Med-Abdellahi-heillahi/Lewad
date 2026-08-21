@@ -45,6 +45,10 @@ temp/
 playwright-report/
 test-results/
 
-# Claude local
+# Local / private files (never push these to a public repository)
 .claude/settings.local.json
+.claude/settings.json
 Supabase.docx
+
+# Vercel CLI local project link (.vercel/project.json holds project + org IDs)
+.vercel

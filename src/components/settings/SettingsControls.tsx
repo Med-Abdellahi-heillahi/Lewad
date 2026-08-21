@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { Sun, Moon, Lock, CheckCircle2, AlertCircle } from "lucide-react";
+import { dictionaries, locales, useI18n } from "../../i18n";
+import { FlagIcon } from "../FlagIcon";
 
 // --- COMPOSANTS DE BASE (Internes) ---
 
@@ -81,16 +83,13 @@ function OptionButton({
 // --- COMPOSANTS PRINCIPAUX (À exporter) ---
 
 export function AppearanceSettings({ className = "" }: { className?: string }) {
-  // États locaux simulant vos hooks globaux
-  const [locale, setLocale] = useState("fr");
+  // La langue est branchée sur le contexte i18n réel : c'est le sélecteur
+  // complet des trois langues, celui que la barre de navigation ne porte pas.
+  const { locale, setLocale } = useI18n();
+  // TODO(settings): thème et taille de texte sont encore des états locaux de
+  // maquette — ils n'écrivent ni dans ThemeProvider ni dans TextSizeProvider.
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [textSize, setTextSize] = useState<"sm" | "base" | "lg" | "xl">("base");
-
-  const locales = [
-    { id: "fr", label: "Français" },
-    { id: "en", label: "English" },
-    { id: "ar", label: "العربية" },
-  ];
 
   const textSizes = [
     { id: "sm", label: "Petit" },
@@ -106,15 +105,18 @@ export function AppearanceSettings({ className = "" }: { className?: string }) {
         description="Personnalisez l'affichage selon vos préférences. Vos choix sont sauvegardés automatiquement."
       >
         <div className="grid gap-6 sm:grid-cols-2 lg:max-w-3xl">
-          {/* Langues */}
+          {/* Langues : les trois sont ici, drapeau + nom dans sa propre langue. */}
           <OptionGroup label="Langue de l'interface" columns="grid-cols-3">
             {locales.map((item) => (
               <OptionButton
-                key={item.id}
-                selected={item.id === locale}
-                onClick={() => setLocale(item.id)}
+                key={item}
+                selected={item === locale}
+                onClick={() => setLocale(item)}
               >
-                {item.label}
+                <FlagIcon locale={item} decorative />
+                <span lang={item} className="truncate">
+                  {dictionaries[item].meta.label}
+                </span>
               </OptionButton>
             ))}
           </OptionGroup>

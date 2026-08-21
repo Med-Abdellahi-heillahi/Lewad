@@ -7,9 +7,10 @@ import { adminCopy } from './adminCopy'
 
 export type AdminIcon = ComponentType<LucideProps>
 
+/** `cancelled` is deliberately absent: it falls through to the neutral tone. */
 function statusClass(status: string) {
   if (['active', 'approved', 'added', 'success'].includes(status)) return 'bg-answer-bg text-answer'
-  if (['pending', 'reviewed', 'draft'].includes(status)) return 'bg-brand-soft text-brand-deep'
+  if (['pending', 'pending_review', 'reviewed', 'draft'].includes(status)) return 'bg-brand-soft text-brand-deep'
   if (['rejected', 'suspended', 'deleted', 'error', 'insufficient_credits', 'closed'].includes(status)) return 'bg-ask-bg text-ask'
   return 'bg-surface-2 text-ink-soft'
 }

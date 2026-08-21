@@ -151,6 +151,8 @@ export type AdminCreateEstablishmentParams = {
   openingDate?: string | null
   closingDate?: string | null
   sourceRequestId?: string | null
+  latitude?: number | null
+  longitude?: number | null
 }
 
 export type AdminCreateEstablishmentResponse = {
@@ -922,6 +924,8 @@ export async function adminCreateEstablishment(
     p_opening_date: params.openingDate ?? null,
     p_closing_date: params.closingDate ?? null,
     p_source_request_id: params.sourceRequestId ?? null,
+    p_latitude: params.latitude ?? null,
+    p_longitude: params.longitude ?? null,
   })
 
   const response = data as AdminCreateEstablishmentResponse | null

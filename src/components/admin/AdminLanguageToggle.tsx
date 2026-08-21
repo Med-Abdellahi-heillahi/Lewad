@@ -1,11 +1,6 @@
 import { useI18n } from '../../i18n'
 import { iconBtn } from '../../lib/ui'
-
-const flagMap: Record<'fr' | 'ar' | 'en', string> = {
-  fr: '\u{1F1EB}\u{1F1F7}',
-  ar: '\u{1F1F2}\u{1F1F7}',
-  en: '\u{1F1EC}\u{1F1E7}',
-}
+import { FlagIcon } from '../FlagIcon'
 
 const shortMap: Record<'fr' | 'ar' | 'en', string> = {
   fr: 'FR',
@@ -44,7 +39,9 @@ export function AdminLanguageToggle({ className = '' }: AdminLanguageToggleProps
       title={label}
       onClick={toggle}
     >
-      <span aria-hidden="true">{flagMap[locale]}</span>
+      {/* Drapeau image plutôt qu'émoji : Windows ne rend pas les émojis
+          drapeaux, où le bouton n'affichait que « FR »/« AR » en indicatif. */}
+      <FlagIcon locale={locale} decorative />
       <span aria-hidden="true">{shortMap[locale]}</span>
     </button>
   )

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, lazy, Suspense } from 'react'
 import { type Locale, useI18n } from '../i18n'
 import { searchDemoEstablishments } from '../lib/content'
 import { type Db2Branch, type Db2Establishment } from '../lib/db2'
@@ -11,6 +11,8 @@ import { appPad, appWrap, btnGhost, btnPrimary, card } from '../lib/ui'
 import { useAccount } from '../hooks/useAccount'
 import { Icon, type IconName } from './Icon'
 import { AppShell } from './shell/AppShell'
+import { hasCoordinates, directionsUrl } from './maps/mapUtils'
+const ServiceMapSheet = lazy(() => import('./maps/ServiceMapSheet').then((m) => ({ default: m.ServiceMapSheet })))
 
 type SearchState = 'initial' | 'loading' | 'found' | 'unavailable' | 'insufficient' | 'requested'
 type ValidationMessage = 'empty' | 'minimum' | null
@@ -36,6 +38,9 @@ const appCopy = {
     requesting: 'Envoi de la demande…', retryRequest: 'Réessayer', requestError: 'Impossible d’envoyer la demande pour le moment.',
     requestedTitle: 'Demande envoyée', requestedText: 'Votre demande a été envoyée à l’équipe Lewad.', requestDuplicateTitle: 'Demande déjà en attente', requestDuplicateText: 'Une demande pour ce service est déjà en attente.', reset: 'Nouvelle recherche',
     version: 'Version 1.0.0', by: 'By Wasla', mapLabel: 'Carte illustrative des agences',
+    nearbyPlace: 'Lieu proche', viewOnMap: 'Voir sur la carte', directionsLink: 'Itinéraire', locationUnavailable: 'Localisation exacte non disponible',
+    mapSheetTitle: 'Emplacement', mapCloseLabel: 'Fermer la carte', mapLoading: 'Chargement de la carte…',
+    mapUnavailable: "La carte n'a pas pu être chargée.", openExternalMap: 'Ouvrir dans une carte',
   },
   ar: {
     title: 'البحث', language: 'اختيار اللغة', menu: 'فتح القائمة', closeMenu: 'إغلاق القائمة',
@@ -56,6 +61,9 @@ const appCopy = {
     requesting: 'جارٍ إرسال الطلب…', retryRequest: 'أعد المحاولة', requestError: 'تعذّر إرسال الطلب حاليًا.',
     requestedTitle: 'تم إرسال الطلب', requestedText: 'تم إرسال طلبك إلى فريق لواد.', requestDuplicateTitle: 'الطلب قيد الانتظار بالفعل', requestDuplicateText: 'يوجد طلب قيد الانتظار لهذه الخدمة بالفعل.', reset: 'بحث جديد',
     version: 'الإصدار 1.0.0', by: 'By Wasla', mapLabel: 'خريطة توضيحية للوكالات',
+    nearbyPlace: 'المكان القريب', viewOnMap: 'عرض على الخريطة', directionsLink: 'الاتجاهات', locationUnavailable: 'الموقع الدقيق غير متوفر',
+    mapSheetTitle: 'الموقع', mapCloseLabel: 'إغلاق الخريطة', mapLoading: 'جارٍ تحميل الخريطة…',
+    mapUnavailable: 'تعذر تحميل الخريطة.', openExternalMap: 'فتح في الخرائط',
   },
   en: {
     title: 'Search', language: 'Choose language', menu: 'Open menu', closeMenu: 'Close menu',
@@ -76,6 +84,9 @@ const appCopy = {
     requesting: 'Sending request…', retryRequest: 'Try again', requestError: 'Unable to send the request right now.',
     requestedTitle: 'Request sent', requestedText: 'Your request was sent to the Lewad team.', requestDuplicateTitle: 'Request already pending', requestDuplicateText: 'A request for this service is already pending.', reset: 'New search',
     version: 'Version 1.0.0', by: 'By Wasla', mapLabel: 'Illustrative agency map',
+    nearbyPlace: 'Nearby place', viewOnMap: 'View on map', directionsLink: 'Directions', locationUnavailable: 'Exact location unavailable',
+    mapSheetTitle: 'Location', mapCloseLabel: 'Close the map', mapLoading: 'Loading the map…',
+    mapUnavailable: 'The map could not be loaded.', openExternalMap: 'Open in maps',
   },
 } as const
 
@@ -86,7 +97,7 @@ const pinColors = ['bg-brand text-brand-ink', 'bg-[var(--pin-2)] text-white', 'b
 
 function formatLocation(branch: Db2Branch | undefined, fallback: string) {
   if (!branch) return fallback
-  return [branch.neighborhood, branch.city].filter(Boolean).join(', ') || fallback
+  return branch.neighborhood ?? branch.address ?? branch.city ?? fallback
 }
 
 function phoneHref(phone: string) {
@@ -672,19 +683,38 @@ function EstablishmentResult({ copy, establishment, onReset }: { copy: AppCopy; 
   const whatsapp = establishment.whatsapp
   const canCall = Boolean(phone && isActionablePhone(phone))
   const canWhatsApp = Boolean(whatsapp && isActionablePhone(whatsapp))
+  const [mapOpen, setMapOpen] = useState(false)
+  const [selectedBranch, setSelectedBranch] = useState<Db2Branch | null>(null)
+  const mappableBranches = establishment.branches.filter(hasCoordinates)
+  const firstMappable = mappableBranches[0]
+  const openMap = (branch: Db2Branch) => {
+    setSelectedBranch(branch)
+    setMapOpen(true)
+  }
 
   return <article className={`${card} overflow-hidden`} aria-label={establishment.name}>
     <div className="border-b border-line p-5 sm:p-7"><div className="flex flex-wrap items-start justify-between gap-4"><div className="flex items-center gap-4"><span className="grid size-12 place-items-center rounded-2xl bg-brand text-brand-ink"><Icon name="store" size={24} /></span><div><span className="text-xs font-bold tracking-[0.08em] text-muted uppercase rtl:tracking-normal rtl:normal-case">{copy.dataFromLewad}</span><div className="mt-1 flex flex-wrap items-center gap-2"><h2 className="text-2xl font-bold tracking-tight">{establishment.name}</h2>{establishment.is_verified && <span className="inline-flex items-center gap-1 rounded-full bg-answer-bg px-2 py-1 text-xs font-bold text-answer"><Icon name="check" size={14} />{copy.verified}</span>}</div><p className="mt-1 text-sm text-muted">{establishment.category?.name ?? copy.categoryUnavailable}</p></div></div><span className="rounded-full border border-line bg-surface-2 px-3 py-1.5 text-xs font-bold text-ink">{establishment.branches.length} {copy.agenciesFound}</span></div>{establishment.description && <p className="mt-5 max-w-3xl text-sm leading-6 text-muted">{establishment.description}</p>}</div>
     <div className="grid gap-7 p-5 sm:p-7 lg:grid-cols-[.9fr_1.1fr]"><div><dl className="grid gap-3"><ContactRow copy={copy} icon="phone" label={copy.phone} value={phone} href={canCall && phone ? phoneHref(phone) : undefined} /><ContactRow copy={copy} icon="message" label={copy.whatsapp} value={whatsapp} href={canWhatsApp && whatsapp ? whatsappHref(whatsapp) : undefined} external /><ContactRow copy={copy} icon="globe" label={copy.website} value={establishment.website} href={establishment.website ? websiteHref(establishment.website) : undefined} external /><ContactRow copy={copy} icon="pin" label={copy.location} value={formatLocation(mainBranch, copy.notAvailable)} /></dl>
-        <div className="mt-5 grid grid-cols-2 gap-2">{canCall && phone ? <a className={btnPrimary} href={phoneHref(phone)}><Icon name="phone" size={17} />{copy.call}</a> : <span className={`${btnPrimary} cursor-not-allowed opacity-50`}><Icon name="phone" size={17} />{copy.call}</span>}{canWhatsApp && whatsapp ? <a className={btnGhost} href={whatsappHref(whatsapp)} target="_blank" rel="noreferrer"><Icon name="message" size={17} />{copy.whatsapp}</a> : <span className={`${btnGhost} cursor-not-allowed opacity-50`}><Icon name="message" size={17} />{copy.whatsapp}</span>}<a className={`${btnGhost} col-span-2`} href={`#branches-${establishment.id}`}><Icon name="route" size={17} />{copy.directions}</a></div></div><MockMap copy={copy} branches={establishment.branches} /></div>
-    <div id={`branches-${establishment.id}`} className="border-t border-line bg-page-alt p-5 sm:p-7"><div className="flex items-center justify-between gap-3"><h3 className="text-base font-bold">{copy.nearby}</h3><span className="text-xs font-semibold text-muted">{establishment.branches.length} {copy.agenciesFound}</span></div>{establishment.branchesError ? <p className="mt-4 text-sm text-muted">{copy.branchesError}</p> : establishment.branches.length ? <ol className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{establishment.branches.map((branch, index) => <BranchCard key={branch.id} branch={branch} establishment={establishment} copy={copy} index={index} />)}</ol> : <p className="mt-4 text-sm text-muted">{copy.noBranches}</p>}</div>
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          {canCall && phone ? <a className={btnPrimary} href={phoneHref(phone)}><Icon name="phone" size={17} />{copy.call}</a> : <span className={`${btnPrimary} cursor-not-allowed opacity-50`}><Icon name="phone" size={17} />{copy.call}</span>}
+          {canWhatsApp && whatsapp ? <a className={btnGhost} href={whatsappHref(whatsapp)} target="_blank" rel="noreferrer"><Icon name="message" size={17} />{copy.whatsapp}</a> : <span className={`${btnGhost} cursor-not-allowed opacity-50`}><Icon name="message" size={17} />{copy.whatsapp}</span>}
+          {firstMappable && <button type="button" className={btnGhost} onClick={() => openMap(firstMappable)} aria-label={copy.viewOnMap}><Icon name="pin" size={17} />{copy.viewOnMap}</button>}
+          {firstMappable && <a className={btnGhost} href={directionsUrl(firstMappable.latitude!, firstMappable.longitude!)} target="_blank" rel="noreferrer" aria-label={copy.directionsLink}><Icon name="route" size={17} />{copy.directionsLink}</a>}
+        </div>
+        {!firstMappable && <p className="mt-3 text-xs text-muted">{copy.locationUnavailable}</p>}
+      </div>
+      <div className="hidden lg:block"><div className="relative grid min-h-72 place-items-center overflow-hidden rounded-2xl border border-line bg-surface-2 p-4 text-center">{firstMappable ? <button type="button" className={`${btnGhost} flex-col`} onClick={() => openMap(firstMappable)} aria-label={copy.viewOnMap}><Icon name="pin" size={24} />{copy.viewOnMap}</button> : <p className="text-xs text-muted">{copy.locationUnavailable}</p>}</div></div>
+    </div>
+    <div id={`branches-${establishment.id}`} className="border-t border-line bg-page-alt p-5 sm:p-7"><div className="flex items-center justify-between gap-3"><h3 className="text-base font-bold">{copy.nearby}</h3><span className="text-xs font-semibold text-muted">{establishment.branches.length} {copy.agenciesFound}</span></div>{establishment.branchesError ? <p className="mt-4 text-sm text-muted">{copy.branchesError}</p> : establishment.branches.length ? <ol className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{establishment.branches.map((branch, index) => <BranchCard key={branch.id} branch={branch} establishment={establishment} copy={copy} index={index} onViewMap={openMap} />)}</ol> : <p className="mt-4 text-sm text-muted">{copy.noBranches}</p>}</div>
     <div className="flex justify-end border-t border-line p-5 sm:p-7"><button type="button" className={btnPrimary} onClick={onReset}>{copy.ok}<Icon name="check" size={17} /></button></div>
+    {mapOpen && <Suspense fallback={null}><ServiceMapSheet copy={copy} branches={establishment.branches} selectedBranchId={selectedBranch?.id} onClose={() => setMapOpen(false)} /></Suspense>}
   </article>
 }
 
-function BranchCard({ branch, establishment, copy, index }: { branch: Db2Branch; establishment: Db2Establishment; copy: AppCopy; index: number }) {
+function BranchCard({ branch, establishment, copy, index, onViewMap }: { branch: Db2Branch; establishment: Db2Establishment; copy: AppCopy; index: number; onViewMap: (branch: Db2Branch) => void }) {
   const phone = branch.phone ?? establishment.phone
   const whatsapp = branch.whatsapp ?? establishment.whatsapp
+  const mappable = hasCoordinates(branch)
 
-  return <li className="rounded-xl border border-line bg-surface px-3 py-3"><div className="flex items-start gap-3"><span className={`mt-1 size-2.5 shrink-0 rounded-full ${pinColors[index % pinColors.length].split(' ')[0]}`} /><div className="min-w-0"><div className="flex flex-wrap items-center gap-1.5"><p className="text-sm font-semibold text-ink">{branch.name}</p>{branch.is_main && <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-bold text-brand-deep dark:text-brand">{copy.mainBranch}</span>}</div><p className="mt-1 text-xs text-muted">{[branch.neighborhood, branch.city].filter(Boolean).join(', ') || copy.notAvailable}</p>{branch.address && <p className="mt-1 text-xs leading-5 text-muted">{branch.address}</p>}<p className="mt-2 ltr-isolate text-xs font-medium text-ink">{phone ?? copy.notAvailable}</p>{whatsapp && isActionablePhone(whatsapp) && <a className="mt-1 inline-block text-xs font-semibold text-brand-deep hover:underline dark:text-brand" href={whatsappHref(whatsapp)} target="_blank" rel="noreferrer">{copy.whatsapp}</a>}</div></div></li>
+  return <li className="rounded-xl border border-line bg-surface px-3 py-3"><div className="flex items-start gap-3"><span className={`mt-1 size-2.5 shrink-0 rounded-full ${pinColors[index % pinColors.length].split(' ')[0]}`} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-1.5"><p className="text-sm font-semibold text-ink">{branch.name}</p>{branch.is_main && <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-bold text-brand-deep dark:text-brand">{copy.mainBranch}</span>}</div><p className="mt-1 text-xs text-muted"><span className="font-semibold text-ink-soft">{copy.nearbyPlace}</span>{' · '}{formatLocation(branch, copy.notAvailable)}</p><p className="mt-2 ltr-isolate text-xs font-medium text-ink">{phone ?? copy.notAvailable}</p>{whatsapp && isActionablePhone(whatsapp) && <a className="mt-1 inline-block text-xs font-semibold text-brand-deep hover:underline dark:text-brand" href={whatsappHref(whatsapp)} target="_blank" rel="noreferrer">{copy.whatsapp}</a>}{mappable ? <div className="mt-3 grid grid-cols-2 gap-2"><button type="button" className={`${btnGhost} min-h-11 px-2 text-xs`} onClick={() => onViewMap(branch)} aria-label={copy.viewOnMap}><Icon name="pin" size={15} />{copy.viewOnMap}</button><a className={`${btnGhost} min-h-11 px-2 text-xs`} href={directionsUrl(branch.latitude!, branch.longitude!)} target="_blank" rel="noreferrer" aria-label={copy.directionsLink}><Icon name="route" size={15} />{copy.directionsLink}</a></div> : <p className="mt-3 text-xs text-muted">{copy.locationUnavailable}</p>}</div></div></li>
 }

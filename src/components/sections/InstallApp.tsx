@@ -4,7 +4,7 @@ import { useI18n } from '../../i18n'
 import { ease } from '../../lib/motion'
 import { btnGhost, btnPrimary, card, sectionPad, wrap } from '../../lib/ui'
 import { useInstallPrompt } from '../../lib/useInstallPrompt'
-import { Logo } from '../Logo'
+import { Logo, LogoAppIcon } from '../Logo'
 import { Reveal } from '../Reveal'
 import { SectionHeading } from '../SectionHeading'
 
@@ -54,9 +54,10 @@ function PhoneMockup({ labels }: { labels: { menu: string; addToHome: string; ho
               {labels.homeScreen}
             </p>
             <div className="mt-2 flex items-end gap-2.5">
-              <span className="relative grid size-9 shrink-0 place-items-center rounded-[10px] bg-brand text-brand-ink">
+              {/* L'icône Lewad telle qu'elle apparaîtra sur l'écran d'accueil. */}
+              <span className="relative shrink-0">
+                <LogoAppIcon className="size-9 rounded-[10px]" />
                 <m.span {...pulse} className="absolute inset-0 rounded-[10px] ring-2 ring-brand" />
-                <Smartphone size={16} />
               </span>
               <span className="size-9 rounded-[10px] bg-surface-2" />
               <span className="size-9 rounded-[10px] bg-surface-2" />

@@ -1,7 +1,7 @@
 import type { Locale } from '../../i18n'
 import type { AdminAlertId } from '../../lib/admin'
 
-export type AdminTabId = 'dashboard' | 'requests' | 'users' | 'credits' | 'search-logs' | 'services' | 'system'
+export type AdminTabId = 'dashboard' | 'requests' | 'users' | 'credits' | 'search-logs' | 'services' | 'submissions' | 'system'
 export type SuperAdminTabId = 'overview' | 'admins' | 'users' | 'audit' | 'settings'
 
 type AlertText = { title: string; text: string }
@@ -216,6 +216,54 @@ type AdminRequestsCopy = {
   close: string
   dismiss: string
   reviewActions: string
+}
+
+type AdminBusinessSubmissionsCopy = {
+  title: string
+  subtitle: string
+  emptyTitle: string
+  emptyText: string
+  pendingCount: string
+  businessName: string
+  ownerName: string
+  ownerPhone: string
+  businessPhone: string
+  status: string
+  amount: string
+  date: string
+  actions: string
+  viewDetails: string
+  approve: string
+  reject: string
+  detailsTitle: string
+  ownerSection: string
+  businessSection: string
+  contactSection: string
+  locationSection: string
+  adminSection: string
+  whatsapp: string
+  website: string
+  category: string
+  location: string
+  nearestPlace: string
+  adminNote: string
+  adminNotePlaceholder: string
+  approveConfirmTitle: string
+  approveConfirmText: string
+  rejectConfirmTitle: string
+  rejectConfirmText: string
+  rejectionReasonRequired: string
+  approving: string
+  rejecting: string
+  actionFailed: string
+  close: string
+  confirm: string
+  cancel: string
+  submissionApproved: string
+  submissionRejected: string
+  pending: string
+  approved: string
+  rejected: string
 }
 
 type AdminEstablishmentFormCopy = {
@@ -473,6 +521,7 @@ type AdminCopy = {
   users: AdminUsersCopy
   credits: AdminCreditsCopy
   requests: AdminRequestsCopy
+  businessSubmissions: AdminBusinessSubmissionsCopy
   establishmentForm: AdminEstablishmentFormCopy
   /** Pages compte de l'espace admin : profil et paramètres, hors espace membre. */
   account: {
@@ -563,7 +612,7 @@ type AdminCopy = {
 
 export const adminCopy: Record<Locale, AdminCopy> = {
   fr: {
-    tabs: { dashboard: 'Tableau de bord', requests: 'Demandes', users: 'Utilisateurs', credits: 'Crédits', 'search-logs': 'Recherches', services: 'Services', system: 'Système' },
+    tabs: { dashboard: 'Tableau de bord', requests: 'Demandes', users: 'Utilisateurs', credits: 'Crédits', 'search-logs': 'Recherches', services: 'Services', submissions: 'Soumissions', system: 'Système' },
     access: {
       unavailableTitle: 'Impossible de vérifier l’accès', deniedTitle: 'Accès refusé',
       unavailableText: 'Votre profil n’a pas pu être chargé. Réessayez dans un instant.', deniedText: 'Cette page est réservée à l’équipe Lewad.',
@@ -670,6 +719,30 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       requestUpdated: 'Demande mise à jour.', requestUpdateFailed: 'Impossible de mettre à jour la demande.', serviceAddedSuccess: 'Service ajouté avec succès.', serviceAddFailed: 'Impossible d’ajouter ce service.', requestMarkedAdded: 'Demande marquée comme ajoutée.',
       close: 'Fermer', dismiss: 'Fermer la notification', reviewActions: 'Actions de traitement',
     },
+    businessSubmissions: {
+      title: 'Soumissions établissements', subtitle: 'Demandes de dépôt d\'établissements soumises par les professionnels.',
+      emptyTitle: 'Aucune soumission', emptyText: 'Les soumissions d\'établissements apparaîtront ici.',
+      pendingCount: '{count} en attente',
+      businessName: 'Établissement', ownerName: 'Propriétaire', ownerPhone: 'Tél. propriétaire',
+      businessPhone: 'Tél. établissement', status: 'Statut', amount: 'Montant', date: 'Date', actions: 'Actions',
+      viewDetails: 'Voir les détails', approve: 'Approuver', reject: 'Rejeter',
+      detailsTitle: 'Détail de la soumission',
+      ownerSection: 'Propriétaire', businessSection: 'Établissement', contactSection: 'Coordonnées',
+      locationSection: 'Localisation', adminSection: 'Traitement',
+      whatsapp: 'WhatsApp', website: 'Site web', category: 'Catégorie', location: 'Adresse', nearestPlace: 'Lieu proche',
+      adminNote: 'Note admin', adminNotePlaceholder: 'Motif du rejet ou commentaire…',
+      approveConfirmTitle: 'Approuver la soumission',
+      approveConfirmText: 'Cette action créera l\'établissement et l\'agence principale. L\'établissement sera visible dans les recherches Lewad.',
+      rejectConfirmTitle: 'Rejeter la soumission',
+      rejectConfirmText: 'Indiquez le motif du rejet. Le soumetteur sera notifié.',
+      rejectionReasonRequired: 'Le motif du rejet est obligatoire.',
+      approving: 'Approbation…', rejecting: 'Rejet…',
+      actionFailed: 'Impossible de traiter cette soumission.',
+      close: 'Fermer', confirm: 'Confirmer', cancel: 'Annuler',
+      submissionApproved: 'La soumission a été approuvée et l\'établissement a été créé.',
+      submissionRejected: 'La soumission a été rejetée.',
+      pending: 'En attente', approved: 'Approuvée', rejected: 'Rejetée',
+    },
     establishmentForm: {
       title: 'Ajouter un établissement', subtitle: 'Créez la fiche d’un service local à partir d’une demande.',
       requiredSection: 'Informations obligatoires', optionalSection: 'Informations complémentaires',
@@ -714,7 +787,7 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       },
       filters: { searchLabel: 'Filtrer par recherche', searchPlaceholder: 'Filtrer par recherche…', statusLabel: 'Filtrer par statut', dateLabel: 'Filtrer par date', allStatuses: 'Tous les statuts' },
       sections: { wallets: 'Portefeuilles', recentMovements: 'Mouvements récents', categories: 'Catégories', establishments: 'Établissements', branches: 'Succursales', categoriesEmpty: 'Aucune catégorie', establishmentsEmpty: 'Aucun établissement', branchesEmpty: 'Aucune succursale' },
-      status: { active: 'actif', approved: 'approuvé', added: 'ajouté', success: 'réussi', pending: 'en attente', reviewed: 'revu', draft: 'brouillon', rejected: 'rejeté', suspended: 'suspendu', deleted: 'supprimé', error: 'erreur', insufficient_credits: 'points insuffisants', closed: 'fermé', duplicate: 'doublon', not_found: 'sans résultat', invalid_query: 'requête invalide', admin: 'admin', super_admin: 'super admin', user: 'utilisateur', welcome_bonus: 'bonus de bienvenue', search_debit: 'recherche', recharge_credit: 'recharge', admin_adjustment: 'ajustement', referral_bonus: 'partage Lewad' },
+      status: { active: 'actif', approved: 'approuvé', pending_review: 'en attente', cancelled: 'annulée', added: 'ajouté', success: 'réussi', pending: 'en attente', reviewed: 'revu', draft: 'brouillon', rejected: 'rejeté', suspended: 'suspendu', deleted: 'supprimé', error: 'erreur', insufficient_credits: 'points insuffisants', closed: 'fermé', duplicate: 'doublon', not_found: 'sans résultat', invalid_query: 'requête invalide', admin: 'admin', super_admin: 'super admin', user: 'utilisateur', welcome_bonus: 'bonus de bienvenue', search_debit: 'recherche', recharge_credit: 'recharge', admin_adjustment: 'ajustement', referral_bonus: 'partage Lewad' },
     },
     mobile: {
       user: 'Utilisateur', createdAt: 'Créée le', linkedLog: 'Journal lié', requestStatus: 'État de la demande', teamNote: 'Note de l’équipe', notePlaceholder: 'Ajouter une note interne…', save: 'Enregistrer', saving: 'Enregistrement…',
@@ -776,7 +849,7 @@ export const adminCopy: Record<Locale, AdminCopy> = {
     },
   },
   ar: {
-    tabs: { dashboard: 'لوحة التحكم', requests: 'الطلبات', users: 'المستخدمون', credits: 'النقاط', 'search-logs': 'عمليات البحث', services: 'الخدمات', system: 'النظام' },
+    tabs: { dashboard: 'لوحة التحكم', requests: 'الطلبات', users: 'المستخدمون', credits: 'النقاط', 'search-logs': 'عمليات البحث', services: 'الخدمات', submissions: 'الطلبات', system: 'النظام' },
     access: {
       unavailableTitle: 'تعذر التحقق من الوصول', deniedTitle: 'تم رفض الوصول',
       unavailableText: 'تعذر تحميل ملفك الشخصي. أعد المحاولة لاحقاً.', deniedText: 'هذه الصفحة مخصصة لفريق لواد.',
@@ -883,6 +956,30 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       requestUpdated: 'تم تحديث الطلب.', requestUpdateFailed: 'تعذر تحديث الطلب.', serviceAddedSuccess: 'تمت إضافة الخدمة بنجاح.', serviceAddFailed: 'تعذر إضافة هذه الخدمة.', requestMarkedAdded: 'تم تعليم الطلب كمضاف.',
       close: 'إغلاق', dismiss: 'إغلاق الإشعار', reviewActions: 'إجراءات المعالجة',
     },
+    businessSubmissions: {
+      title: 'طلبات المؤسسات', subtitle: 'طلبات إضافة مؤسسات مقدّمة من أصحاب الأعمال.',
+      emptyTitle: 'لا توجد طلبات', emptyText: 'ستظهر هنا طلبات إضافة المؤسسات.',
+      pendingCount: '{count} في الانتظار',
+      businessName: 'المؤسسة', ownerName: 'المالك', ownerPhone: 'هاتف المالك',
+      businessPhone: 'هاتف المؤسسة', status: 'الحالة', amount: 'المبلغ', date: 'التاريخ', actions: 'الإجراءات',
+      viewDetails: 'عرض التفاصيل', approve: 'الموافقة', reject: 'الرفض',
+      detailsTitle: 'تفاصيل الطلب',
+      ownerSection: 'المالك', businessSection: 'المؤسسة', contactSection: 'معلومات الاتصال',
+      locationSection: 'الموقع', adminSection: 'المعالجة',
+      whatsapp: 'واتساب', website: 'الموقع الإلكتروني', category: 'الفئة', location: 'العنوان', nearestPlace: 'أقرب مكان',
+      adminNote: 'ملاحظة المشرف', adminNotePlaceholder: 'سبب الرفض أو تعليق…',
+      approveConfirmTitle: 'الموافقة على الطلب',
+      approveConfirmText: 'سيتم إنشاء المؤسسة والوكالة الرئيسية. ستظهر المؤسسة في نتائج بحث لواد.',
+      rejectConfirmTitle: 'رفض الطلب',
+      rejectConfirmText: 'حدد سبب الرفض. سيتم إخطار مقدم الطلب.',
+      rejectionReasonRequired: 'سبب الرفض مطلوب.',
+      approving: 'جارٍ الموافقة…', rejecting: 'جارٍ الرفض…',
+      actionFailed: 'تعذر معالجة هذا الطلب.',
+      close: 'إغلاق', confirm: 'تأكيد', cancel: 'إلغاء',
+      submissionApproved: 'تمت الموافقة على الطلب وإنشاء المؤسسة.',
+      submissionRejected: 'تم رفض الطلب.',
+      pending: 'قيد الانتظار', approved: 'تمت الموافقة', rejected: 'مرفوض',
+    },
     establishmentForm: {
       title: 'إضافة مؤسسة', subtitle: 'أنشئ بطاقة خدمة محلية انطلاقًا من طلب.',
       requiredSection: 'معلومات إلزامية', optionalSection: 'معلومات إضافية',
@@ -914,7 +1011,7 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       },
       filters: { searchLabel: 'تصفية حسب البحث', searchPlaceholder: 'تصفية حسب البحث…', statusLabel: 'تصفية حسب الحالة', dateLabel: 'تصفية حسب التاريخ', allStatuses: 'كل الحالات' },
       sections: { wallets: 'المحافظ', recentMovements: 'أحدث الحركات', categories: 'الفئات', establishments: 'المؤسسات', branches: 'الوكالات', categoriesEmpty: 'لا توجد فئات', establishmentsEmpty: 'لا توجد مؤسسات', branchesEmpty: 'لا توجد وكالات' },
-      status: { active: 'نشط', approved: 'معتمد', added: 'أضيف', success: 'ناجح', pending: 'معلّق', reviewed: 'تمت المراجعة', draft: 'مسودة', rejected: 'مرفوض', suspended: 'موقوف', deleted: 'محذوف', error: 'خطأ', insufficient_credits: 'نقاط غير كافية', closed: 'مغلق', duplicate: 'مكرر', not_found: 'بلا نتيجة', invalid_query: 'طلب غير صالح', admin: 'مشرف', super_admin: 'مشرف عام', user: 'مستخدم', welcome_bonus: 'مكافأة ترحيب', search_debit: 'بحث', recharge_credit: 'شحن', admin_adjustment: 'تعديل', referral_bonus: 'مشاركة لواد' },
+      status: { active: 'نشط', approved: 'معتمد', pending_review: 'في الانتظار', cancelled: 'ملغاة', added: 'أضيف', success: 'ناجح', pending: 'معلّق', reviewed: 'تمت المراجعة', draft: 'مسودة', rejected: 'مرفوض', suspended: 'موقوف', deleted: 'محذوف', error: 'خطأ', insufficient_credits: 'نقاط غير كافية', closed: 'مغلق', duplicate: 'مكرر', not_found: 'بلا نتيجة', invalid_query: 'طلب غير صالح', admin: 'مشرف', super_admin: 'مشرف عام', user: 'مستخدم', welcome_bonus: 'مكافأة ترحيب', search_debit: 'بحث', recharge_credit: 'شحن', admin_adjustment: 'تعديل', referral_bonus: 'مشاركة لواد' },
     },
     mobile: {
       user: 'المستخدم', createdAt: 'تاريخ الإنشاء', linkedLog: 'سجل مرتبط', requestStatus: 'حالة الطلب', teamNote: 'ملاحظة الفريق', notePlaceholder: 'أضف ملاحظة داخلية…', save: 'حفظ', saving: 'جارٍ الحفظ…',
@@ -989,7 +1086,7 @@ export const adminCopy: Record<Locale, AdminCopy> = {
     },
   },
   en: {
-    tabs: { dashboard: 'Dashboard', requests: 'Requests', users: 'Users', credits: 'Credits', 'search-logs': 'Search logs', services: 'Services', system: 'System' },
+    tabs: { dashboard: 'Dashboard', requests: 'Requests', users: 'Users', credits: 'Credits', 'search-logs': 'Search logs', services: 'Services', submissions: 'Submissions', system: 'System' },
     access: {
       unavailableTitle: 'Unable to verify access', deniedTitle: 'Access denied',
       unavailableText: 'Your profile could not be loaded. Please try again later.', deniedText: 'This page is reserved for the Lewad team.',
@@ -1096,6 +1193,30 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       requestUpdated: 'Request updated.', requestUpdateFailed: 'Could not update request.', serviceAddedSuccess: 'Service added successfully.', serviceAddFailed: 'Could not add this service.', requestMarkedAdded: 'Request marked as added.',
       close: 'Close', dismiss: 'Dismiss notification', reviewActions: 'Review actions',
     },
+    businessSubmissions: {
+      title: 'Business submissions', subtitle: 'Business listing requests submitted by owners.',
+      emptyTitle: 'No submissions', emptyText: 'Business submissions will appear here.',
+      pendingCount: '{count} pending',
+      businessName: 'Business', ownerName: 'Owner', ownerPhone: 'Owner phone',
+      businessPhone: 'Business phone', status: 'Status', amount: 'Amount', date: 'Date', actions: 'Actions',
+      viewDetails: 'View details', approve: 'Approve', reject: 'Reject',
+      detailsTitle: 'Submission details',
+      ownerSection: 'Owner', businessSection: 'Business', contactSection: 'Contact details',
+      locationSection: 'Location', adminSection: 'Review',
+      whatsapp: 'WhatsApp', website: 'Website', category: 'Category', location: 'Address', nearestPlace: 'Nearest landmark',
+      adminNote: 'Admin note', adminNotePlaceholder: 'Rejection reason or comment…',
+      approveConfirmTitle: 'Approve submission',
+      approveConfirmText: 'This will create the establishment and its main branch. The business will appear in Lewad search results.',
+      rejectConfirmTitle: 'Reject submission',
+      rejectConfirmText: 'Provide a rejection reason. The submitter will be notified.',
+      rejectionReasonRequired: 'A rejection reason is required.',
+      approving: 'Approving…', rejecting: 'Rejecting…',
+      actionFailed: 'Unable to process this submission.',
+      close: 'Close', confirm: 'Confirm', cancel: 'Cancel',
+      submissionApproved: 'The submission was approved and the business has been created.',
+      submissionRejected: 'The submission was rejected.',
+      pending: 'Pending', approved: 'Approved', rejected: 'Rejected',
+    },
     establishmentForm: {
       title: 'Add establishment', subtitle: 'Create a local service listing from a request.',
       requiredSection: 'Required information', optionalSection: 'Additional information',
@@ -1127,7 +1248,7 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       },
       filters: { searchLabel: 'Filter by search', searchPlaceholder: 'Filter by search…', statusLabel: 'Filter by status', dateLabel: 'Filter by date', allStatuses: 'All statuses' },
       sections: { wallets: 'Wallets', recentMovements: 'Recent movements', categories: 'Categories', establishments: 'Establishments', branches: 'Branches', categoriesEmpty: 'No categories', establishmentsEmpty: 'No establishments', branchesEmpty: 'No branches' },
-      status: { active: 'active', approved: 'approved', added: 'added', success: 'successful', pending: 'pending', reviewed: 'reviewed', draft: 'draft', rejected: 'rejected', suspended: 'suspended', deleted: 'deleted', error: 'error', insufficient_credits: 'insufficient points', closed: 'closed', duplicate: 'duplicate', not_found: 'no result', invalid_query: 'invalid query', admin: 'admin', super_admin: 'super admin', user: 'user', welcome_bonus: 'welcome bonus', search_debit: 'search', recharge_credit: 'recharge', admin_adjustment: 'adjustment', referral_bonus: 'Lewad sharing' },
+      status: { active: 'active', approved: 'approved', pending_review: 'pending', cancelled: 'cancelled', added: 'added', success: 'successful', pending: 'pending', reviewed: 'reviewed', draft: 'draft', rejected: 'rejected', suspended: 'suspended', deleted: 'deleted', error: 'error', insufficient_credits: 'insufficient points', closed: 'closed', duplicate: 'duplicate', not_found: 'no result', invalid_query: 'invalid query', admin: 'admin', super_admin: 'super admin', user: 'user', welcome_bonus: 'welcome bonus', search_debit: 'search', recharge_credit: 'recharge', admin_adjustment: 'adjustment', referral_bonus: 'Lewad sharing' },
     },
     mobile: {
       user: 'User', createdAt: 'Created', linkedLog: 'Linked log', requestStatus: 'Request status', teamNote: 'Team note', notePlaceholder: 'Add an internal note…', save: 'Save', saving: 'Saving…',

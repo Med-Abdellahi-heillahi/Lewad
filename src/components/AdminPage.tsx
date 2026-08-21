@@ -28,6 +28,12 @@ import {
   type AdminRechargeModule,
   type AdminRechargeRequest,
 } from '../lib/admin'
+import {
+  adminListBusinessSubmissions,
+  adminApproveBusinessSubmission,
+  adminRejectBusinessSubmission,
+  type BusinessSubmissionSummary,
+} from '../lib/businessSubmissions'
 import type { MissingServiceRequestStatus } from '../lib/db3b'
 import { formatDate, formatNumber, formatSignedPoints } from '../lib/format'
 import { appWrap, card, cardMuted, field, pill } from '../lib/ui'
@@ -43,12 +49,13 @@ import { AdminSidebar } from './admin/AdminSidebar'
 import { AdminUsers } from './admin/AdminUsers'
 import { AdminRequests } from './admin/AdminRequests'
 import { AdminCredits } from './admin/AdminCredits'
+import { AdminBusinessSubmissions } from './admin/AdminBusinessSubmissions'
 import { PaginationControls } from './ui/PaginationControls'
 import { Building2, Eye, LayoutDashboard, ListChecks, Plus, Search, Users, Wallet } from 'lucide-react'
 import { DEFAULT_PAGE_SIZE, paginatedResult, type PaginatedResult } from '../lib/pagination'
 
 type AdminTab = AdminTabId
-type AdminListPage = 'requests' | 'users' | 'wallets' | 'ledger' | 'searchLogs' | 'categories' | 'establishments' | 'branches'
+type AdminListPage = 'requests' | 'users' | 'wallets' | 'ledger' | 'searchLogs' | 'categories' | 'establishments' | 'branches' | 'submissions'
 
 type DisplayUser = {
   full_name: string | null
@@ -63,6 +70,7 @@ const tabs: { id: AdminTab; icon: AdminIcon }[] = [
   { id: 'credits', icon: Wallet },
   { id: 'search-logs', icon: Search },
   { id: 'services', icon: Building2 },
+  { id: 'submissions', icon: Building2 },
 ]
 
 function emptyPage<T>(): PaginatedResult<T> {
@@ -241,8 +249,9 @@ export function AdminPage() {
   const [rechargeModule, setRechargeModule] = useState<AdminRechargeModule>('not-connected')
   const [searchLogs, setSearchLogs] = useState<PaginatedResult<AdminSearchLog>>(() => emptyPage())
   const [services, setServices] = useState<AdminServices | null>(null)
+  const [submissions, setSubmissions] = useState<PaginatedResult<BusinessSubmissionSummary>>(() => emptyPage())
   const [pages, setPages] = useState<Record<AdminListPage, number>>({
-    requests: 1, users: 1, wallets: 1, ledger: 1, searchLogs: 1, categories: 1, establishments: 1, branches: 1,
+    requests: 1, users: 1, wallets: 1, ledger: 1, searchLogs: 1, categories: 1, establishments: 1, branches: 1, submissions: 1,
   })
   const [rechargeRequested, setRechargeRequested] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -342,6 +351,14 @@ export function AdminPage() {
         setErrors((value) => ({ ...value, services: error }))
       }
     }
+    if (target === 'submissions') {
+      const result = await adminListBusinessSubmissions({ page: pages.submissions, pageSize: DEFAULT_PAGE_SIZE })
+      setSubmissions(result.data)
+      if (result.error) {
+        const error = result.error
+        setErrors((value) => ({ ...value, submissions: error }))
+      }
+    }
     setLoading((value) => ({ ...value, [target]: false }))
   }, [pages, userFilters])
 
@@ -400,6 +417,28 @@ export function AdminPage() {
     return null
   }
 
+  const approveSubmission = async (submission: BusinessSubmissionSummary) => {
+    const result = await adminApproveBusinessSubmission(submission.id)
+    if (result.error) return result.error
+    setSubmissions((value) => ({
+      ...value,
+      data: value.data.map((item) => item.id === submission.id ? { ...item, status: 'approved' } : item),
+    }))
+    void load('dashboard')
+    return null
+  }
+
+  const rejectSubmission = async (submission: BusinessSubmissionSummary, adminNote: string) => {
+    const result = await adminRejectBusinessSubmission(submission.id, adminNote)
+    if (result.error) return result.error
+    setSubmissions((value) => ({
+      ...value,
+      data: value.data.map((item) => item.id === submission.id ? { ...item, status: 'rejected' } : item),
+    }))
+    void load('dashboard')
+    return null
+  }
+
   const activeLabel = copy.tabs[activeTab]
   const adminRole = isSuperAdmin ? copy.header.superAdmin : copy.header.admin
   const openRechargePanel = () => {
@@ -442,6 +481,7 @@ export function AdminPage() {
           {activeTab === 'credits' && <AdminCredits wallets={wallets.data} pagination={wallets} loading={Boolean(loading.credits)} recharges={recharges} rechargeModule={rechargeModule} onPageChange={(page) => setPage('wallets', page)} onRefresh={() => void load('credits')} displayName={(user) => personName(user, locale)} />}
           {activeTab === 'search-logs' && <SearchLogsView logs={searchLogs.data} pagination={searchLogs} loading={Boolean(loading['search-logs'])} onPageChange={(page) => setPage('searchLogs', page)} />}
           {activeTab === 'services' && <ServicesView services={services} loading={Boolean(loading.services)} onCategoryPageChange={(page) => setPage('categories', page)} onEstablishmentPageChange={(page) => setPage('establishments', page)} onBranchPageChange={(page) => setPage('branches', page)} />}
+          {activeTab === 'submissions' && <AdminBusinessSubmissions submissions={submissions.data} pagination={submissions} loading={Boolean(loading.submissions)} onApprove={approveSubmission} onReject={rejectSubmission} onPageChange={(page) => setPage('submissions', page)} />}
           </section>
         </div>
       </main>

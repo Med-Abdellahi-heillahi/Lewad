@@ -4,7 +4,7 @@ import { Check, EllipsisVertical, Plus, Smartphone, X } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { ease } from '../lib/motion'
 import { useInstallInvitation } from '../lib/useInstallPrompt'
-import { Logo } from './Logo'
+import { Logo, LogoAppIcon } from './Logo'
 
 const STEP_DURATION = 2000
 
@@ -99,13 +99,15 @@ function StepScene({ step }: { step: number }) {
         ))}
       </div>
       <div className="absolute inset-x-0 top-8 grid place-items-center">
+        {/* L'icône posée sur l'écran d'accueil : l'emblème occupe toute la tuile,
+            comme le fera la vraie icône installée. */}
         <m.div
           initial={{ opacity: 0, scale: 0.7 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3, ease }}
-          className="grid size-[3.25rem] place-items-center rounded-2xl bg-brand shadow-lg shadow-brand/30"
+          className="shadow-lg shadow-black/20"
         >
-          <Logo compact />
+          <LogoAppIcon className="size-[3.25rem] rounded-2xl" />
         </m.div>
         <span className="mt-1.5 h-1.5 w-11 rounded-full bg-ink/25" />
       </div>

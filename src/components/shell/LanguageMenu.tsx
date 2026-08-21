@@ -4,6 +4,7 @@ import { dictionaries, locales, useI18n } from '../../i18n'
 import { ease } from '../../lib/motion'
 import { useDismiss } from '../../lib/useDismiss'
 import { iconBtn } from '../../lib/ui'
+import { FlagIcon } from '../FlagIcon'
 import { Icon } from '../Icon'
 
 type LanguageMenuProps = {
@@ -37,11 +38,10 @@ export function LanguageMenu({ align = 'start', className = '' }: LanguageMenuPr
         aria-haspopup="true"
         onClick={() => setOpen((value) => !value)}
       >
-        {/* Sur mobile, seul le code de langue : le globe alourdit une barre
-            déjà chargée, et « FR / ع / EN » se lit sans pictogramme. */}
-        <span className="hidden sm:inline-flex">
-          <Icon name="globe" size={18} />
-        </span>
+        {/* Le drapeau remplace le globe : il dit la langue courante d'un coup
+            d'œil, là où le globe ne disait que « langue ». Le code reste, car un
+            drapeau seul n'identifie pas une langue de façon fiable. */}
+        <FlagIcon locale={locale} decorative />
         <span aria-hidden="true">{dictionaries[locale].meta.short}</span>
       </button>
 
@@ -70,7 +70,10 @@ export function LanguageMenu({ align = 'start', className = '' }: LanguageMenuPr
                     setOpen(false)
                   }}
                 >
-                  {dictionaries[item].meta.label}
+                  <span className="inline-flex min-w-0 items-center gap-2.5">
+                    <FlagIcon locale={item} decorative />
+                    <span className="truncate">{dictionaries[item].meta.label}</span>
+                  </span>
                   {item === locale && <Icon name="check" size={15} />}
                 </button>
               </li>

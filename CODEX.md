@@ -44,7 +44,7 @@ area agent below, `security-agent.md`, `design-agent.md`,
 - Reports stay short and useful: completed work, files, checks actually run,
   and deliberate boundaries.
 
-## Authoritative V1 status — 2026-08-20
+## Authoritative V1 status — 2026-08-21
 
 Lewad V1 is in **late stabilization / QA preparation**. The core frontend,
 operational admin and super-admin spaces, secure Supabase flows, recharge
@@ -66,7 +66,7 @@ workflow, request-to-service workflow, and minimal PWA are implemented.
 | `/profile`, `/credits`, `/recharge`, `/settings` | Member account features |
 | `/admin` | Operational admin space |
 | `/super-admin` | Super-admin platform space |
-| `/add-business` | Placeholder/future business submission |
+| `/add-business` | Authenticated business submission with a local map picker |
 
 - Default post-login destinations are `user → /app`, `admin → /admin`, and
   `super_admin → /super-admin`.
@@ -109,6 +109,14 @@ workflow, request-to-service workflow, and minimal PWA are implemented.
   WhatsApp handoff; an active admin/super-admin approves or rejects only a
   pending request. Approval alone credits the wallet atomically and ledger
   history is append-only.
+- **Business submissions (DB4):**
+  `20260821000002_db4_business_submissions.sql` is applied remotely and its
+  history was repaired after verification. It provides the RPC-only backend
+  for a 500 MRO pending-review proposal. The map-support migration,
+  `20260821000003_db4_maps_location_support.sql`, remains local/unapplied
+  until remote application is confirmed. Approval creates an approved,
+  verified establishment and active main branch atomically; rejection records
+  a reason. See [`docs/db4-business-submissions.md`](./docs/db4-business-submissions.md).
 
 ### Security, migrations, and checks
 
@@ -129,8 +137,11 @@ workflow, request-to-service workflow, and minimal PWA are implemented.
   `20260820000002_security_2a_recharge_constraints.sql`,
   `20260820000003_create_recharge_request_rpc.sql`, and
   `20260820000004_security_2b_medium_hardening.sql`.
-- `npx tsc --noEmit -p tsconfig.app.json` and `npm run build` pass. The Vite
-  chunk-size advisory is non-blocking.
+  `20260821000002_db4_business_submissions.sql` is applied and recorded;
+  `20260821000003_db4_maps_location_support.sql` is local/unapplied pending
+  owner confirmation.
+- `npx tsc --noEmit -p tsconfig.app.json`, `npm test`, and `npm run build`
+  pass. The Vite chunk-size advisory is non-blocking.
 - Repository hygiene: `.gitignore` is hardened, `.env.example` exists,
   `.env.local` is untracked, and secret scans passed. `Supabase.docx` is
   tracked and must be reviewed or removed before a public push.
@@ -149,6 +160,23 @@ workflow, request-to-service workflow, and minimal PWA are implemented.
   Do not run `supabase db push` until the controlled archival strategy in
   `docs/migration-repair-command-plan.md` is completed and accepted.
 - Do not commit, push, or expose secrets automatically.
+
+## Current Project Status — 2026-08-21
+
+See:
+
+- [`docs/dev-log-2026-08-21.md`](./docs/dev-log-2026-08-21.md)
+- [`docs/migration-repair-command-plan.md`](./docs/migration-repair-command-plan.md)
+- [`docs/db4-business-submissions.md`](./docs/db4-business-submissions.md)
+- [`docs/maps-ux-plan.md`](./docs/maps-ux-plan.md)
+
+Lewad V1 has secure core flows, admin/super-admin, recharge,
+request-to-service, DB4 business submissions, and maps. Future work must
+preserve RPC/RLS boundaries and migration-history guardrails.
+
+**Warnings:** Do not run `db push` blindly. Do not replay the
+`20260819000005` duplicate migrations. Do not expose secrets or use
+`service_role` in frontend code.
 
 ## Recommended next steps
 
