@@ -58,15 +58,15 @@ workflow, request-to-service workflow, and minimal PWA are implemented.
 
 ### Routes, roles, and redirect rules
 
-| Route | Purpose |
-|---|---|
-| `/` | Public landing |
-| `/auth` | Authentication |
-| `/app` | Member search/dashboard |
-| `/profile`, `/credits`, `/recharge`, `/settings` | Member account features |
-| `/admin` | Operational admin space |
-| `/super-admin` | Super-admin platform space |
-| `/add-business` | Authenticated business submission with a local map picker |
+| Route                                            | Purpose                                                   |
+| ------------------------------------------------ | --------------------------------------------------------- |
+| `/`                                              | Public landing                                            |
+| `/auth`                                          | Authentication                                            |
+| `/app`                                           | Member search/dashboard                                   |
+| `/profile`, `/credits`, `/recharge`, `/settings` | Member account features                                   |
+| `/admin`                                         | Operational admin space                                   |
+| `/super-admin`                                   | Super-admin platform space                                |
+| `/add-business`                                  | Authenticated business submission with a local map picker |
 
 - Default post-login destinations are `user → /app`, `admin → /admin`, and
   `super_admin → /super-admin`.
@@ -142,6 +142,14 @@ workflow, request-to-service workflow, and minimal PWA are implemented.
   owner confirmation.
 - `npx tsc --noEmit -p tsconfig.app.json`, `npm test`, and `npm run build`
   pass. The Vite chunk-size advisory is non-blocking.
+- **Client history pagination TODO:** `/history` currently uses frontend
+  pagination with 10 items per page, which is acceptable for V1. Future backend
+  work must implement server-side pagination and return only the requested page
+  of the authenticated user's own events, while preserving the user-owned
+  security boundary. Do not expose admin audit logs or technical table/function
+  names to the client; keep non-technical labels for searches, points used or
+  added, recharge status, and business submission status. Preserve 10 items per
+  page unless the product owner changes it.
 - Repository hygiene: `.gitignore` is hardened, `.env.example` exists,
   `.env.local` is untracked, and secret scans passed. `Supabase.docx` is
   tracked and must be reviewed or removed before a public push.
@@ -192,19 +200,19 @@ preserve RPC/RLS boundaries and migration-history guardrails.
 
 ## Available agents
 
-| Agent | File | Use it for |
-|---|---|---|
-| users-agent | [`agent/users-agent.md`](./agent/users-agent.md) | Admin planning for profiles and users |
-| credits-agent | [`agent/credits-agent.md`](./agent/credits-agent.md) | Wallet, ledger, and recharge planning |
-| search-agent | [`agent/search-agent.md`](./agent/search-agent.md) | Search-log and secure-search planning |
-| services-agent | [`agent/services-agent.md`](./agent/services-agent.md) | Establishment and branch planning |
-| categories-agent | [`agent/categories-agent.md`](./agent/categories-agent.md) | Category-management planning |
-| requests-agent | [`agent/requests-agent.md`](./agent/requests-agent.md) | Missing-service and recharge-request planning |
-| security-agent | [`agent/security-agent.md`](./agent/security-agent.md) | Secrets, auth, routes, RLS boundaries |
-| design-agent | [`agent/design-agent.md`](./agent/design-agent.md) | Responsive UI, RTL, accessibility, themes |
-| clean-code-agent | [`agent/clean-code-agent.md`](./agent/clean-code-agent.md) | Readability, types, reuse |
-| clean-architecture-agent | [`agent/clean-architecture-agent.md`](./agent/clean-architecture-agent.md) | Layering and dependency direction |
-| backup-recovery-agent | `agent/backup-recovery-agent.md`, if present | Backup and recovery work only |
+| Agent                    | File                                                                       | Use it for                                    |
+| ------------------------ | -------------------------------------------------------------------------- | --------------------------------------------- |
+| users-agent              | [`agent/users-agent.md`](./agent/users-agent.md)                           | Admin planning for profiles and users         |
+| credits-agent            | [`agent/credits-agent.md`](./agent/credits-agent.md)                       | Wallet, ledger, and recharge planning         |
+| search-agent             | [`agent/search-agent.md`](./agent/search-agent.md)                         | Search-log and secure-search planning         |
+| services-agent           | [`agent/services-agent.md`](./agent/services-agent.md)                     | Establishment and branch planning             |
+| categories-agent         | [`agent/categories-agent.md`](./agent/categories-agent.md)                 | Category-management planning                  |
+| requests-agent           | [`agent/requests-agent.md`](./agent/requests-agent.md)                     | Missing-service and recharge-request planning |
+| security-agent           | [`agent/security-agent.md`](./agent/security-agent.md)                     | Secrets, auth, routes, RLS boundaries         |
+| design-agent             | [`agent/design-agent.md`](./agent/design-agent.md)                         | Responsive UI, RTL, accessibility, themes     |
+| clean-code-agent         | [`agent/clean-code-agent.md`](./agent/clean-code-agent.md)                 | Readability, types, reuse                     |
+| clean-architecture-agent | [`agent/clean-architecture-agent.md`](./agent/clean-architecture-agent.md) | Layering and dependency direction             |
+| backup-recovery-agent    | `agent/backup-recovery-agent.md`, if present                               | Backup and recovery work only                 |
 
 If an agent document is missing, report it and continue only within the rules
 that are available. Do not invent missing database authority.

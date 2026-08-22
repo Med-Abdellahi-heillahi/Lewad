@@ -31,6 +31,7 @@ import type { AppNavId } from './shell/appNav'
 import { EmptyState, InlineAlert, Skeleton } from './system/States'
 import { AppearanceSettings, PasswordResetSettings } from './settings/SettingsControls'
 import { PaginationControls } from './ui/PaginationControls'
+import { BackButton } from './ui/BackButton'
 import { BusinessSubmissionForm } from './BusinessSubmissionForm'
 
 export type PrivatePageName = 'profile' | 'credits' | 'settings' | 'recharge' | 'history'
@@ -158,14 +159,17 @@ function statusLabel(value: Db1Profile['status'], text: Copy) {
  * En-tête de page membre : le titre tombe toujours au même endroit d'une page à
  * l'autre, ce qui donne à l'espace connecté sa continuité.
  */
-function PageHeader({ title, text, action }: { title: string; text?: string; action?: ReactNode }) {
+function PageHeader({ title, text, action, backButton }: { title: string; text?: string; action?: ReactNode; backButton?: boolean }) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div className="min-w-0">
-        <h1 className="text-[26px] leading-tight font-bold tracking-tight sm:text-3xl lg:text-[34px]">{title}</h1>
-        {text && <p className="mt-2 max-w-2xl text-sm leading-6 text-muted sm:text-base sm:leading-7">{text}</p>}
+    <div>
+      {backButton && <BackButton />}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-[26px] leading-tight font-bold tracking-tight sm:text-3xl lg:text-[34px]">{title}</h1>
+          {text && <p className="mt-2 max-w-2xl text-sm leading-6 text-muted sm:text-base sm:leading-7">{text}</p>}
+        </div>
+        {action && <div className="shrink-0">{action}</div>}
       </div>
-      {action && <div className="shrink-0">{action}</div>}
     </div>
   )
 }
@@ -224,7 +228,7 @@ function ProfilePage({ text }: { text: Copy }) {
   if (loading && !profile) {
     return (
       <>
-        <PageHeader title={text.profile} text={text.profileSubtitle} />
+        <PageHeader title={text.profile} text={text.profileSubtitle} backButton />
         <div className="mt-7 grid gap-5 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:gap-6" role="status" aria-busy="true">
           <div className={`${card} p-6`}>
             <Skeleton className="size-20 rounded-2xl" />
@@ -245,7 +249,7 @@ function ProfilePage({ text }: { text: Copy }) {
   if (!profile) {
     return (
       <>
-        <PageHeader title={text.profile} text={text.profileSubtitle} />
+        <PageHeader title={text.profile} text={text.profileSubtitle} backButton />
         <InlineAlert
           tone="error"
           className="mt-7"
@@ -270,6 +274,7 @@ function ProfilePage({ text }: { text: Copy }) {
       <PageHeader
         title={text.profile}
         text={text.profileSubtitle}
+        backButton
         action={
           <div className="flex flex-wrap gap-2">
             <a href="/history" className={btnGhost}>
@@ -630,7 +635,7 @@ function CreditsPage({ text }: { text: Copy }) {
 
   return (
     <>
-      <PageHeader title={text.credits} text={text.creditsSubtitle} />
+      <PageHeader title={text.credits} text={text.creditsSubtitle} backButton />
 
       {/* Desktop : le solde reste épinglé pendant qu'on parcourt l'historique. */}
       <div className="mt-7 grid items-start gap-5 lg:grid-cols-[minmax(0,23rem)_minmax(0,1fr)] lg:gap-6">
@@ -919,7 +924,7 @@ function RechargePage({ text }: { text: Copy }) {
 
   return (
     <>
-      <PageHeader title={text.recharge} text={text.rechargeSubtitle} />
+      <PageHeader title={text.recharge} text={text.rechargeSubtitle} backButton />
 
       <InlineAlert tone="info" className="mt-6" title={text.activationNotice}>
         {text.paymentNotice}
@@ -1097,6 +1102,7 @@ function SettingsPage({ text }: { text: Copy }) {
       <PageHeader
         title={settings.title}
         text={settings.subtitle}
+        backButton
         action={spaceHref ? <a href={spaceHref} className={btnGhost}><span className="rtl:rotate-180"><Icon name="arrow" size={16} /></span>{settings.backToMySpace}</a> : undefined}
       />
 
@@ -1175,7 +1181,7 @@ export function ContactPage() {
       <main id="app-main" className={`${appWrap} ${appPad}`}>
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-10">
           <section>
-            <PageHeader title={text.contactTitle} text={text.contactText} />
+            <PageHeader title={text.contactTitle} text={text.contactText} backButton />
 
             <div className={`${card} mt-7 overflow-hidden`}>
               <h2 className="border-b border-line px-5 py-4 text-sm font-bold">{text.contactDetails}</h2>
@@ -1257,6 +1263,7 @@ export function AddBusinessPage() {
   return (
     <AppShell documentTitle={copy.title} skipLabel={copy.title}>
       <main id="app-main" className={`${appWrap} ${appPad}`}>
+        <BackButton />
         <BusinessSubmissionForm />
 
         {/* L'historique reste un espace réservé : la couche de données n'expose

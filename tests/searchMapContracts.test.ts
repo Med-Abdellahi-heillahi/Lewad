@@ -16,11 +16,14 @@ describe('search result map contracts', () => {
   })
 
   it('keeps branch map actions secondary and shows a translated fallback without coordinates', () => {
-    const source = readFileSync(searchViewPath, 'utf8')
+    const source = readFileSync(searchViewPath, 'utf8').replaceAll('\r\n', '\n')
 
-    expect(source).toContain("nearbyPlace: 'Lieu proche'")
-    expect(source).toContain("nearbyPlace: 'المكان القريب'")
-    expect(source).toContain("nearbyPlace: 'Nearby place'")
+    expect(source).toMatch(/nearbyPlace:\s*['"]Lieu proche['"]/
+    )
+    expect(source).toMatch(/nearbyPlace:\s*['"]المكان القريب['"]/
+    )
+    expect(source).toMatch(/nearbyPlace:\s*['"]Nearby place['"]/
+    )
     expect(source).toContain('copy.locationUnavailable')
     expect(source).toContain('onViewMap={openMap}')
     expect(source).toContain('aria-label={copy.viewOnMap}')
@@ -28,11 +31,11 @@ describe('search result map contracts', () => {
   })
 
   it('keeps the map sheet lazy, dismissible, and independent from tile caching', () => {
-    const searchSource = readFileSync(searchViewPath, 'utf8')
+    const searchSource = readFileSync(searchViewPath, 'utf8').replaceAll('\r\n', '\n')
     const mapSheetSource = readFileSync(mapSheetPath, 'utf8')
     const serviceWorkerSource = readFileSync(serviceWorkerPath, 'utf8')
 
-    expect(searchSource).toContain("lazy(() => import('./maps/ServiceMapSheet')")
+    expect(searchSource).toMatch(/lazy\(\(\)\s*=>\s*import\(['"]\.\/maps\/ServiceMapSheet['"]\)/)
     expect(mapSheetSource).toContain('selectedBranchId?: string')
     expect(mapSheetSource).toContain("event.key === 'Escape'")
     expect(mapSheetSource).toContain('onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}')

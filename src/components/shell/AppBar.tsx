@@ -1,43 +1,43 @@
-import { useCallback, useState } from 'react'
-import { Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
-import { dictionaries, locales, useI18n, type Locale } from '../../i18n'
-import { useAccount } from '../../hooks/useAccount'
-import { signOut } from '../../lib/auth'
-import { isAdminRole } from '../../lib/routeAuth'
-import { formatNumber, initialOf, profileDisplayName } from '../../lib/format'
-import { useTheme } from '../../lib/theme'
-import { appWrap, btnGhost, btnPrimary, iconBtn } from '../../lib/ui'
-import { FlagIcon } from '../FlagIcon'
-import { Icon } from '../Icon'
-import { Logo } from '../Logo'
-import { Drawer } from './Drawer'
-import { LanguageMenu } from './LanguageMenu'
-import { ThemeToggle } from './ThemeToggle'
-import { UserArea } from './UserArea'
-import { AdminLanguageToggle } from '../admin/AdminLanguageToggle'
-import { appNavItems, appShellCopy, type AppNavId } from './appNav'
+import { useCallback, useState } from "react";
+import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { dictionaries, locales, useI18n, type Locale } from "../../i18n";
+import { useAccount } from "../../hooks/useAccount";
+import { signOut } from "../../lib/auth";
+import { isAdminRole } from "../../lib/routeAuth";
+import { formatNumber, initialOf, profileDisplayName } from "../../lib/format";
+import { useTheme } from "../../lib/theme";
+import { appWrap, btnGhost, btnPrimary, iconBtn } from "../../lib/ui";
+import { FlagIcon } from "../FlagIcon";
+import { Icon } from "../Icon";
+import { Logo } from "../Logo";
+import { Drawer } from "./Drawer";
+import { LanguageMenu } from "./LanguageMenu";
+import { ThemeToggle } from "./ThemeToggle";
+import { UserArea } from "./UserArea";
+import { AdminLanguageToggle } from "../admin/AdminLanguageToggle";
+import { appNavItems, appShellCopy, type AppNavId } from "./appNav";
 
 /** Controls for the contextual admin/super-admin sidebar. */
 export type AdminBarProps = {
-  productLabel: string
-  sectionLabel: string
-  roleLabel: string
-  sidebarCollapsed?: boolean
-  mobileSidebarOpen?: boolean
-  desktopToggleLabel?: string
-  mobileToggleLabel?: string
-  onDesktopSidebarToggle?: () => void
-  onMobileSidebarToggle?: () => void
-}
+  productLabel: string;
+  sectionLabel: string;
+  roleLabel: string;
+  sidebarCollapsed?: boolean;
+  mobileSidebarOpen?: boolean;
+  desktopToggleLabel?: string;
+  mobileToggleLabel?: string;
+  onDesktopSidebarToggle?: () => void;
+  onMobileSidebarToggle?: () => void;
+};
 
 type AppBarProps = {
   /** Entrée de navigation correspondant à la page affichée. */
-  active?: AppNavId
+  active?: AppNavId;
   /** Cible du logo : `/app` pour un membre, `/` pour un visiteur. */
-  homeHref?: string
+  homeHref?: string;
   /** Variante sans navigation membre pour l'espace d'administration. */
-  admin?: AdminBarProps
-}
+  admin?: AdminBarProps;
+};
 
 /**
  * Bandeau applicatif unique, partagé par `/app` et toutes les pages membre.
@@ -48,27 +48,34 @@ type AppBarProps = {
  * Le desktop n'est pas le mobile étiré : il expose la navigation et le nom
  * complet, là où le mobile privilégie le solde et une cible tactile large.
  */
-export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
-  const { locale, setLocale } = useI18n()
-  const { theme, setTheme } = useTheme()
-  const { user, isAuthenticated, profile, wallet, loading, walletError } = useAccount()
-  const copy = appShellCopy[locale]
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [signingOut, setSigningOut] = useState(false)
+export function AppBar({ active, homeHref = "/app", admin }: AppBarProps) {
+  const { locale, setLocale } = useI18n();
+  const { theme, setTheme } = useTheme();
+  const { user, isAuthenticated, profile, wallet, loading, walletError } =
+    useAccount();
+  const copy = appShellCopy[locale];
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
-  const closeDrawer = useCallback(() => setDrawerOpen(false), [])
+  const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
-  const displayName = profileDisplayName(profile, locale, null) ?? copy.account
-  const balanceNumber = wallet === null ? '0' : formatNumber(wallet.balance, locale)
-  const balanceAria = `${copy.balance} : ${balanceNumber} ${copy.pointsUnit}`
-  const hasAdminAccess = isAuthenticated && profile?.status === 'active' && isAdminRole(profile?.role)
-  const isSuperAdmin = hasAdminAccess && profile?.role === 'super_admin'
+  const displayName = profileDisplayName(profile, locale, null) ?? copy.account;
+  const balanceNumber =
+    wallet === null ? "0" : formatNumber(wallet.balance, locale);
+  const balanceAria = `${copy.balance} : ${balanceNumber} ${copy.pointsUnit}`;
+  const hasAdminAccess =
+    isAuthenticated &&
+    profile?.status === "active" &&
+    isAdminRole(profile?.role);
+  const isSuperAdmin = hasAdminAccess && profile?.role === "super_admin";
   const roleSpaceItems = hasAdminAccess
     ? [
-      ...(isSuperAdmin ? [{ label: copy.superAdminSpace, href: '/super-admin' }] : []),
-      { label: copy.adminSpace, href: '/admin' },
-    ]
-    : []
+        ...(isSuperAdmin
+          ? [{ label: copy.superAdminSpace, href: "/super-admin" }]
+          : []),
+        { label: copy.adminSpace, href: "/admin" },
+      ]
+    : [];
 
   /*
    * Retour à l'accueil public après déconnexion. `replace` plutôt qu'`assign` :
@@ -76,83 +83,152 @@ export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
    * relancerait le garde et le renverrait vers /auth.
    */
   const endSession = async () => {
-    setSigningOut(true)
-    await signOut()
-    window.location.replace('/')
-  }
+    setSigningOut(true);
+    await signOut();
+    window.location.replace("/");
+  };
 
   /*
    * `/contact` est publique : un visiteur non connecté ne voit que ce qu'il peut
    * réellement ouvrir, plutôt qu'une liste de pages qui le renverraient à /auth.
    */
   const links = appNavItems
-    .filter((item) => isAuthenticated || item.id === 'search' || item.id === 'contact')
-    .map((item) => ({ ...item, label: copy.items[item.id] }))
-  const memberLinks = links.filter((item) => !hasAdminAccess || item.id !== 'recharge')
+    .filter(
+      (item) =>
+        isAuthenticated || item.id === "search" || item.id === "contact",
+    )
+    .map((item) => ({ ...item, label: copy.items[item.id] }));
+  const memberLinks = links.filter(
+    (item) => !hasAdminAccess || item.id !== "recharge",
+  );
   const accountItems = [
     ...roleSpaceItems,
-    ...memberLinks.filter((item) => item.id !== 'search').map((item) => ({ label: item.label, href: item.href })),
+    ...memberLinks
+      .filter((item) => item.id !== "search")
+      .map((item) => ({ label: item.label, href: item.href })),
     { label: copy.signOut, onSelect: () => void endSession() },
-  ]
+  ];
 
-  const chooseLocale = (next: Locale) => setLocale(next)
+  const chooseLocale = (next: Locale) => setLocale(next);
 
   if (admin) {
     const adminAccountItems = isAuthenticated
       ? [{ label: copy.signOut, onSelect: () => void endSession() }]
-      : []
+      : [];
 
     return (
-      <header className={`sticky top-0 z-40 border-b-2 backdrop-blur-md ${isSuperAdmin ? 'border-indigo-400/50 bg-gradient-to-r from-indigo-50/80 via-page/85 to-violet-50/60 dark:from-indigo-950/40 dark:via-page/85 dark:to-violet-950/30' : 'border-sky-300/50 bg-gradient-to-r from-sky-50/80 via-page/85 to-cyan-50/60 dark:from-sky-950/40 dark:via-page/85 dark:to-cyan-950/30'}`}>
-        <div className={`${appWrap} flex h-16 items-center gap-2 sm:h-[72px] sm:gap-3`}>
+      <header
+        className={`sticky top-0 z-40 border-b-2 backdrop-blur-md ${isSuperAdmin ? "border-indigo-400/50 bg-gradient-to-r from-indigo-50/80 via-page/85 to-violet-50/60 dark:from-indigo-950/40 dark:via-page/85 dark:to-violet-950/30" : "border-sky-300/50 bg-gradient-to-r from-sky-50/80 via-page/85 to-cyan-50/60 dark:from-sky-950/40 dark:via-page/85 dark:to-cyan-950/30"}`}
+      >
+        <div
+          className={`${appWrap} flex h-16 items-center gap-2 sm:h-[72px] sm:gap-3`}
+        >
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-            {admin.onMobileSidebarToggle && <button type="button" className={`${iconBtn} lg:hidden`} aria-label={admin.mobileToggleLabel} title={admin.mobileToggleLabel} aria-expanded={admin.mobileSidebarOpen} aria-haspopup="dialog" onClick={admin.onMobileSidebarToggle}><Menu size={19} aria-hidden /></button>}
+            {admin.onMobileSidebarToggle && (
+              <button
+                type="button"
+                className={`${iconBtn} lg:hidden`}
+                aria-label={admin.mobileToggleLabel}
+                title={admin.mobileToggleLabel}
+                aria-expanded={admin.mobileSidebarOpen}
+                aria-haspopup="dialog"
+                onClick={admin.onMobileSidebarToggle}
+              >
+                <Menu size={19} aria-hidden />
+              </button>
+            )}
             {/* Enveloppe nécessaire : `iconBtn` pose déjà `inline-flex`, qui l'emporte
                 sur un `hidden` appliqué au même élément. Le bouton restait donc
                 visible sur mobile, à côté du bouton menu. */}
             {admin.onDesktopSidebarToggle && (
               <span className="hidden lg:inline-flex">
-                <button type="button" className={iconBtn} aria-label={admin.desktopToggleLabel} title={admin.desktopToggleLabel} aria-pressed={admin.sidebarCollapsed} onClick={admin.onDesktopSidebarToggle}>{admin.sidebarCollapsed ? <PanelLeftOpen size={19} aria-hidden /> : <PanelLeftClose size={19} aria-hidden />}</button>
+                <button
+                  type="button"
+                  className={iconBtn}
+                  aria-label={admin.desktopToggleLabel}
+                  title={admin.desktopToggleLabel}
+                  aria-pressed={admin.sidebarCollapsed}
+                  onClick={admin.onDesktopSidebarToggle}
+                >
+                  {admin.sidebarCollapsed ? (
+                    <PanelLeftOpen size={19} aria-hidden />
+                  ) : (
+                    <PanelLeftClose size={19} aria-hidden />
+                  )}
+                </button>
               </span>
             )}
-            <p className="min-w-0 truncate text-sm font-bold text-ink lg:hidden">{admin.sectionLabel}</p>
+            <p className="min-w-0 truncate text-sm font-bold text-ink lg:hidden">
+              {admin.sectionLabel}
+            </p>
             <div className="hidden min-w-0 lg:block">
-              <p className="truncate text-[11px] font-bold tracking-[0.09em] text-muted uppercase rtl:tracking-normal rtl:normal-case">{admin.productLabel}</p>
-              <h1 className="truncate text-base font-bold text-ink sm:text-lg">{admin.sectionLabel}</h1>
+              <p className="truncate text-[11px] font-bold tracking-[0.09em] text-muted uppercase rtl:tracking-normal rtl:normal-case">
+                {admin.productLabel}
+              </p>
+              <h1 className="truncate text-base font-bold text-ink sm:text-lg">
+                {admin.sectionLabel}
+              </h1>
             </div>
-            <span className={`${isSuperAdmin ? 'bg-brand text-brand-ink' : 'bg-surface-2 text-ink-soft'} hidden rounded-full px-2.5 py-1 text-[11px] font-bold lg:inline-flex`}>{admin.roleLabel}</span>
+            <span
+              className={`${isSuperAdmin ? "bg-brand text-brand-ink" : "bg-surface-2 text-ink-soft"} hidden rounded-full px-2.5 py-1 text-[11px] font-bold lg:inline-flex`}
+            >
+              {admin.roleLabel}
+            </span>
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
             <AdminLanguageToggle />
             <ThemeToggle />
-            {isAuthenticated ? <div className="hidden lg:block"><UserArea user={{ name: displayName, email: user?.email }} items={adminAccountItems} /></div> : <a href="/auth" className={`${btnPrimary} hidden lg:inline-flex`}>{copy.signIn}</a>}
+            {isAuthenticated ? (
+              <div className="hidden lg:block">
+                <UserArea
+                  user={{ name: displayName, email: user?.email }}
+                  items={adminAccountItems}
+                />
+              </div>
+            ) : (
+              <a href="/auth" className={`${btnPrimary} hidden lg:inline-flex`}>
+                {copy.signIn}
+              </a>
+            )}
           </div>
         </div>
       </header>
-    )
+    );
   }
 
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-line bg-page/85 backdrop-blur-md">
-        <div className={`${appWrap} flex h-16 items-center gap-2 sm:h-[72px] sm:gap-3`}>
-          <a href={homeHref} aria-label="Lewad" className="w-max shrink-0 rounded-lg">
+        <div
+          className={`${appWrap} flex h-16 items-center gap-2 sm:h-[72px] sm:gap-3`}
+        >
+          <a
+            href={homeHref}
+            aria-label="Lewad"
+            className="w-max shrink-0 rounded-lg"
+          >
             <Logo compact />
           </a>
 
           {/* Desktop : la navigation occupe le centre de la barre. */}
-          <nav aria-label={copy.primaryNav} className="hidden min-w-0 flex-1 justify-center lg:flex">
+          <nav
+            aria-label={copy.primaryNav}
+            className="hidden min-w-0 flex-1 justify-center lg:flex"
+          >
             <ul className="flex list-none items-center gap-0.5">
               {memberLinks.map((link) => (
-                <li key={link.id} className={link.secondary ? 'hidden xl:block' : undefined}>
+                <li
+                  key={link.id}
+                  className={link.secondary ? "hidden xl:block" : undefined}
+                >
                   <a
                     href={link.href}
-                    aria-current={link.id === active ? 'page' : undefined}
+                    aria-current={link.id === active ? "page" : undefined}
                     className={`inline-flex min-h-10 items-center rounded-lg px-3 text-sm whitespace-nowrap transition-colors ${
                       link.id === active
-                        ? 'bg-surface-2 font-semibold text-ink'
-                        : 'font-medium text-muted hover:bg-surface-2 hover:text-ink'
+                        ? "bg-surface-2 font-semibold text-ink"
+                        : "font-medium text-muted hover:bg-surface-2 hover:text-ink"
                     }`}
                   >
                     {link.label}
@@ -166,13 +242,21 @@ export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
             {/* Le solde reste sur les barres tablette/desktop. Sur mobile, le
                 panneau de recherche le garde visible sans encombrer la barre. */}
             {isAuthenticated && (
-              <span aria-label={balanceAria} className="shrink-0 text-sm font-semibold text-muted tabular">
+              <span
+                aria-label={balanceAria}
+                className="shrink-0 text-sm font-semibold text-muted tabular"
+              >
                 {balanceNumber} {copy.pointsUnit}
               </span>
             )}
 
             {isAuthenticated && (
-              <a href="/add-business" className={`${iconBtn} hidden sm:inline-flex`} aria-label={copy.addEstablishment} title={copy.addEstablishment}>
+              <a
+                href="/add-business"
+                className={`${iconBtn} hidden sm:inline-flex`}
+                aria-label={copy.addEstablishment}
+                title={copy.addEstablishment}
+              >
                 <Icon name="plus" size={20} />
               </a>
             )}
@@ -186,7 +270,10 @@ export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
 
             {isAuthenticated ? (
               <div className="hidden lg:block">
-                <UserArea user={{ name: displayName, email: user?.email }} items={accountItems} />
+                <UserArea
+                  user={{ name: displayName, email: user?.email }}
+                  items={accountItems}
+                />
               </div>
             ) : (
               <a href="/auth" className={`${btnPrimary} hidden lg:inline-flex`}>
@@ -225,8 +312,16 @@ export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
                 <p dir="auto" className="truncate text-sm font-bold text-ink">
                   {displayName}
                 </p>
-                {user?.email && <p className="ltr-isolate truncate text-xs text-muted">{user.email}</p>}
-                {hasAdminAccess && <span className="mt-1 inline-flex rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-bold text-brand-deep">{isSuperAdmin ? copy.superAdminSpace : copy.adminSpace}</span>}
+                {user?.email && (
+                  <p className="ltr-isolate truncate text-xs text-muted">
+                    {user.email}
+                  </p>
+                )}
+                {hasAdminAccess && (
+                  <span className="mt-1 inline-flex rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-bold text-brand-deep">
+                    {isSuperAdmin ? copy.superAdminSpace : copy.adminSpace}
+                  </span>
+                )}
               </div>
             </div>
             <a
@@ -239,10 +334,16 @@ export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
                 {balanceNumber} {copy.pointsUnit}
               </span>
             </a>
-            {walletError && !wallet && <p className="mt-2 text-xs text-ask">{copy.pointsUnavailable}</p>}
+            {walletError && !wallet && (
+              <p className="mt-2 text-xs text-ask">{copy.pointsUnavailable}</p>
+            )}
           </div>
         ) : (
-          <a href="/auth" onClick={closeDrawer} className={`${btnPrimary} w-full`}>
+          <a
+            href="/auth"
+            onClick={closeDrawer}
+            className={`${btnPrimary} w-full`}
+          >
             {copy.signIn}
             <span className="rtl:rotate-180">
               <Icon name="arrow" size={16} />
@@ -269,11 +370,11 @@ export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
                 <a
                   href={link.href}
                   onClick={closeDrawer}
-                  aria-current={link.id === active ? 'page' : undefined}
+                  aria-current={link.id === active ? "page" : undefined}
                   className={`flex min-h-12 items-center gap-3 rounded-xl px-3 text-[15px] transition-colors ${
                     link.id === active
-                      ? 'bg-brand-soft font-semibold text-brand-deep'
-                      : 'font-medium text-ink-soft hover:bg-surface-2 hover:text-ink'
+                      ? "bg-brand-soft font-semibold text-brand-deep"
+                      : "font-medium text-ink-soft hover:bg-surface-2 hover:text-ink"
                   }`}
                 >
                   <Icon name={link.icon} size={19} />
@@ -302,7 +403,9 @@ export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
                 onClick={() => chooseLocale(item)}
                 aria-pressed={item === locale}
                 className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg text-sm font-semibold transition-colors ${
-                  item === locale ? 'bg-brand-soft text-brand-deep' : 'text-muted hover:bg-surface-2'
+                  item === locale
+                    ? "bg-brand-soft text-brand-deep"
+                    : "text-muted hover:bg-surface-2"
                 }`}
               >
                 <FlagIcon locale={item} decorative />
@@ -317,10 +420,12 @@ export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
           >
             <button
               type="button"
-              onClick={() => setTheme('light')}
-              aria-pressed={theme === 'light'}
+              onClick={() => setTheme("light")}
+              aria-pressed={theme === "light"}
               className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors ${
-                theme === 'light' ? 'bg-brand-soft text-brand-deep' : 'text-muted hover:bg-surface-2'
+                theme === "light"
+                  ? "bg-brand-soft text-brand-deep"
+                  : "text-muted hover:bg-surface-2"
               }`}
             >
               <Icon name="sun" size={16} />
@@ -328,10 +433,12 @@ export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
             </button>
             <button
               type="button"
-              onClick={() => setTheme('dark')}
-              aria-pressed={theme === 'dark'}
+              onClick={() => setTheme("dark")}
+              aria-pressed={theme === "dark"}
               className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors ${
-                theme === 'dark' ? 'bg-brand-soft text-brand-deep' : 'text-muted hover:bg-surface-2'
+                theme === "dark"
+                  ? "bg-brand-soft text-brand-deep"
+                  : "text-muted hover:bg-surface-2"
               }`}
             >
               <Icon name="moon" size={16} />
@@ -342,7 +449,12 @@ export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
 
         {isAuthenticated && (
           <div className="mt-5 border-t border-line pt-5">
-            <button type="button" className={`${btnGhost} w-full`} disabled={signingOut} onClick={() => void endSession()}>
+            <button
+              type="button"
+              className={`${btnGhost} w-full`}
+              disabled={signingOut}
+              onClick={() => void endSession()}
+            >
               <Icon name="logOut" size={17} />
               {signingOut ? copy.signingOut : copy.signOut}
             </button>
@@ -350,5 +462,5 @@ export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
         )}
       </Drawer>
     </>
-  )
+  );
 }
