@@ -238,18 +238,18 @@ export function AppBar({ active, homeHref = "/app", admin }: AppBarProps) {
             </ul>
           </nav>
 
-          <div className="flex flex-1 items-center justify-end gap-2 lg:flex-none">
-            {/* Le solde reste sur les barres tablette/desktop. Sur mobile, le
-                panneau de recherche le garde visible sans encombrer la barre. */}
-            {isAuthenticated && (
-              <span
-                aria-label={balanceAria}
-                className="shrink-0 text-sm font-semibold text-muted tabular"
-              >
-                {balanceNumber} {copy.pointsUnit}
-              </span>
-            )}
+          {/* Le solde est un élément autonome entre le logo et les actions : il
+              ne peut pas se mélanger avec l'emblème ou les boutons. */}
+          {isAuthenticated && (
+            <span
+              aria-label={balanceAria}
+              className="ms-3 shrink-0 whitespace-nowrap text-sm font-semibold text-muted tabular"
+            >
+              {balanceNumber} {copy.pointsUnit}
+            </span>
+          )}
 
+          <div className="ms-auto flex shrink-0 items-center gap-2">
             {isAuthenticated && (
               <a
                 href="/add-business"
