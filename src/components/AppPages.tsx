@@ -7,7 +7,7 @@ import { useAccount } from '../hooks/useAccount'
 import { useCreditLedger } from '../hooks/useCreditLedger'
 import { HistoryPage } from './HistoryPage'
 import { isAllowedAvatarFile, isAvatarFileTooLarge, isValidArabicName, isValidMauritanianPhone, normalizeMauritanianPhone } from '../lib/validation'
-import { contact as contactDetails } from '../lib/content'
+import { contact as contactDetails, paymentApps } from '../lib/content'
 import { formatCurrency, formatDate, formatNumber, formatSignedPoints, initialOf, profileDisplayName } from '../lib/format'
 import { defaultDestinationForRole, isAdminRole } from '../lib/routeAuth'
 import { createRechargeRequest, type RechargeOfferCode, type RechargeRequest } from '../lib/recharge'
@@ -54,13 +54,14 @@ const copy = {
     welcomeBonus: 'Bonus de bienvenue', searchDebit: 'Recherche', rechargeCredit: 'Recharge', adminAdjustment: 'Ajustement', referralBonus: 'Partage Lewad', movement: 'Mouvement',
     showAllMovements: 'Voir tout l’historique', showFewerMovements: 'Réduire l’historique', pagination: { previous: 'Précédent', next: 'Suivant', page: 'Page', of: 'sur', items: 'mouvements' },
     recharge: 'Recharger', rechargeSubtitle: 'Choisissez une offre fixe pour préparer votre demande de recharge.', fixedOffers: 'Offres de recharge', popular: 'Le plus choisi',
+    rechargeSteps: 'Étapes de recharge', paymentInformation: 'Informations de paiement', reviewPayment: 'Vérifiez votre demande', stepOne: 'Étape 1', stepTwo: 'Étape 2', stepThree: 'Étape 3', back: 'Retour', paymentNumber: 'Envoyez le montant au numéro Lewad : {number}', senderPhone: 'Numéro utilisé pour l’envoi', bankingApp: 'Application bancaire', chooseBankingApp: 'Choisissez une application', acceptedBankingApps: 'Applications acceptées', paymentValidation: 'Veuillez renseigner ce champ.',
     offerTest: 'Pour tester Lewad et faire quelques recherches.', offerRegular: 'Pour une utilisation régulière.', offerAdvanced: 'Pour une utilisation avancée.', chooseOffer: 'Choisir cette offre',
     customRecharge: 'Recharge personnalisée', pointsNumber: 'Nombre de points', totalPrice: 'Prix total', perPoint: '1 point = {price}', minimumPoints: 'Minimum : 1 point', continue: 'Continuer',
     rechargeModalTitle: 'Finaliser votre recharge', rechargeModalText: 'Pour finaliser l’achat de vos points, contactez l’équipe Lewad sur WhatsApp. Nous vous guiderons pour le paiement et l’activation.', selectedOffer: 'Offre sélectionnée', contactWhatsApp: 'Contacter sur WhatsApp', closeRechargeModal: 'Fermer la fenêtre de recharge', whatsappMessagePrefix: 'Bonjour Lewad, je veux recharger mon compte avec', whatsappMessageFor: 'pour',
     paymentNotice: 'Le paiement en ligne n’est pas encore activé : la recharge se fait avec l’équipe Lewad.',
     activationNotice: 'Les points seront activés après validation de l’équipe Lewad.',
     rechargeRequestCreating: 'Création de votre demande de recharge…', rechargeRequestCreated: 'Demande de recharge créée.', rechargeRequestDuplicate: 'Vous avez déjà une demande de recharge en attente.', rechargeRequestError: 'Impossible de créer la demande de recharge.', rechargeRequestContinue: 'Envoyez maintenant le message WhatsApp pour confirmer le paiement.',
-    whatsappFallback: 'WhatsApp ne s’est pas ouvert automatiquement. Utilisez le bouton ci-dessous.', whatsappMessageIntro: 'Bonjour Lewad, je souhaite recharger mon compte.', whatsappUserName: 'Nom', whatsappUserEmail: 'E-mail', whatsappUserPhone: 'Téléphone', whatsappOffer: 'Offre', whatsappPoints: 'Points demandés', whatsappAmount: 'Montant', whatsappRequestId: 'ID demande', whatsappThanks: 'Merci.',
+    whatsappFallback: 'WhatsApp ne s’est pas ouvert automatiquement. Utilisez le bouton ci-dessous.', whatsappMessageIntro: 'Bonjour l’équipe Lewad,\nJe souhaite recharger mon compte.', whatsappUserName: 'Nom du client', whatsappUserEmail: 'E-mail', whatsappUserPhone: 'Téléphone', whatsappOffer: 'Offre', whatsappPoints: 'Points demandés', whatsappAmount: 'Montant envoyé', whatsappSenderPhone: 'Numéro utilisé pour l’envoi', whatsappBankingApp: 'Application bancaire', whatsappPaymentNumber: 'Numéro Lewad payé', whatsappRequestId: 'ID demande', whatsappThanks: 'Merci.',
     history: 'Historique', whereMyPoints: 'Où sont passés mes points ?',
     settings: 'Paramètres', settingsSubtitle: 'Réglez l’apparence de Lewad et retrouvez les options de votre compte.', appearance: 'Apparence et langue', appearanceText: 'Le choix est conservé sur cet appareil.', language: 'Langue', theme: 'Thème', light: 'Clair', dark: 'Sombre',
     accountSection: 'Compte', accountText: 'La gestion complète du compte arrive prochainement.', security: 'Sécurité', securityText: 'Les réglages de sécurité seront ajoutés avec le profil complet.', notifications: 'Notifications', notificationsText: 'Les préférences de notification seront disponibles prochainement.',
@@ -68,32 +69,33 @@ const copy = {
   },
   ar: {
     account: 'حسابي', pointsUnit: 'نقاط', pointsUnavailable: 'الرصيد غير متاح', retry: 'إعادة المحاولة', readOnly: 'للقراءة فقط', close: 'إغلاق',
-    profile: 'الملف الشخصي', profileSubtitle: 'معلوماتك في لواد. تُستخدم للتعريف بك لدى المؤسسات.', personalInfo: 'المعلومات الشخصية',
-    email: 'البريد الإلكتروني', fullName: 'الاسم الكامل', fullNameAr: 'الاسم الكامل بالعربية', fullNameArHint: 'يُعرض بدل الاسم اللاتيني عندما يكون لواد بالعربية.', phone: 'الهاتف', phoneHint: '8 أرقام تبدأ بـ 2 أو 3 أو 4.',
+    profile: 'الملف الشخصي', profileSubtitle: 'معلوماتك في Lewad. تُستخدم للتعريف بك لدى المؤسسات.', personalInfo: 'المعلومات الشخصية',
+    email: 'البريد الإلكتروني', fullName: 'الاسم الكامل', fullNameAr: 'الاسم الكامل بالعربية', fullNameArHint: 'يُعرض بدل الاسم اللاتيني عندما يكون Lewad بالعربية.', phone: 'الهاتف', phoneHint: '8 أرقام تبدأ بـ 2 أو 3 أو 4.',
     avatar: 'صورة الملف الشخصي', avatarUrl: 'رابط صورة الملف الشخصي', avatarHint: 'الصيغ المقبولة: PNG أو JPG أو JPEG.', chooseImage: 'اختر صورة', avatarUploadNotActive: 'سيتم تفعيل رفع الصورة بعد إعداد التخزين.',
     saveProfile: 'حفظ', savingProfile: 'جارٍ الحفظ…', profileUpdated: 'تم تحديث الملف الشخصي.', profileUpdateError: 'تعذر حفظ ملفك الشخصي حاليًا. حاول بعد قليل.',
     fullNameRequired: 'يرجى إدخال الاسم الكامل.', phoneRequired: 'يرجى إدخال رقم الهاتف.', invalidPhone: 'يجب أن يتكون الرقم من 8 أرقام بالضبط وأن يبدأ بـ 2 أو 3 أو 4.', invalidArabicFullName: 'يجب أن يحتوي الاسم العربي على أحرف عربية فقط.', invalidAvatarFormat: 'يجب أن تكون الصورة بصيغة PNG أو JPG أو JPEG.',
-    profileDatabaseNote: 'تُحفظ هذه المعلومات في ملفك الشخصي على لواد.', loadingProfile: 'جارٍ تحميل الملف الشخصي…', profileUnavailable: 'الملف الشخصي غير متاح مؤقتًا.', profileMissing: 'تعذر العثور على ملفك الشخصي في لواد.', backApp: 'العودة إلى البحث',
+    profileDatabaseNote: 'تُحفظ هذه المعلومات في ملفك الشخصي على Lewad.', loadingProfile: 'جارٍ تحميل الملف الشخصي…', profileUnavailable: 'الملف الشخصي غير متاح مؤقتًا.', profileMissing: 'تعذر العثور على ملفك الشخصي في Lewad.', backApp: 'العودة إلى البحث',
     role: 'الدور', status: 'الحالة', memberSince: 'عضو منذ',
     roleUser: 'مستخدم', roleAdmin: 'مشرف', roleSuperAdmin: 'مشرف عام',
     statusActive: 'نشط', statusSuspended: 'موقوف', statusDeleted: 'محذوف',
-    credits: 'نقاطي', creditsSubtitle: 'رصيدك من النقاط وسجل حركاتك.', walletBalance: 'رصيد النقاط', creditsText: 'تُستخدم النقاط لإجراء عمليات بحث في لواد. نقطة واحدة = عملية بحث واحدة.', unlimitedRoleNote: 'دورك يسمح بعمليات بحث غير محدودة داخل Lewad.', zeroBalance: 'رصيدك 0. أعد شحن نقاطك لمتابعة استخدام لواد.', rechargeCta: 'شحن نقاطي',
+    credits: 'نقاطي', creditsSubtitle: 'رصيدك من النقاط وسجل حركاتك.', walletBalance: 'رصيد النقاط', creditsText: 'تُستخدم النقاط لإجراء عمليات بحث في Lewad. نقطة واحدة = عملية بحث واحدة.', unlimitedRoleNote: 'دورك يسمح بعمليات بحث غير محدودة داخل Lewad.', zeroBalance: 'رصيدك 0. أعد شحن نقاطك لمتابعة استخدام Lewad.', rechargeCta: 'شحن نقاطي',
     loadingWallet: 'جارٍ تحميل الرصيد…', walletUnavailable: 'الرصيد غير متاح مؤقتًا.', walletMissing: 'لا توجد محفظة مرتبطة بهذا الحساب بعد.',
     creditHistory: 'السجل', historySubtitle: 'كل حركات نقاطك، من الأحدث إلى الأقدم.', loadingLedger: 'جارٍ تحميل السجل…', ledgerUnavailable: 'السجل غير متاح مؤقتًا.', noCreditMovements: 'لا توجد حركات حتى الآن', noCreditMovementsText: 'ستظهر هنا مكافآتك وعمليات الشحن وعمليات البحث.', movements: 'حركات',
-    welcomeBonus: 'مكافأة الترحيب', searchDebit: 'بحث', rechargeCredit: 'شحن', adminAdjustment: 'تعديل', referralBonus: 'مشاركة لواد', movement: 'حركة',
+    welcomeBonus: 'مكافأة الترحيب', searchDebit: 'بحث', rechargeCredit: 'شحن', adminAdjustment: 'تعديل', referralBonus: 'مشاركة Lewad', movement: 'حركة',
     showAllMovements: 'عرض السجل كاملًا', showFewerMovements: 'تصغير السجل', pagination: { previous: 'السابق', next: 'التالي', page: 'الصفحة', of: 'من', items: 'حركة' },
     recharge: 'شحن', rechargeSubtitle: 'اختر عرضًا ثابتًا لإعداد طلب إعادة الشحن.', fixedOffers: 'عروض الشحن', popular: 'الأكثر اختيارًا',
-    offerTest: 'لتجربة لواد وإجراء بعض عمليات البحث.', offerRegular: 'لاستخدام منتظم.', offerAdvanced: 'لاستخدام متقدم.', chooseOffer: 'اختر هذا العرض',
+    rechargeSteps: 'خطوات الشحن', paymentInformation: 'معلومات الدفع', reviewPayment: 'راجع طلبك', stepOne: 'الخطوة 1', stepTwo: 'الخطوة 2', stepThree: 'الخطوة 3', back: 'رجوع', paymentNumber: 'أرسل المبلغ إلى رقم Lewad: {number}', senderPhone: 'الرقم المستخدم في الإرسال', bankingApp: 'التطبيق البنكي', chooseBankingApp: 'اختر التطبيق البنكي', acceptedBankingApps: 'التطبيقات المقبولة', paymentValidation: 'يرجى ملء هذا الحقل.',
+    offerTest: 'لتجربة Lewad وإجراء بعض عمليات البحث.', offerRegular: 'لاستخدام منتظم.', offerAdvanced: 'لاستخدام متقدم.', chooseOffer: 'اختر هذا العرض',
     customRecharge: 'شحن مخصص', pointsNumber: 'عدد النقاط', totalPrice: 'السعر الإجمالي', perPoint: 'نقطة واحدة = {price}', minimumPoints: 'الحد الأدنى: نقطة واحدة', continue: 'متابعة',
-    rechargeModalTitle: 'إتمام شحن النقاط', rechargeModalText: 'لإتمام شراء نقاطك، تواصل مع فريق لواد عبر واتساب. سنرشدك إلى الدفع والتفعيل.', selectedOffer: 'العرض المختار', contactWhatsApp: 'التواصل عبر واتساب', closeRechargeModal: 'إغلاق نافذة الشحن', whatsappMessagePrefix: 'مرحبًا لواد، أريد شحن حسابي بـ', whatsappMessageFor: 'مقابل',
-    paymentNotice: 'الدفع الإلكتروني غير مفعّل بعد: يتم الشحن مع فريق لواد.',
-    activationNotice: 'سيتم تفعيل النقاط بعد مصادقة فريق لواد.',
+    rechargeModalTitle: 'إتمام شحن النقاط', rechargeModalText: 'لإتمام شراء نقاطك، تواصل مع فريق Lewad عبر واتساب. سنرشدك إلى الدفع والتفعيل.', selectedOffer: 'العرض المختار', contactWhatsApp: 'التواصل عبر واتساب', closeRechargeModal: 'إغلاق نافذة الشحن', whatsappMessagePrefix: 'مرحبًا Lewad، أريد شحن حسابي بـ', whatsappMessageFor: 'مقابل',
+    paymentNotice: 'الدفع الإلكتروني غير مفعّل بعد: يتم الشحن مع فريق Lewad.',
+    activationNotice: 'سيتم تفعيل النقاط بعد مصادقة فريق Lewad.',
     rechargeRequestCreating: 'جارٍ إنشاء طلب إعادة الشحن…', rechargeRequestCreated: 'تم إنشاء طلب إعادة الشحن.', rechargeRequestDuplicate: 'لديك بالفعل طلب إعادة شحن معلق.', rechargeRequestError: 'تعذر إنشاء طلب إعادة الشحن.', rechargeRequestContinue: 'أرسل الآن رسالة واتساب لتأكيد الدفع.',
-    whatsappFallback: 'لم يُفتح واتساب تلقائيًا. استخدم الزر أدناه.', whatsappMessageIntro: 'مرحبًا لواد، أرغب في شحن حسابي.', whatsappUserName: 'الاسم', whatsappUserEmail: 'البريد الإلكتروني', whatsappUserPhone: 'الهاتف', whatsappOffer: 'العرض', whatsappPoints: 'النقاط المطلوبة', whatsappAmount: 'المبلغ', whatsappRequestId: 'معرّف الطلب', whatsappThanks: 'شكرًا.',
+    whatsappFallback: 'لم يُفتح واتساب تلقائيًا. استخدم الزر أدناه.', whatsappMessageIntro: 'السلام عليكم فريق Lewad،\nأريد شحن حسابي بالنقاط.', whatsappUserName: 'اسم العميل', whatsappUserEmail: 'البريد الإلكتروني', whatsappUserPhone: 'الهاتف', whatsappOffer: 'العرض', whatsappPoints: 'النقاط المطلوبة', whatsappAmount: 'المبلغ المرسل', whatsappSenderPhone: 'الرقم المستخدم في الإرسال', whatsappBankingApp: 'التطبيق البنكي', whatsappPaymentNumber: 'رقم Lewad الذي تم الدفع إليه', whatsappRequestId: 'معرّف الطلب', whatsappThanks: 'شكرًا.',
     history: 'السجل', whereMyPoints: 'أين ذهبت نقاطي؟',
-    settings: 'الإعدادات', settingsSubtitle: 'اضبط مظهر لواد واطّلع على خيارات حسابك.', appearance: 'المظهر واللغة', appearanceText: 'يُحفظ اختيارك على هذا الجهاز.', language: 'اللغة', theme: 'السمة', light: 'فاتح', dark: 'داكن',
+    settings: 'الإعدادات', settingsSubtitle: 'اضبط مظهر Lewad واطّلع على خيارات حسابك.', appearance: 'المظهر واللغة', appearanceText: 'يُحفظ اختيارك على هذا الجهاز.', language: 'اللغة', theme: 'السمة', light: 'فاتح', dark: 'داكن',
     accountSection: 'الحساب', accountText: 'ستتوفر إدارة الحساب الكاملة قريبًا.', security: 'الأمان', securityText: 'ستضاف إعدادات الأمان مع الملف الشخصي الكامل.', notifications: 'الإشعارات', notificationsText: 'ستتوفر تفضيلات الإشعارات قريبًا.',
-    contact: 'التواصل', contactTitle: 'لنتحدث عن حاجتك.', contactText: 'فريق Wasla Soft يرافق مستخدمي ومؤسسات لواد.', reason: 'السبب', reasonOptions: ['إضافة مؤسسة', 'طلب خدمة', 'دعم الحساب', 'أخرى'], message: 'رسالتك', messagePlaceholder: 'صف حاجتك في بضعة أسطر…', send: 'تجهيز رسالتي', messagePrepared: 'تم تجهيز رسالتك. سيتم تفعيل الإرسال الحقيقي في مرحلة قادمة.', contactDetails: 'كيف تصل إلينا',
+    contact: 'التواصل', contactTitle: 'لنتحدث عن حاجتك.', contactText: 'فريق Wasla Soft يرافق مستخدمي ومؤسسات Lewad.', reason: 'السبب', reasonOptions: ['إضافة مؤسسة', 'طلب خدمة', 'دعم الحساب', 'أخرى'], message: 'رسالتك', messagePlaceholder: 'صف حاجتك في بضعة أسطر…', send: 'تجهيز رسالتي', messagePrepared: 'تم تجهيز رسالتك. سيتم تفعيل الإرسال الحقيقي في مرحلة قادمة.', contactDetails: 'كيف تصل إلينا',
   },
   en: {
     account: 'My account', pointsUnit: 'points', pointsUnavailable: 'Balance unavailable', retry: 'Try again', readOnly: 'Read only', close: 'Close',
@@ -112,13 +114,14 @@ const copy = {
     welcomeBonus: 'Welcome bonus', searchDebit: 'Search', rechargeCredit: 'Recharge', adminAdjustment: 'Adjustment', referralBonus: 'Share Lewad', movement: 'Movement',
     showAllMovements: 'Show full history', showFewerMovements: 'Show less', pagination: { previous: 'Previous', next: 'Next', page: 'Page', of: 'of', items: 'movements' },
     recharge: 'Recharge', rechargeSubtitle: 'Choose a fixed offer to prepare your recharge request.', fixedOffers: 'Recharge offers', popular: 'Most chosen',
+    rechargeSteps: 'Recharge steps', paymentInformation: 'Payment information', reviewPayment: 'Review your request', stepOne: 'Step 1', stepTwo: 'Step 2', stepThree: 'Step 3', back: 'Back', paymentNumber: 'Send the amount to Lewad number: {number}', senderPhone: 'Sender phone number', bankingApp: 'Banking app', chooseBankingApp: 'Choose a banking app', acceptedBankingApps: 'Accepted banking apps', paymentValidation: 'Please complete this field.',
     offerTest: 'To try Lewad and run a few searches.', offerRegular: 'For regular use.', offerAdvanced: 'For advanced use.', chooseOffer: 'Choose this offer',
     customRecharge: 'Custom recharge', pointsNumber: 'Number of points', totalPrice: 'Total price', perPoint: '1 point = {price}', minimumPoints: 'Minimum: 1 point', continue: 'Continue',
     rechargeModalTitle: 'Complete your recharge', rechargeModalText: 'To complete your points purchase, contact the Lewad team on WhatsApp. We will guide you through payment and activation.', selectedOffer: 'Selected offer', contactWhatsApp: 'Contact on WhatsApp', closeRechargeModal: 'Close recharge dialog', whatsappMessagePrefix: 'Hello Lewad, I want to recharge my account with', whatsappMessageFor: 'for',
     paymentNotice: 'Online payment is not enabled yet: recharges are handled with the Lewad team.',
     activationNotice: 'Points will be activated after the Lewad team validates your recharge.',
     rechargeRequestCreating: 'Creating your recharge request…', rechargeRequestCreated: 'Recharge request created.', rechargeRequestDuplicate: 'You already have a pending recharge request.', rechargeRequestError: 'Could not create recharge request.', rechargeRequestContinue: 'Now send the WhatsApp message to confirm payment.',
-    whatsappFallback: 'WhatsApp did not open automatically. Use the button below.', whatsappMessageIntro: 'Hello Lewad, I would like to recharge my account.', whatsappUserName: 'Name', whatsappUserEmail: 'Email', whatsappUserPhone: 'Phone', whatsappOffer: 'Offer', whatsappPoints: 'Requested points', whatsappAmount: 'Amount', whatsappRequestId: 'Request ID', whatsappThanks: 'Thank you.',
+    whatsappFallback: 'WhatsApp did not open automatically. Use the button below.', whatsappMessageIntro: 'Hello Lewad team,\nI want to recharge my account.', whatsappUserName: 'Client name', whatsappUserEmail: 'Email', whatsappUserPhone: 'Phone', whatsappOffer: 'Offer', whatsappPoints: 'Requested points', whatsappAmount: 'Amount sent', whatsappSenderPhone: 'Sender phone number', whatsappBankingApp: 'Banking app', whatsappPaymentNumber: 'Lewad payment number', whatsappRequestId: 'Request ID', whatsappThanks: 'Thank you.',
     history: 'History', whereMyPoints: 'Where did my points go?',
     settings: 'Settings', settingsSubtitle: 'Adjust how Lewad looks and find your account options.', appearance: 'Appearance and language', appearanceText: 'Your choice is kept on this device.', language: 'Language', theme: 'Theme', light: 'Light', dark: 'Dark',
     accountSection: 'Account', accountText: 'Full account management is coming soon.', security: 'Security', securityText: 'Security settings will be added with the complete profile.', notifications: 'Notifications', notificationsText: 'Notification preferences will be available soon.',
@@ -853,11 +856,15 @@ type RechargeRequester = { name: string; email: string | null; phone: string | n
 function rechargeWhatsAppUrl({
   request,
   requester,
+  senderPhone,
+  bankingApp,
   text,
   locale,
 }: {
   request: RechargeRequest
   requester: RechargeRequester
+  senderPhone: string
+  bankingApp: string
   text: Copy
   locale: Locale
 }) {
@@ -870,6 +877,9 @@ function rechargeWhatsAppUrl({
     `${text.whatsappOffer}: ${request.offerLabel}`,
     `${text.whatsappPoints}: ${formatNumber(request.requestedPoints, locale)} ${text.pointsUnit}`,
     `${text.whatsappAmount}: ${formatCurrency(request.amountMro, locale)}`,
+    `${text.whatsappSenderPhone}: ${senderPhone}`,
+    `${text.whatsappBankingApp}: ${bankingApp}`,
+    `${text.whatsappPaymentNumber}: ${contactDetails.paymentNumber}`,
     `${text.whatsappRequestId}: ${request.id}`,
     '',
     text.whatsappThanks,
@@ -882,6 +892,11 @@ function RechargePage({ text }: { text: Copy }) {
   const { locale } = useI18n()
   const { user, profile, authFullName } = useAccount()
   const [selection, setSelection] = useState<RechargeRequest | null>(null)
+  const [selectedOffer, setSelectedOffer] = useState<RechargeOffer | null>(null)
+  const [senderPhone, setSenderPhone] = useState('')
+  const [bankingApp, setBankingApp] = useState('')
+  const [step, setStep] = useState(1)
+  const [paymentError, setPaymentError] = useState(false)
   const [creatingOffer, setCreatingOffer] = useState<RechargeOfferCode | null>(null)
   const [notice, setNotice] = useState<RechargeNotice>(null)
   const [whatsAppOpened, setWhatsAppOpened] = useState(true)
@@ -899,12 +914,16 @@ function RechargePage({ text }: { text: Copy }) {
     phone: profile?.phone ?? null,
   }
 
-  const startRechargeRequest = async (offer: RechargeOffer) => {
+  const startRechargeRequest = async () => {
+    if (!selectedOffer || !senderPhone.trim() || !bankingApp) {
+      setPaymentError(true)
+      return
+    }
     if (creatingOffer) return
 
-    setCreatingOffer(offer.code)
+    setCreatingOffer(selectedOffer.code)
     setNotice({ tone: 'info', text: text.rechargeRequestCreating })
-    const result = await createRechargeRequest(offer.code)
+    const result = await createRechargeRequest(selectedOffer.code)
     setCreatingOffer(null)
 
     if (!result.ok || !result.request) {
@@ -912,7 +931,7 @@ function RechargePage({ text }: { text: Copy }) {
       return
     }
 
-    const whatsAppUrl = rechargeWhatsAppUrl({ request: result.request, requester, text, locale })
+    const whatsAppUrl = rechargeWhatsAppUrl({ request: result.request, requester, senderPhone: senderPhone.trim(), bankingApp, text, locale })
     const opened = window.open(whatsAppUrl, '_blank', 'noopener,noreferrer')
     setWhatsAppOpened(Boolean(opened))
     setSelection(result.request)
@@ -932,7 +951,11 @@ function RechargePage({ text }: { text: Copy }) {
 
       {notice && <InlineAlert tone={notice.tone} className="mt-4">{notice.text}</InlineAlert>}
 
-      <section className="mt-8" aria-labelledby="recharge-offers">
+      <div className="mt-8 flex flex-wrap gap-2" aria-label={text.rechargeSteps}>
+        {[text.stepOne, text.stepTwo, text.stepThree].map((label, index) => <span key={label} className={`rounded-full px-3 py-1.5 text-xs font-bold ${step === index + 1 ? 'bg-brand text-brand-ink' : 'bg-surface-2 text-muted'}`}>{label}</span>)}
+      </div>
+
+      {step === 1 && <section className="mt-6" aria-labelledby="recharge-offers">
         <h2 id="recharge-offers" className="text-lg font-bold tracking-tight">
           {text.fixedOffers}
         </h2>
@@ -964,7 +987,7 @@ function RechargePage({ text }: { text: Copy }) {
                 className={`${offer.featured ? btnPrimary : btnGhost} mt-6 w-full`}
                 disabled={creatingOffer !== null}
                 aria-busy={creatingOffer === offer.code}
-                onClick={() => void startRechargeRequest(offer)}
+                onClick={() => { setSelectedOffer(offer); setStep(2); setNotice(null) }}
               >
                 {creatingOffer === offer.code ? text.rechargeRequestCreating : text.chooseOffer}
                 <span className="rtl:rotate-180">
@@ -974,11 +997,32 @@ function RechargePage({ text }: { text: Copy }) {
             </article>
           ))}
         </div>
-      </section>
+      </section>}
+
+      {step === 2 && selectedOffer && <section className={`${card} mt-6 p-5 sm:p-6`}>
+        <h2 className="text-lg font-bold">{text.paymentInformation}</h2>
+        <p className="mt-3 rounded-xl border border-line bg-page-alt px-4 py-3 text-sm font-semibold text-ink">{text.paymentNumber.replace('{number}', contactDetails.paymentNumber)}</p>
+        <p className="mt-4 text-sm font-semibold text-muted">{formatNumber(selectedOffer.points, locale)} {text.pointsUnit} · {formatCurrency(selectedOffer.amountMro, locale)}</p>
+        <div className="mt-5 grid gap-4">
+          <div><label className={fieldLabel} htmlFor="recharge-sender-phone">{text.senderPhone}</label><input id="recharge-sender-phone" className={`${field} mt-2`} value={senderPhone} onChange={(event) => setSenderPhone(event.target.value)} inputMode="tel" /></div>
+          <div><label className={fieldLabel} htmlFor="recharge-banking-app">{text.bankingApp}</label><select id="recharge-banking-app" className={`${field} mt-2`} value={bankingApp} onChange={(event) => setBankingApp(event.target.value)}><option value="">{text.chooseBankingApp}</option>{paymentApps.map((app) => <option key={app} value={app}>{app}</option>)}</select></div>
+        </div>
+        {paymentError && <p className="mt-3 text-sm text-ask" role="alert">{text.paymentValidation}</p>}
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row"><button type="button" className={btnGhost} onClick={() => setStep(1)}>{text.back}</button><button type="button" className={`${btnPrimary} sm:flex-1`} onClick={() => { if (senderPhone.trim() && bankingApp) { setPaymentError(false); setStep(3) } else setPaymentError(true) }}>{text.continue}</button></div>
+      </section>}
+
+      {step === 3 && selectedOffer && <section className={`${card} mt-6 p-5 sm:p-6`}>
+        <h2 className="text-lg font-bold">{text.reviewPayment}</h2>
+        <p className="mt-3 text-sm leading-6 text-muted">{text.paymentNumber.replace('{number}', contactDetails.paymentNumber)}</p>
+        <dl className="mt-4 grid gap-2 text-sm"><div className="flex justify-between gap-3"><dt className="text-muted">{text.whatsappPoints}</dt><dd className="font-semibold">{formatNumber(selectedOffer.points, locale)} {text.pointsUnit}</dd></div><div className="flex justify-between gap-3"><dt className="text-muted">{text.whatsappSenderPhone}</dt><dd className="font-semibold" dir="auto">{senderPhone}</dd></div><div className="flex justify-between gap-3"><dt className="text-muted">{text.whatsappBankingApp}</dt><dd className="font-semibold">{bankingApp}</dd></div></dl>
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row"><button type="button" className={btnGhost} onClick={() => setStep(2)}>{text.back}</button><button type="button" className={`${btnPrimary} sm:flex-1`} disabled={creatingOffer !== null} onClick={() => void startRechargeRequest()}>{creatingOffer ? text.rechargeRequestCreating : text.contactWhatsApp}<Icon name="message" size={17} /></button></div>
+      </section>}
 
       <RechargeWhatsAppModal
         selection={selection}
         requester={requester}
+        senderPhone={senderPhone}
+        bankingApp={bankingApp}
         text={text}
         whatsAppOpened={whatsAppOpened}
         onClose={closeModal}
@@ -990,12 +1034,16 @@ function RechargePage({ text }: { text: Copy }) {
 function RechargeWhatsAppModal({
   selection,
   requester,
+  senderPhone,
+  bankingApp,
   text,
   whatsAppOpened,
   onClose,
 }: {
   selection: RechargeRequest | null
   requester: RechargeRequester
+  senderPhone: string
+  bankingApp: string
   text: Copy
   whatsAppOpened: boolean
   onClose: () => void
@@ -1027,7 +1075,7 @@ function RechargeWhatsAppModal({
 
   const pointsLabel = `${formatNumber(selection.requestedPoints, locale)} ${text.pointsUnit}`
   const priceLabel = formatCurrency(selection.amountMro, locale)
-  const whatsappUrl = rechargeWhatsAppUrl({ request: selection, requester, text, locale })
+  const whatsappUrl = rechargeWhatsAppUrl({ request: selection, requester, senderPhone, bankingApp, text, locale })
 
   return (
     <div

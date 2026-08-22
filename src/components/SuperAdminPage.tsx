@@ -113,7 +113,7 @@ function SuperAdminSettingsPanel() {
       {/* Lewad Contact */}
       <section className={`${card} p-5 sm:p-6`}>
         <h2 className="text-lg font-bold tracking-tight text-ink">{locale === 'ar' ? 'التواصل' : locale === 'en' ? 'Contact' : 'Contact'}</h2>
-        <p className="mt-1 text-sm text-muted">{locale === 'ar' ? 'معلومات التواصل مع فريق لواد.' : locale === 'en' ? 'Lewad team contact details.' : 'Coordonnées de l\'équipe Lewad.'}</p>
+        <p className="mt-1 text-sm text-muted">{locale === 'ar' ? 'معلومات التواصل مع فريق Lewad.' : locale === 'en' ? 'Lewad team contact details.' : 'Coordonnées de l\'équipe Lewad.'}</p>
         <div className="mt-4 grid gap-px bg-line sm:grid-cols-2">
           <div className="bg-surface px-4 py-3.5">
             <dt className="flex items-center gap-1.5 text-xs font-semibold text-muted"><Phone size={13} aria-hidden />{locale === 'ar' ? 'الهاتف' : locale === 'en' ? 'Phone' : 'Téléphone'}</dt>

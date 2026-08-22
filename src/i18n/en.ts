@@ -551,6 +551,7 @@ export const en: Dictionary = {
     introTitle: "How it works",
     introText:
       "Fill out the form below. Our team will review your submission and create your business on Lewad. You will be contacted to complete the registration.",
+    stepsLabel: 'Steps', stepOne: 'Step 1', stepTwo: 'Step 2', stepThree: 'Step 3', continue: 'Continue', back: 'Back', paymentTitle: 'Payment information', paymentInstruction: 'Send 200 MRO to Lewad number: {number}', senderPhone: 'Sender phone number', bankingApp: 'Banking app', chooseBankingApp: 'Choose a banking app', acceptedBankingApps: 'Accepted banking apps', reviewTitle: 'Review your request', whatsappSend: 'Send request on WhatsApp', paymentValidation: 'Please complete this field.', whatsappIntro: 'Hello Lewad team,\nI want to add an establishment.', clientName: 'Client name', establishmentName: 'Establishment name', establishmentPhone: 'Establishment phone', establishmentWhatsapp: 'Establishment WhatsApp', amountSent: 'Amount sent', durationRequested: 'Requested duration', paymentNumberLabel: 'Lewad payment number', whatsappThanks: 'Thank you.',
     ownerSection: "Owner information",
     ownerFirstName: "First name",
     ownerLastName: "Last name",

@@ -12,9 +12,12 @@ export const contact = {
   phoneHref: 'tel:+22230687543',
   whatsappDisplay: '+222 30 68 75 43',
   whatsappHref: 'https://wa.me/22230687543',
+  paymentNumber: '30687543',
   email: 'dedahisdh@gmail.com',
   emailHref: 'mailto:dedahisdh@gmail.com',
 }
+
+export const paymentApps = ['Bankily', 'Sedad', 'Masrivi', 'Bimbank', 'Gazapay', 'Bamis Digital', 'Barid Cash', 'Click'] as const
 
 /**
  * Offre publiée pour l'inscription d'un établissement, affichée **avant** la

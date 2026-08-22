@@ -580,6 +580,7 @@ export const fr = {
     introTitle: "Comment ça marche ?",
     introText:
       "Remplissez le formulaire ci-dessous. Notre équipe vérifiera votre demande et créera votre établissement sur Lewad. Vous serez contacté pour finaliser l'inscription.",
+    stepsLabel: 'Étapes', stepOne: 'Étape 1', stepTwo: 'Étape 2', stepThree: 'Étape 3', continue: 'Continuer', back: 'Retour', paymentTitle: 'Informations de paiement', paymentInstruction: 'Envoyez 200 MRO au numéro Lewad : {number}', senderPhone: 'Numéro utilisé pour l’envoi', bankingApp: 'Application bancaire', chooseBankingApp: 'Choisissez une application', acceptedBankingApps: 'Applications acceptées', reviewTitle: 'Vérifiez votre demande', whatsappSend: 'Envoyer ma demande sur WhatsApp', paymentValidation: 'Veuillez renseigner ce champ.', whatsappIntro: 'Bonjour l’équipe Lewad,\nJe souhaite ajouter un établissement.', clientName: 'Nom du client', establishmentName: 'Nom de l’établissement', establishmentPhone: 'Téléphone établissement', establishmentWhatsapp: 'WhatsApp établissement', amountSent: 'Montant envoyé', durationRequested: 'Durée demandée', paymentNumberLabel: 'Numéro Lewad payé', whatsappThanks: 'Merci.',
     ownerSection: "Informations du propriétaire",
     ownerFirstName: "Prénom",
     ownerLastName: "Nom de famille",

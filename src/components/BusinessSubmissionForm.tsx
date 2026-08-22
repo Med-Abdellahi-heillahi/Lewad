@@ -1,7 +1,7 @@
 import { lazy, type FormEvent, Suspense, useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
 import { createBusinessSubmission } from '../lib/businessSubmissions'
-import { businessSubmissionOffer, contact } from '../lib/content'
+import { businessSubmissionOffer, contact, paymentApps } from '../lib/content'
 import { getActiveCategories, type Db2Category } from '../lib/db2'
 import { formatCurrency, formatNumber } from '../lib/format'
 import { isValidMauritanianPhone, normalizeMauritanianPhone, isValidArabicName } from '../lib/validation'
@@ -45,6 +45,9 @@ export function BusinessSubmissionForm() {
   const [location, setLocation] = useState('')
   const [nearestPlace, setNearestPlace] = useState('')
   const [mapLocation, setMapLocation] = useState<MapCoordinates | null>(null)
+  const [step, setStep] = useState(1)
+  const [senderPhone, setSenderPhone] = useState('')
+  const [bankingApp, setBankingApp] = useState('')
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -105,6 +108,18 @@ export function BusinessSubmissionForm() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
+    if (step === 1) {
+      if (validate()) setStep(2)
+      return
+    }
+    if (step === 2) {
+      const paymentErrors: Record<string, string> = {}
+      if (!senderPhone.trim()) paymentErrors.senderPhone = copy.paymentValidation
+      if (!bankingApp) paymentErrors.bankingApp = copy.paymentValidation
+      setErrors(paymentErrors)
+      if (Object.keys(paymentErrors).length === 0) setStep(3)
+      return
+    }
     if (!validate() || !mapLocation) return
 
     setFormState('submitting')
@@ -151,15 +166,45 @@ export function BusinessSubmissionForm() {
     }
 
     setSuccessResult({ submissionId: result.submissionId, amountMro: result.amountMro, periodMonths: result.periodMonths })
+    const whatsappMessage = [
+      copy.whatsappIntro,
+      '',
+      `${copy.clientName}: ${ownerFirstName.trim()} ${ownerLastName.trim()}`,
+      `${copy.establishmentName}: ${businessNameFr.trim()}`,
+      `${copy.establishmentPhone}: ${businessPhone.trim()}`,
+      whatsapp.trim() ? `${copy.establishmentWhatsapp}: ${whatsapp.trim()}` : null,
+      `${copy.amountSent}: ${formatCurrency(result.amountMro ?? businessSubmissionOffer.amountMro, locale)}`,
+      `${copy.durationRequested}: ${periodLabel(result.periodMonths ?? businessSubmissionOffer.periodMonths)}`,
+      `${copy.senderPhone}: ${senderPhone.trim()}`,
+      `${copy.bankingApp}: ${bankingApp}`,
+      `${copy.paymentNumberLabel}: ${contact.paymentNumber}`,
+      '',
+      copy.whatsappThanks,
+    ].filter((line): line is string => Boolean(line)).join('\n')
+    window.open(`${contact.whatsappHref}?text=${encodeURIComponent(whatsappMessage)}`, '_blank', 'noopener,noreferrer')
     setFormState('success')
   }
 
   const submissionWhatsAppHref = successResult
     ? `${contact.whatsappHref}?text=${encodeURIComponent([
-      copy.successTitle,
+      copy.whatsappIntro,
+      '',
+      `${copy.clientName}: ${ownerFirstName.trim()} ${ownerLastName.trim()}`,
+      `${copy.establishmentName}: ${businessNameFr.trim()}`,
+      `${copy.establishmentPhone}: ${businessPhone.trim()}`,
+      whatsapp.trim() ? `${copy.establishmentWhatsapp}: ${whatsapp.trim()}` : null,
       successResult.submissionId ? `${copy.submissionId}: ${successResult.submissionId}` : null,
-      successResult.amountMro !== null ? `${copy.amountSection}: ${formatCurrency(successResult.amountMro, locale)}` : null,
-      successResult.periodMonths !== null ? `${copy.periodSection}: ${periodLabel(successResult.periodMonths)}` : null,
+      `${copy.amountSent}: ${formatCurrency(successResult.amountMro ?? businessSubmissionOffer.amountMro, locale)}`,
+      `${copy.durationRequested}: ${periodLabel(successResult.periodMonths ?? businessSubmissionOffer.periodMonths)}`,
+      `${copy.senderPhone}: ${senderPhone.trim()}`,
+      `${copy.bankingApp}: ${bankingApp}`,
+      `${copy.paymentNumberLabel}: ${contact.paymentNumber}`,
+      '',
+      copy.whatsappThanks,
+      `${copy.senderPhone}: ${senderPhone}`,
+      `${copy.bankingApp}: ${bankingApp}`,
+      `${copy.paymentNumberLabel}: ${contact.paymentNumber}`,
+      `${copy.whatsappThanks}`,
     ].filter((line): line is string => Boolean(line)).join('\n'))}`
     : contact.whatsappHref
 
@@ -228,6 +273,10 @@ export function BusinessSubmissionForm() {
       <h1 id="add-business-title" className="mt-5 text-2xl font-bold tracking-tight sm:text-3xl">{copy.title}</h1>
       <p className="mt-3 text-sm leading-7 text-muted sm:text-base">{copy.subtitle}</p>
 
+      <div className="mt-6 flex flex-wrap gap-2" aria-label={copy.stepsLabel}>
+        {[copy.stepOne, copy.stepTwo, copy.stepThree].map((label, index) => <span key={label} className={`rounded-full px-3 py-1.5 text-xs font-bold ${step === index + 1 ? 'bg-brand text-brand-ink' : 'bg-surface-2 text-muted'}`}>{label}</span>)}
+      </div>
+
       <div className="mt-6 rounded-xl border border-line bg-page-alt p-4 sm:p-5">
         <h2 className="text-sm font-bold text-ink">{copy.introTitle}</h2>
         <p className="mt-2 text-sm leading-6 text-muted">{copy.introText}</p>
@@ -240,6 +289,7 @@ export function BusinessSubmissionForm() {
       )}
 
       <form className="mt-8 grid gap-6" onSubmit={(e) => void handleSubmit(e)} noValidate>
+        <div className={step === 1 ? 'grid gap-6' : 'hidden'}>
         {/* Owner */}
         <fieldset className="grid gap-4">
           <legend className="text-sm font-bold text-ink">{copy.ownerSection}</legend>
@@ -281,7 +331,6 @@ export function BusinessSubmissionForm() {
           </div>
         </fieldset>
 
-        {/* Amount */}
         <div className="rounded-xl border border-line bg-page-alt p-4 sm:p-5">
           <h2 className="text-sm font-bold text-ink">{copy.amountSection}</h2>
           <p className="mt-2 text-sm leading-6 text-muted">
@@ -290,11 +339,30 @@ export function BusinessSubmissionForm() {
               .replace('{months}', formatNumber(businessSubmissionOffer.periodMonths, locale))}
           </p>
         </div>
+        </div>
 
+        {step === 2 && <div className="grid gap-5">
+          <div>
+            <h2 className="text-lg font-bold">{copy.paymentTitle}</h2>
+            <p className="mt-3 rounded-xl border border-line bg-page-alt px-4 py-3 text-sm font-semibold text-ink">{copy.paymentInstruction.replace('{number}', contact.paymentNumber)}</p>
+          </div>
+          <div><label className={fieldLabel} htmlFor="business-sender-phone">{copy.senderPhone}</label><input id="business-sender-phone" className={`${field} mt-2`} value={senderPhone} onChange={(event) => setSenderPhone(event.target.value)} inputMode="tel" aria-invalid={Boolean(errors.senderPhone) || undefined} />{errors.senderPhone && <p className="mt-1 text-xs text-ask" role="alert">{errors.senderPhone}</p>}</div>
+          <div><label className={fieldLabel} htmlFor="business-banking-app">{copy.bankingApp}</label><select id="business-banking-app" className={`${field} mt-2`} value={bankingApp} onChange={(event) => setBankingApp(event.target.value)} aria-invalid={Boolean(errors.bankingApp) || undefined}><option value="">{copy.chooseBankingApp}</option>{paymentApps.map((app) => <option key={app} value={app}>{app}</option>)}</select>{errors.bankingApp && <p className="mt-1 text-xs text-ask" role="alert">{errors.bankingApp}</p>}</div>
+        </div>}
+
+        {step === 3 && <div className="rounded-xl border border-line bg-page-alt p-4 sm:p-5">
+          <h2 className="text-lg font-bold">{copy.reviewTitle}</h2>
+          <p className="mt-3 text-sm leading-6 text-muted">{copy.paymentInstruction.replace('{number}', contact.paymentNumber)}</p>
+          <dl className="mt-4 grid gap-2 text-sm"><div className="flex justify-between gap-3"><dt className="text-muted">{copy.businessNameFr}</dt><dd className="font-semibold" dir="auto">{businessNameFr}</dd></div><div className="flex justify-between gap-3"><dt className="text-muted">{copy.businessPhone}</dt><dd className="font-semibold" dir="auto">{businessPhone}</dd></div><div className="flex justify-between gap-3"><dt className="text-muted">{copy.senderPhone}</dt><dd className="font-semibold" dir="auto">{senderPhone}</dd></div><div className="flex justify-between gap-3"><dt className="text-muted">{copy.bankingApp}</dt><dd className="font-semibold">{bankingApp}</dd></div></dl>
+        </div>}
+
+        <div className="flex flex-col-reverse gap-3 sm:flex-row">
+        {step > 1 && <button type="button" className={`${btnGhost} w-full sm:w-auto`} onClick={() => { setErrors({}); setStep(step - 1) }}>{copy.back}</button>}
         <button type="submit" className={`${btnPrimary} w-full`} disabled={formState === 'submitting'}>
-          {formState === 'submitting' ? copy.submitting : copy.submit}
+          {formState === 'submitting' ? copy.submitting : step === 3 ? copy.whatsappSend : copy.continue}
           <span className="rtl:rotate-180"><Icon name="arrow" size={17} /></span>
         </button>
+        </div>
       </form>
     </section>
   )
