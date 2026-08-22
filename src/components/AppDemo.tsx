@@ -49,7 +49,7 @@ const appCopy = {
     pointsUnit: 'نقاط', pointsUnavailable: 'النقاط غير متاحة',
     welcome: 'ماذا تبحث عنه اليوم؟', description: 'ابحث عن خدمة أو وكالة أو مؤسسة محلية في موريتانيا.',
     input: 'ابحث عن خدمة', placeholder: 'مثال: Bankily أو صيدلية أو مطعم…', submit: 'ابحث', examples: 'أمثلة',
-    chips: ['Bankily', 'صيدلية', 'قاعة رياضية', 'مطعم'], initialTitle: 'ابدأ بحثك', initialText: 'ابحث عن خدمة محلية.',
+    chips: ['بنكيلي', 'صيدلية', 'قاعة رياضة', 'مطعم'], initialTitle: 'ابدأ بحثك', initialText: 'ابحث عن خدمة محلية.',
     empty: 'يرجى إدخال اسم خدمة.', minimum: 'أدخل حرفين على الأقل لبدء البحث.', loading: 'جارٍ البحث…',
     dataFromLewad: 'بيانات لواد', verified: 'موثّق', categoryUnavailable: 'فئة غير محددة',
     phone: 'الهاتف', website: 'الموقع الإلكتروني', location: 'الموقع', nearby: 'الوكالات', agenciesFound: 'وكالات موجودة', nearest: 'الأقرب', mainBranch: 'الوكالة الرئيسية',
@@ -465,12 +465,6 @@ export function PublicSearchDemo() {
             </h1>
             <p className="mt-3 max-w-xl text-[15px] leading-7 text-muted sm:mt-4 sm:text-lg">{copy.description}</p>
           </header>
-
-          {/* Le solde reste immédiatement visible au pouce sur mobile ; à
-              partir de `lg`, il rejoint sa colonne latérale fixe. */}
-          <div className="mt-6 lg:col-start-2 lg:row-span-full lg:mt-0 lg:sticky lg:top-24">
-            <WalletPanel copy={copy} balance={balance} loading={accountLoading} unlimited={hasUnlimitedSearches} />
-          </div>
 
           <form
             className="mt-7 min-w-0 sm:mt-8 lg:col-start-1"

@@ -169,8 +169,8 @@ describe('user history contracts', () => {
   it('is reachable from the member navigation, credits, and profile', () => {
     const nav = readFileSync(new URL('../src/components/shell/appNav.ts', import.meta.url), 'utf8')
     expect(nav).toContain("{ id: 'history', href: '/history', icon: 'clock', secondary: true },")
-    // Four bottom tabs is the documented ceiling; history stays out of them.
-    expect(nav).toContain("export const appTabIds: AppNavId[] = ['search', 'credits', 'recharge', 'profile']")
+    // Four bottom tabs is the documented ceiling; history replaces credits.
+    expect(nav).toContain("export const appTabIds: AppNavId[] = ['search', 'history', 'recharge', 'profile']")
 
     const pages = readFileSync(new URL('../src/components/AppPages.tsx', import.meta.url), 'utf8')
     expect(pages).toContain('href="/history"')

@@ -59,11 +59,8 @@ export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
   const closeDrawer = useCallback(() => setDrawerOpen(false), [])
 
   const displayName = profileDisplayName(profile, locale, null) ?? copy.account
-  const balanceKnown = wallet !== null
-  const balanceNumber = balanceKnown ? formatNumber(wallet.balance, locale) : '—'
-  const balanceAria = balanceKnown
-    ? `${copy.balance} : ${balanceNumber} ${copy.pointsUnit}`
-    : copy.pointsUnavailable
+  const balanceNumber = wallet === null ? '0' : formatNumber(wallet.balance, locale)
+  const balanceAria = `${copy.balance} : ${balanceNumber} ${copy.pointsUnit}`
   const hasAdminAccess = isAuthenticated && profile?.status === 'active' && isAdminRole(profile?.role)
   const isSuperAdmin = hasAdminAccess && profile?.role === 'super_admin'
   const roleSpaceItems = hasAdminAccess
@@ -141,7 +138,7 @@ export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
       <header className="sticky top-0 z-40 border-b border-line bg-page/85 backdrop-blur-md">
         <div className={`${appWrap} flex h-16 items-center gap-2 sm:h-[72px] sm:gap-3`}>
           <a href={homeHref} aria-label="Lewad" className="w-max shrink-0 rounded-lg">
-            <Logo />
+            <Logo compact />
           </a>
 
           {/* Desktop : la navigation occupe le centre de la barre. */}
@@ -168,20 +165,11 @@ export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
           <div className="flex flex-1 items-center justify-end gap-2 lg:flex-none">
             {/* Le solde reste sur les barres tablette/desktop. Sur mobile, le
                 panneau de recherche le garde visible sans encombrer la barre. */}
-            {isAuthenticated &&
-              (loading && !wallet ? (
-                <span aria-hidden="true" className="hidden h-11 w-16 shrink-0 rounded-xl bg-surface-2 motion-safe:animate-pulse sm:block" />
-              ) : (
-                <a
-                  href="/credits"
-                  aria-label={balanceAria}
-                  className="hidden h-11 shrink-0 items-center gap-1.5 rounded-xl bg-brand px-2.5 text-[13px] font-bold text-brand-ink transition-colors hover:bg-brand/85 sm:inline-flex"
-                >
-                  <Icon name="wallet" size={16} />
-                  <span className="tabular">{balanceNumber}</span>
-                  <span className="hidden sm:inline">{copy.pointsUnit}</span>
-                </a>
-              ))}
+            {isAuthenticated && (
+              <span aria-label={balanceAria} className="shrink-0 text-sm font-semibold text-muted tabular">
+                {balanceNumber} {copy.pointsUnit}
+              </span>
+            )}
 
             {isAuthenticated && (
               <a href="/add-business" className={`${iconBtn} hidden sm:inline-flex`} aria-label={copy.addEstablishment} title={copy.addEstablishment}>
@@ -198,7 +186,7 @@ export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
 
             {isAuthenticated ? (
               <div className="hidden lg:block">
-                <UserArea user={{ name: displayName, email: user?.email }} credits={wallet?.balance ?? null} items={accountItems} />
+                <UserArea user={{ name: displayName, email: user?.email }} items={accountItems} />
               </div>
             ) : (
               <a href="/auth" className={`${btnPrimary} hidden lg:inline-flex`}>
@@ -248,7 +236,7 @@ export function AppBar({ active, homeHref = '/app', admin }: AppBarProps) {
             >
               <span className="font-semibold text-muted">{copy.balance}</span>
               <span className="tabular font-bold text-ink">
-                {loading && !wallet ? '…' : balanceKnown ? `${balanceNumber} ${copy.pointsUnit}` : copy.pointsUnavailable}
+                {balanceNumber} {copy.pointsUnit}
               </span>
             </a>
             {walletError && !wallet && <p className="mt-2 text-xs text-ask">{copy.pointsUnavailable}</p>}

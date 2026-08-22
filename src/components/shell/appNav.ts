@@ -19,7 +19,7 @@ export type AppNavItem = {
 export const appNavItems: AppNavItem[] = [
   { id: 'search', href: '/app', icon: 'search' },
   { id: 'credits', href: '/credits', icon: 'wallet' },
-  { id: 'recharge', href: '/recharge', icon: 'sparkle' },
+  { id: 'recharge', href: '/recharge', icon: 'wallet' },
   { id: 'history', href: '/history', icon: 'clock', secondary: true },
   { id: 'profile', href: '/profile', icon: 'user' },
   { id: 'contact', href: '/contact', icon: 'message', secondary: true },
@@ -27,7 +27,7 @@ export const appNavItems: AppNavItem[] = [
 ]
 
 /** Onglets du bas sur mobile : quatre au maximum, sinon les cibles rétrécissent. */
-export const appTabIds: AppNavId[] = ['search', 'credits', 'recharge', 'profile']
+export const appTabIds: AppNavId[] = ['search', 'history', 'recharge', 'profile']
 
 export type AppShellCopy = {
   items: Record<AppNavId, string>
@@ -60,7 +60,7 @@ export type AppShellCopy = {
 export const appShellCopy: Record<Locale, AppShellCopy> = {
   fr: {
     items: { search: 'Recherche', credits: 'Mes crédits', recharge: 'Recharger', history: 'Historique', profile: 'Profil', contact: 'Contact', settings: 'Paramètres' },
-    shortItems: { credits: 'Crédits' },
+    shortItems: { history: 'Historique' },
     menu: 'Ouvrir le menu', closeMenu: 'Fermer le menu', account: 'Mon compte', signIn: 'Se connecter', addEstablishment: 'Ajouter un établissement', signOut: 'Se déconnecter', signingOut: 'Déconnexion…', adminSpace: 'Espace admin', superAdminSpace: 'Espace super admin',
     balance: 'Solde de points', pointsUnit: 'points', pointsUnavailable: 'Solde indisponible',
     appearance: 'Apparence', language: 'Langue', theme: 'Thème', light: 'Clair', dark: 'Sombre',
@@ -69,7 +69,7 @@ export const appShellCopy: Record<Locale, AppShellCopy> = {
   },
   ar: {
     items: { search: 'البحث', credits: 'نقاطي', recharge: 'شحن', history: 'السجل', profile: 'الملف الشخصي', contact: 'التواصل', settings: 'الإعدادات' },
-    shortItems: { profile: 'حسابي' },
+    shortItems: { history: 'السجل' },
     menu: 'فتح القائمة', closeMenu: 'إغلاق القائمة', account: 'حسابي', signIn: 'تسجيل الدخول', addEstablishment: 'إضافة مؤسسة', signOut: 'تسجيل الخروج', signingOut: 'جارٍ تسجيل الخروج…', adminSpace: 'مساحة الإدارة', superAdminSpace: 'مساحة المشرف العام',
     balance: 'رصيد النقاط', pointsUnit: 'نقاط', pointsUnavailable: 'الرصيد غير متاح',
     appearance: 'المظهر', language: 'اللغة', theme: 'السمة', light: 'فاتح', dark: 'داكن',
@@ -78,7 +78,7 @@ export const appShellCopy: Record<Locale, AppShellCopy> = {
   },
   en: {
     items: { search: 'Search', credits: 'My credits', recharge: 'Recharge', history: 'History', profile: 'Profile', contact: 'Contact', settings: 'Settings' },
-    shortItems: { credits: 'Credits' },
+    shortItems: { history: 'History' },
     menu: 'Open menu', closeMenu: 'Close menu', account: 'My account', signIn: 'Sign in', addEstablishment: 'Add an establishment', signOut: 'Sign out', signingOut: 'Signing out…', adminSpace: 'Admin space', superAdminSpace: 'Super admin space',
     balance: 'Points balance', pointsUnit: 'points', pointsUnavailable: 'Balance unavailable',
     appearance: 'Appearance', language: 'Language', theme: 'Theme', light: 'Light', dark: 'Dark',

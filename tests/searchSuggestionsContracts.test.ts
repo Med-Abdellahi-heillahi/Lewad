@@ -14,7 +14,7 @@ const dataLayerPath = new URL('../src/lib/searchSuggestions.ts', import.meta.url
 const searchUiPath = new URL('../src/components/AppDemo.tsx', import.meta.url)
 
 function migration() {
-  return readFileSync(suggestionsPath, 'utf8')
+  return readFileSync(suggestionsPath, 'utf8').replaceAll('\r\n', '\n')
 }
 
 /** The body of `suggest_services`, isolated from the search function above it. */
@@ -150,23 +150,23 @@ describe('Arabic search contracts', () => {
 
   it('keeps every credit and abuse protection from the superseded search function', () => {
     const sql = migration()
-    const previous = readFileSync(searchDebitPath, 'utf8')
+    const previous = readFileSync(searchDebitPath, 'utf8').replaceAll('\r\n', '\n')
 
     // The rewrite is for matching only. Losing any of these would either give
     // away paid searches or remove the anti-abuse ceiling.
     const preserved = [
-      "perform pg_advisory_xact_lock(hashtext('search_services_with_credit:' || v_user_id::text));",
-      "and search_log.created_at >= now() - interval '1 minute'",
-      'update public.wallets\n    set balance = balance - 1',
-      'insert into public.credit_ledger (',
-      'insert into public.search_logs (',
-      'if char_length(v_normalized_query) < 2 or char_length(v_normalized_query) > 80 then',
-      'limit 20',
+      /perform\s+pg_advisory_xact_lock\(hashtext\('search_services_with_credit:' \|\| v_user_id::text\)\);/,
+      /and\s+search_log\.created_at\s+>=\s+now\(\)\s+-\s+interval\s+'1 minute'/,
+      /update\s+public\.wallets\s+set\s+balance\s*=\s*balance\s*-\s*1/,
+      /insert\s+into\s+public\.credit_ledger\s*\(/,
+      /insert\s+into\s+public\.search_logs\s*\(/,
+      /if\s+char_length\(v_normalized_query\)\s*<\s*2\s+or\s+char_length\(v_normalized_query\)\s*>\s*80\s+then/,
+      /limit\s+20/,
     ]
 
     for (const clause of preserved) {
-      expect(previous).toContain(clause)
-      expect(sql).toContain(clause)
+      expect(previous).toMatch(clause)
+      expect(sql).toMatch(clause)
     }
 
     expect(sql).toContain('revoke all on function public.search_services_with_credit(text) from public, anon;')
