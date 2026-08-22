@@ -330,7 +330,7 @@ function ClientEstablishmentsSection({ text }: { text: Copy }) {
   useEffect(() => { void load() }, [load])
 
   return (
-    <section className="mt-7" aria-labelledby="my-establishments">
+    <section id="establishments" className="mt-7" aria-labelledby="my-establishments">
       <SectionTitle title={text.establishmentsTitle} text={text.establishmentsSubtitle} aside={<a href="/add-business" className={btnGhost}><Icon name="plus" size={16} />{text.establishmentsAdd}</a>} />
       {loading ? (
         <div className="mt-4 grid gap-3" role="status" aria-busy="true">

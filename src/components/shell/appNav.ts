@@ -67,6 +67,7 @@ export type AppShellCopy = {
   by: string;
   version: string;
   rights: string;
+  myEstablishments: string;
 };
 
 export const appShellCopy: Record<Locale, AppShellCopy> = {
@@ -103,6 +104,7 @@ export const appShellCopy: Record<Locale, AppShellCopy> = {
     by: "By Wasla",
     version: "Version 1.0.0",
     rights: "© 2026 Wasla Soft",
+    myEstablishments: "Mes établissements",
   },
   ar: {
     items: {
@@ -137,6 +139,7 @@ export const appShellCopy: Record<Locale, AppShellCopy> = {
     by: "By Wasla",
     version: "الإصدار 1.0.0",
     rights: "© 2026 Wasla Soft",
+    myEstablishments: "مؤسساتي",
   },
   en: {
     items: {
@@ -171,5 +174,6 @@ export const appShellCopy: Record<Locale, AppShellCopy> = {
     by: "By Wasla",
     version: "Version 1.0.0",
     rights: "© 2026 Wasla Soft",
+    myEstablishments: "My establishments",
   },
 };

@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { lazy, Suspense, useId, useState } from 'react'
 import { CalendarDays, CheckCircle, ImageIcon, Info, MapPin, Phone, Plus, Signpost, Type } from 'lucide-react'
 import { useI18n } from '../../i18n'
 import type { AdminCreateEstablishmentParams, AdminCreateEstablishmentResponse, AdminEstablishmentType } from '../../lib/admin'
@@ -11,6 +11,12 @@ import {
 } from '../../lib/validation'
 import { AdminActionButton, AdminModal } from './AdminUi'
 import { adminCopy } from './adminCopy'
+import type { MapCoordinates } from '../map/MapLocationPicker'
+
+const MapLocationPicker = lazy(async () => {
+  const module = await import('../map/MapLocationPicker')
+  return { default: module.MapLocationPicker }
+})
 
 type EstablishmentDraft = {
   nameFr: string
@@ -21,12 +27,13 @@ type EstablishmentDraft = {
   nearestPlace: string
   openingDate: string
   closingDate: string
+  mapLocation: MapCoordinates | null
 }
 
-type FieldName = 'nameFr' | 'nameAr' | 'phone' | 'image' | 'location'
+type FieldName = 'nameFr' | 'nameAr' | 'phone' | 'image' | 'location' | 'mapLocation'
 
 const emptyDraft: EstablishmentDraft = {
-  nameFr: '', nameAr: '', phone: '', image: '', location: '', nearestPlace: '', openingDate: '', closingDate: '',
+  nameFr: '', nameAr: '', phone: '', image: '', location: '', nearestPlace: '', openingDate: '', closingDate: '', mapLocation: null,
 }
 
 function validate(draft: EstablishmentDraft, type: AdminEstablishmentType, copy: (typeof adminCopy)['fr']['establishmentForm']) {
@@ -41,6 +48,7 @@ function validate(draft: EstablishmentDraft, type: AdminEstablishmentType, copy:
   } else if (!draft.location.trim()) {
     errors.location = copy.locationRequired
   }
+  if (!draft.mapLocation) errors.mapLocation = copy.errorMapLocation
 
   return errors
 }
@@ -99,6 +107,16 @@ export function AdminAddEstablishmentForm({
     })
   }
 
+  const selectMapLocation = (coordinates: MapCoordinates) => {
+    setDraft((current) => ({ ...current, mapLocation: coordinates }))
+    setSubmitError(null)
+    setErrors((current) => {
+      if (!current.mapLocation) return current
+      const { mapLocation: _mapLocation, ...remaining } = current
+      return remaining
+    })
+  }
+
   const submit = async () => {
     if (!type) return
     const nextErrors = validate(draft, type, copy)
@@ -118,6 +136,8 @@ export function AdminAddEstablishmentForm({
       closingDate: draft.closingDate || null,
       sourceRequestId,
       establishmentType: type,
+      latitude: draft.mapLocation?.latitude ?? null,
+      longitude: draft.mapLocation?.longitude ?? null,
     })
     setSaving(false)
 
@@ -236,6 +256,15 @@ export function AdminAddEstablishmentForm({
             ))}
           </div>
         </fieldset>
+
+        <Suspense fallback={<div className="grid min-h-64 place-items-center rounded-xl border border-line bg-page-alt text-sm text-muted sm:min-h-72" role="status">{copy.mapLoading}</div>}>
+          <MapLocationPicker
+            copy={copy}
+            value={draft.mapLocation}
+            onChange={selectMapLocation}
+            error={errors.mapLocation}
+          />
+        </Suspense>
 
         <fieldset className={`${cardMuted} p-3`}>
           <legend className="px-1 text-xs font-bold text-ink">{copy.optionalSection}</legend>

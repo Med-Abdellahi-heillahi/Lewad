@@ -1,8 +1,11 @@
+import { lazy, Suspense } from 'react'
 import { useI18n } from '../../i18n'
 import { useAccount } from '../../hooks/useAccount'
 import { isAdminRole } from '../../lib/routeAuth'
 import { Icon } from '../Icon'
 import { appNavItems, appShellCopy, appTabIds, type AppNavId } from './appNav'
+
+const EstablishmentsButton = lazy(() => import('./EstablishmentsButton').then((m) => ({ default: m.EstablishmentsButton })))
 
 /**
  * Barre d'onglets basse, mobile uniquement.
@@ -28,6 +31,11 @@ export function AppTabBar({ active }: { active?: AppNavId }) {
       aria-label={copy.primaryNav}
       className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-page/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
     >
+      {!hasAdminAccess && (
+        <Suspense fallback={null}>
+          <EstablishmentsButton />
+        </Suspense>
+      )}
       <ul className="mx-auto flex list-none items-stretch justify-around gap-1 px-2">
         {tabs.map((tab) => (
           <li key={tab.id} className="flex-1">

@@ -312,6 +312,20 @@ type AdminEstablishmentFormCopy = {
   errorNameArScript: string
   errorPhone: string
   errorImage: string
+  mapPickerLabel: string
+  mapPickerHelper: string
+  mapPickerKeyboardHint: string
+  useCurrentPosition: string
+  locatingCurrentPosition: string
+  currentPositionDenied: string
+  currentPositionUnavailable: string
+  markerPlaced: string
+  placeMarker: string
+  zoomIn: string
+  zoomOut: string
+  attribution: string
+  mapLoading: string
+  errorMapLocation: string
 }
 
 type AdminSidebarCopy = {
@@ -771,6 +785,20 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       errorsTitle: 'Corrigez les champs signalés',
       errorNameFr: 'Le nom en français est obligatoire.', errorNameAr: 'Le nom en arabe est obligatoire.', errorNameArScript: 'Le nom en arabe doit être écrit en caractères arabes.',
       errorPhone: 'Numéro invalide : 8 chiffres commençant par 2, 3 ou 4.', errorImage: 'Format d’image accepté : .png, .jpg ou .jpeg.',
+      mapPickerLabel: 'Emplacement sur la carte',
+      mapPickerHelper: 'Pas besoin de connaître la latitude ou la longitude. Touchez simplement la carte.',
+      mapPickerKeyboardHint: 'Utilisez les flèches pour déplacer la carte, puis Entrée ou Espace pour placer le marqueur.',
+      useCurrentPosition: 'Utiliser ma position actuelle',
+      locatingCurrentPosition: 'Localisation en cours…',
+      currentPositionDenied: 'L’accès à votre position a été refusé. Sélectionnez un emplacement sur la carte.',
+      currentPositionUnavailable: 'Votre position ne peut pas être obtenue. Sélectionnez un emplacement sur la carte.',
+      markerPlaced: 'Emplacement sélectionné.',
+      placeMarker: 'Placer le marqueur ici',
+      zoomIn: 'Agrandir la carte',
+      zoomOut: 'Réduire la carte',
+      attribution: '© OpenStreetMap',
+      mapLoading: 'Chargement de la carte…',
+      errorMapLocation: 'Veuillez sélectionner l’emplacement sur la carte.',
     },
     account: {
       adminProfile: 'Profil Admin', superAdminProfile: 'Profil Super Admin',
@@ -1009,6 +1037,20 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       errorsTitle: 'صحّح الحقول المشار إليها',
       errorNameFr: 'الاسم بالفرنسية إلزامي.', errorNameAr: 'الاسم بالعربية إلزامي.', errorNameArScript: 'يجب كتابة الاسم بالعربية بحروف عربية.',
       errorPhone: 'رقم غير صالح: ٨ أرقام تبدأ بـ 2 أو 3 أو 4.', errorImage: 'صيغ الصور المقبولة: ‎.png أو ‎.jpg أو ‎.jpeg.',
+      mapPickerLabel: 'الموقع على الخريطة',
+      mapPickerHelper: 'لا تحتاج إلى معرفة خطوط الطول والعرض. فقط اضغط على الخريطة.',
+      mapPickerKeyboardHint: 'استخدم مفاتيح الأسهم لتحريك الخريطة، ثم اضغط على Enter أو المسافة لوضع العلامة.',
+      useCurrentPosition: 'استخدم موقعي الحالي',
+      locatingCurrentPosition: 'جارٍ تحديد الموقع…',
+      currentPositionDenied: 'تم رفض الوصول إلى موقعك. حدد موقعًا على الخريطة.',
+      currentPositionUnavailable: 'تعذر الحصول على موقعك. حدد موقعًا على الخريطة.',
+      markerPlaced: 'تم تحديد الموقع.',
+      placeMarker: 'ضع العلامة هنا',
+      zoomIn: 'تكبير الخريطة',
+      zoomOut: 'تصغير الخريطة',
+      attribution: '© OpenStreetMap',
+      mapLoading: 'جارٍ تحميل الخريطة…',
+      errorMapLocation: 'يرجى تحديد الموقع على الخريطة.',
     },
     content: {
       unknownUser: 'مستخدم غير معروف', unnamedUser: 'مستخدم بلا اسم', partialProfilesUnavailable: 'ملفات بعض المستخدمين غير متاحة',
@@ -1247,6 +1289,20 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       errorsTitle: 'Fix the highlighted fields',
       errorNameFr: 'The French name is required.', errorNameAr: 'The Arabic name is required.', errorNameArScript: 'The Arabic name must be written in Arabic characters.',
       errorPhone: 'Invalid number: 8 digits starting with 2, 3 or 4.', errorImage: 'Accepted image formats: .png, .jpg or .jpeg.',
+      mapPickerLabel: 'Location on the map',
+      mapPickerHelper: 'You do not need to know latitude or longitude. Just tap the map.',
+      mapPickerKeyboardHint: 'Use the arrow keys to move the map, then Enter or Space to place the marker.',
+      useCurrentPosition: 'Use my current location',
+      locatingCurrentPosition: 'Locating…',
+      currentPositionDenied: 'Access to your location was denied. Select a location on the map.',
+      currentPositionUnavailable: 'Your location could not be obtained. Select a location on the map.',
+      markerPlaced: 'Location selected.',
+      placeMarker: 'Place marker here',
+      zoomIn: 'Zoom in',
+      zoomOut: 'Zoom out',
+      attribution: '© OpenStreetMap',
+      mapLoading: 'Loading the map…',
+      errorMapLocation: 'Please select the location on the map.',
     },
     content: {
       unknownUser: 'Unknown user', unnamedUser: 'Unnamed user', partialProfilesUnavailable: 'Some profiles are unavailable',
