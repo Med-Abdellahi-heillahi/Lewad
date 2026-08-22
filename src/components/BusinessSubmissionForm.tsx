@@ -193,7 +193,6 @@ export function BusinessSubmissionForm() {
       `${copy.establishmentName}: ${businessNameFr.trim()}`,
       `${copy.establishmentPhone}: ${businessPhone.trim()}`,
       whatsapp.trim() ? `${copy.establishmentWhatsapp}: ${whatsapp.trim()}` : null,
-      successResult.submissionId ? `${copy.submissionId}: ${successResult.submissionId}` : null,
       `${copy.amountSent}: ${formatCurrency(successResult.amountMro ?? businessSubmissionOffer.amountMro, locale)}`,
       `${copy.durationRequested}: ${periodLabel(successResult.periodMonths ?? businessSubmissionOffer.periodMonths)}`,
       `${copy.senderPhone}: ${senderPhone.trim()}`,
@@ -201,10 +200,6 @@ export function BusinessSubmissionForm() {
       `${copy.paymentNumberLabel}: ${contact.paymentNumber}`,
       '',
       copy.whatsappThanks,
-      `${copy.senderPhone}: ${senderPhone}`,
-      `${copy.bankingApp}: ${bankingApp}`,
-      `${copy.paymentNumberLabel}: ${contact.paymentNumber}`,
-      `${copy.whatsappThanks}`,
     ].filter((line): line is string => Boolean(line)).join('\n'))}`
     : contact.whatsappHref
 

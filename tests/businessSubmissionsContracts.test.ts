@@ -208,4 +208,33 @@ describe('DB4 business-submission contracts', () => {
     expect(source).not.toContain(".from('business_submissions')")
     expect(source).not.toContain('p_amount_mro')
   })
+
+  it('keeps technical submission identifiers out of WhatsApp messages', () => {
+    const source = readFileSync(new URL('../src/components/BusinessSubmissionForm.tsx', import.meta.url), 'utf8')
+    const messageStart = source.indexOf('const submissionWhatsAppHref')
+    const messageEnd = source.indexOf('\n  if (formState ===', messageStart)
+    const messageBuilder = source.slice(messageStart, messageEnd)
+
+    expect(messageBuilder).not.toContain('submissionId')
+    expect(messageBuilder).not.toContain('request_id')
+    expect(messageBuilder).not.toContain('UUID')
+    for (const field of ['clientName', 'establishmentName', 'establishmentPhone', 'amountSent', 'durationRequested', 'senderPhone', 'bankingApp', 'paymentNumberLabel', 'whatsappThanks']) {
+      expect(messageBuilder).toContain(`copy.${field}`)
+    }
+  })
+
+  it('keeps technical recharge identifiers out of the WhatsApp message', () => {
+    const source = readFileSync(new URL('../src/components/AppPages.tsx', import.meta.url), 'utf8')
+    const messageStart = source.indexOf('function rechargeWhatsAppUrl')
+    const messageEnd = source.indexOf('\n\nfunction RechargePage', messageStart)
+    const messageBuilder = source.slice(messageStart, messageEnd)
+
+    expect(messageBuilder).not.toContain('request.id')
+    expect(messageBuilder).not.toContain('whatsappRequestId')
+    expect(messageBuilder).not.toContain('request_id')
+    expect(messageBuilder).not.toContain('UUID')
+    for (const field of ['whatsappUserName', 'whatsappPoints', 'whatsappAmount', 'whatsappSenderPhone', 'whatsappBankingApp', 'whatsappPaymentNumber', 'whatsappThanks']) {
+      expect(messageBuilder).toContain(`text.${field}`)
+    }
+  })
 })
