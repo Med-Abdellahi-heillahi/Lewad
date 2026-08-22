@@ -141,7 +141,10 @@ export type AdminServicesPagination = {
   branches?: PaginationParams
 }
 
+export type AdminEstablishmentType = 'private' | 'public' | 'administrative'
+
 export type AdminCreateEstablishmentParams = {
+  establishmentType?: AdminEstablishmentType
   nameFr: string
   nameAr: string
   phone: string
@@ -915,6 +918,7 @@ export async function adminCreateEstablishment(
   params: AdminCreateEstablishmentParams,
 ): Promise<AdminResult<AdminCreateEstablishmentResponse | null>> {
   const { data, error } = await supabase.rpc('admin_create_establishment', {
+    p_establishment_type: params.establishmentType ?? 'private',
     p_name_fr: params.nameFr,
     p_name_ar: params.nameAr,
     p_phone: params.phone,

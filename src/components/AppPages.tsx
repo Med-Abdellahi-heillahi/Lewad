@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
+﻿import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import { type Locale, useI18n } from '../i18n'
 import { AccountLoading } from './system/AccountLoading'
 import { updateMyProfile, uploadMyAvatar, type CreditLedgerType, type Db1CreditLedgerEntry, type Db1Profile, type SafeProfileUpdate } from '../lib/db1'
@@ -64,7 +64,8 @@ const copy = {
     rechargeRequestCreating: 'Création de votre demande de recharge…', rechargeRequestCreated: 'Demande de recharge créée.', rechargeRequestDuplicate: 'Vous avez déjà une demande de recharge en attente.', rechargeRequestError: 'Impossible de créer la demande de recharge.', rechargeRequestContinue: 'Envoyez maintenant le message WhatsApp pour confirmer le paiement.',
     whatsappFallback: 'WhatsApp ne s’est pas ouvert automatiquement. Utilisez le bouton ci-dessous.', whatsappMessageIntro: 'Bonjour l’équipe Lewad,\nJe souhaite recharger mon compte.', whatsappUserName: 'Nom du client', whatsappUserEmail: 'E-mail', whatsappUserPhone: 'Téléphone', whatsappOffer: 'Offre', whatsappPoints: 'Points demandés', whatsappAmount: 'Montant envoyé', whatsappSenderPhone: 'Numéro utilisé pour l’envoi', whatsappBankingApp: 'Application bancaire', whatsappPaymentNumber: 'Numéro Lewad payé', whatsappRequestId: 'ID demande', whatsappThanks: 'Merci.',
     history: 'Historique', whereMyPoints: 'Où sont passés mes points ?', establishmentsTitle: 'Mes établissements', establishmentsSubtitle: 'Les établissements que vous avez ajoutés à Lewad.', establishmentsEmpty: 'Vous n’avez pas encore ajouté d’établissement.', establishmentsAdd: 'Ajouter un établissement', establishmentsRefresh: 'Actualiser', establishmentsLoading: 'Chargement de vos établissements…', establishmentsError: 'Vos établissements sont momentanément indisponibles.', establishmentStats: 'Statistiques', searches: 'Recherches', branches: 'Agences', approved: 'Approuvé', pending: 'En attente', rejected: 'Refusé', subscription: 'Abonnement', statsUnavailable: 'Les statistiques apparaîtront après les premières recherches.',
-    settings: 'Paramètres', settingsSubtitle: 'Réglez l’apparence de Lewad et retrouvez les options de votre compte.', appearance: 'Apparence et langue', appearanceText: 'Le choix est conservé sur cet appareil.', language: 'Langue', theme: 'Thème', light: 'Clair', dark: 'Sombre',
+
+    viewStats: 'Voir les statistiques', statsTitle: 'Statistiques de l’établissement', days: 'jours', timeRemaining: 'Temps restant', renewalNeeded: 'Paiement à renouveler', renewalUnavailable: 'Date de renouvellement non disponible pour le moment.', profileComplete: 'Profil complet', infoToComplete: 'Informations à compléter', fieldName: 'Nom', fieldCategory: 'Catégorie', fieldPhone: 'Téléphone', fieldWhatsapp: 'WhatsApp', fieldLocation: 'Localisation', fieldCoordinates: 'Position carte', statusLabel: 'Statut', subscriptionLabel: 'Abonnement', branchesLabel: 'Agences', verified: 'Vérifié', notVerified: 'Non vérifié', perPeriod: '/ 3 mois',    settings: 'Paramètres', settingsSubtitle: 'Réglez l’apparence de Lewad et retrouvez les options de votre compte.', appearance: 'Apparence et langue', appearanceText: 'Le choix est conservé sur cet appareil.', language: 'Langue', theme: 'Thème', light: 'Clair', dark: 'Sombre',
     accountSection: 'Compte', accountText: 'La gestion complète du compte arrive prochainement.', security: 'Sécurité', securityText: 'Les réglages de sécurité seront ajoutés avec le profil complet.', notifications: 'Notifications', notificationsText: 'Les préférences de notification seront disponibles prochainement.',
     contact: 'Contact', contactTitle: 'Parlons de votre besoin.', contactText: 'L’équipe Wasla Soft accompagne les utilisateurs et les établissements Lewad.', reason: 'Motif', reasonOptions: ['Ajouter un établissement', 'Demander un service', 'Support compte', 'Autre'], message: 'Votre message', messagePlaceholder: 'Décrivez votre besoin en quelques lignes…', send: 'Préparer mon message', messagePrepared: 'Votre message est préparé. L’envoi réel sera activé dans une prochaine étape.', contactDetails: 'Nous joindre',
   },
@@ -94,7 +95,8 @@ const copy = {
     rechargeRequestCreating: 'جارٍ إنشاء طلب إعادة الشحن…', rechargeRequestCreated: 'تم إنشاء طلب إعادة الشحن.', rechargeRequestDuplicate: 'لديك بالفعل طلب إعادة شحن معلق.', rechargeRequestError: 'تعذر إنشاء طلب إعادة الشحن.', rechargeRequestContinue: 'أرسل الآن رسالة واتساب لتأكيد الدفع.',
     whatsappFallback: 'لم يُفتح واتساب تلقائيًا. استخدم الزر أدناه.', whatsappMessageIntro: 'السلام عليكم فريق Lewad،\nأريد شحن حسابي بالنقاط.', whatsappUserName: 'اسم العميل', whatsappUserEmail: 'البريد الإلكتروني', whatsappUserPhone: 'الهاتف', whatsappOffer: 'العرض', whatsappPoints: 'النقاط المطلوبة', whatsappAmount: 'المبلغ المرسل', whatsappSenderPhone: 'الرقم المستخدم في الإرسال', whatsappBankingApp: 'التطبيق البنكي', whatsappPaymentNumber: 'رقم Lewad الذي تم الدفع إليه', whatsappRequestId: 'معرّف الطلب', whatsappThanks: 'شكرًا.',
     history: 'السجل', whereMyPoints: 'أين ذهبت نقاطي؟', establishmentsTitle: 'مؤسساتي', establishmentsSubtitle: 'المؤسسات التي أضفتها إلى Lewad.', establishmentsEmpty: 'لم تقم بإضافة أي مؤسسة بعد.', establishmentsAdd: 'إضافة مؤسسة', establishmentsRefresh: 'تحديث', establishmentsLoading: 'جارٍ تحميل مؤسساتك…', establishmentsError: 'مؤسساتك غير متاحة مؤقتًا.', establishmentStats: 'الإحصائيات', searches: 'عمليات البحث', branches: 'الفروع', approved: 'مقبول', pending: 'قيد الانتظار', rejected: 'مرفوض', subscription: 'الاشتراك', statsUnavailable: 'ستظهر الإحصائيات بعد أولى عمليات البحث.',
-    settings: 'الإعدادات', settingsSubtitle: 'اضبط مظهر Lewad واطّلع على خيارات حسابك.', appearance: 'المظهر واللغة', appearanceText: 'يُحفظ اختيارك على هذا الجهاز.', language: 'اللغة', theme: 'السمة', light: 'فاتح', dark: 'داكن',
+
+    viewStats: 'عرض الإحصائيات', statsTitle: 'إحصائيات المؤسسة', days: 'يومًا', timeRemaining: 'الوقت المتبقي', renewalNeeded: 'يجب تجديد الدفع', renewalUnavailable: 'تاريخ التجديد غير متوفر حاليًا.', profileComplete: 'الملف مكتمل', infoToComplete: 'معلومات يجب إكمالها', fieldName: 'الاسم', fieldCategory: 'التصنيف', fieldPhone: 'الهاتف', fieldWhatsapp: 'واتساب', fieldLocation: 'الموقع', fieldCoordinates: 'الموقع على الخريطة', statusLabel: 'الحالة', subscriptionLabel: 'الاشتراك', branchesLabel: 'الفروع', verified: 'موثّق', notVerified: 'غير موثّق', perPeriod: '/ 3 أشهر',    settings: 'الإعدادات', settingsSubtitle: 'اضبط مظهر Lewad واطّلع على خيارات حسابك.', appearance: 'المظهر واللغة', appearanceText: 'يُحفظ اختيارك على هذا الجهاز.', language: 'اللغة', theme: 'السمة', light: 'فاتح', dark: 'داكن',
     accountSection: 'الحساب', accountText: 'ستتوفر إدارة الحساب الكاملة قريبًا.', security: 'الأمان', securityText: 'ستضاف إعدادات الأمان مع الملف الشخصي الكامل.', notifications: 'الإشعارات', notificationsText: 'ستتوفر تفضيلات الإشعارات قريبًا.',
     contact: 'التواصل', contactTitle: 'لنتحدث عن حاجتك.', contactText: 'فريق Wasla Soft يرافق مستخدمي ومؤسسات Lewad.', reason: 'السبب', reasonOptions: ['إضافة مؤسسة', 'طلب خدمة', 'دعم الحساب', 'أخرى'], message: 'رسالتك', messagePlaceholder: 'صف حاجتك في بضعة أسطر…', send: 'تجهيز رسالتي', messagePrepared: 'تم تجهيز رسالتك. سيتم تفعيل الإرسال الحقيقي في مرحلة قادمة.', contactDetails: 'كيف تصل إلينا',
   },
@@ -124,7 +126,8 @@ const copy = {
     rechargeRequestCreating: 'Creating your recharge request…', rechargeRequestCreated: 'Recharge request created.', rechargeRequestDuplicate: 'You already have a pending recharge request.', rechargeRequestError: 'Could not create recharge request.', rechargeRequestContinue: 'Now send the WhatsApp message to confirm payment.',
     whatsappFallback: 'WhatsApp did not open automatically. Use the button below.', whatsappMessageIntro: 'Hello Lewad team,\nI want to recharge my account.', whatsappUserName: 'Client name', whatsappUserEmail: 'Email', whatsappUserPhone: 'Phone', whatsappOffer: 'Offer', whatsappPoints: 'Requested points', whatsappAmount: 'Amount sent', whatsappSenderPhone: 'Sender phone number', whatsappBankingApp: 'Banking app', whatsappPaymentNumber: 'Lewad payment number', whatsappRequestId: 'Request ID', whatsappThanks: 'Thank you.',
     history: 'History', whereMyPoints: 'Where did my points go?', establishmentsTitle: 'My establishments', establishmentsSubtitle: 'Establishments you have added to Lewad.', establishmentsEmpty: 'You have not added an establishment yet.', establishmentsAdd: 'Add establishment', establishmentsRefresh: 'Refresh', establishmentsLoading: 'Loading your establishments…', establishmentsError: 'Your establishments are temporarily unavailable.', establishmentStats: 'Stats', searches: 'Searches', branches: 'Branches', approved: 'Approved', pending: 'Pending', rejected: 'Rejected', subscription: 'Subscription', statsUnavailable: 'Stats will appear after the first searches.',
-    settings: 'Settings', settingsSubtitle: 'Adjust how Lewad looks and find your account options.', appearance: 'Appearance and language', appearanceText: 'Your choice is kept on this device.', language: 'Language', theme: 'Theme', light: 'Light', dark: 'Dark',
+
+    viewStats: 'View stats', statsTitle: 'Establishment stats', days: 'days', timeRemaining: 'Time remaining', renewalNeeded: 'Payment renewal needed', renewalUnavailable: 'Renewal date is not available yet.', profileComplete: 'Profile complete', infoToComplete: 'Information to complete', fieldName: 'Name', fieldCategory: 'Category', fieldPhone: 'Phone', fieldWhatsapp: 'WhatsApp', fieldLocation: 'Location', fieldCoordinates: 'Map position', statusLabel: 'Status', subscriptionLabel: 'Subscription', branchesLabel: 'Branches', verified: 'Verified', notVerified: 'Not verified', perPeriod: '/ 3 months',    settings: 'Settings', settingsSubtitle: 'Adjust how Lewad looks and find your account options.', appearance: 'Appearance and language', appearanceText: 'Your choice is kept on this device.', language: 'Language', theme: 'Theme', light: 'Light', dark: 'Dark',
     accountSection: 'Account', accountText: 'Full account management is coming soon.', security: 'Security', securityText: 'Security settings will be added with the complete profile.', notifications: 'Notifications', notificationsText: 'Notification preferences will be available soon.',
     contact: 'Contact', contactTitle: 'Let’s talk about what you need.', contactText: 'The Wasla Soft team supports Lewad users and businesses.', reason: 'Reason', reasonOptions: ['Add a business', 'Request a service', 'Account support', 'Other'], message: 'Your message', messagePlaceholder: 'Describe what you need in a few lines…', send: 'Prepare my message', messagePrepared: 'Your message is prepared. Real sending will be enabled in a future step.', contactDetails: 'Reach us',
   },
@@ -355,6 +358,7 @@ function establishmentStatus(status: ClientEstablishment['status'], text: Copy) 
 }
 
 function EstablishmentCard({ item, text, locale }: { item: ClientEstablishment; text: Copy; locale: Locale }) {
+  const [statsOpen, setStatsOpen] = useState(false)
   return (
     <article className={`${card} min-w-0 p-5`}>
       <div className="flex min-w-0 items-start justify-between gap-3">
@@ -370,7 +374,125 @@ function EstablishmentCard({ item, text, locale }: { item: ClientEstablishment; 
       </div>
       {item.searchAppearances === null && <p className="mt-4 text-sm leading-6 text-muted">{text.statsUnavailable}</p>}
       {(item.mainPhone || item.mainWhatsapp || item.mainLocation) && <div className="mt-4 grid gap-1 text-sm text-muted">{item.mainPhone && <p dir="auto">{item.mainPhone}</p>}{item.mainWhatsapp && <p dir="auto">{item.mainWhatsapp}</p>}{item.mainLocation && <p dir="auto">{item.mainLocation}</p>}</div>}
+      <button type="button" className={`${btnGhost} mt-4 w-full justify-center`} onClick={() => setStatsOpen(true)}>
+        <Icon name="eye" size={16} />
+        {text.viewStats}
+      </button>
+      {statsOpen && <ClientEstablishmentStatsPanel item={item} text={text} locale={locale} onClose={() => setStatsOpen(false)} />}
     </article>
+  )
+}
+
+
+function getMissingEstablishmentFields(item: ClientEstablishment, text: Copy): string[] {
+  const missing: string[] = []
+  if (!item.name) missing.push(text.fieldName)
+  if (!item.category) missing.push(text.fieldCategory)
+  if (!item.mainPhone) missing.push(text.fieldPhone)
+  if (!item.mainWhatsapp) missing.push(text.fieldWhatsapp)
+  if (!item.mainLocation) missing.push(text.fieldLocation)
+  if (item.latitude === null || item.longitude === null) missing.push(text.fieldCoordinates)
+  return missing
+}
+
+function renewalDaysLeft(item: ClientEstablishment): number | null {
+  const start = item.approvedAt ?? item.createdAt
+  const months = item.subscriptionPeriodMonths
+  if (!start || !months) return null
+  const startMs = new Date(start).getTime()
+  if (!Number.isFinite(startMs)) return null
+  const endMs = startMs + months * 30 * 24 * 60 * 60 * 1000
+  return Math.ceil((endMs - Date.now()) / (24 * 60 * 60 * 1000))
+}
+
+function ClientEstablishmentStatsPanel({ item, text, locale, onClose }: { item: ClientEstablishment; text: Copy; locale: Locale; onClose: () => void }) {
+  const missingFields = getMissingEstablishmentFields(item, text)
+  const profileComplete = missingFields.length === 0
+  const daysLeft = renewalDaysLeft(item)
+  const expired = daysLeft !== null && daysLeft <= 0
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="estats-title" onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-surface px-5 py-4">
+          <h3 id="estats-title" className="text-base font-bold text-ink">{text.statsTitle}</h3>
+          <button type="button" className={iconBtn} onClick={onClose} aria-label={text.close}>
+            <Icon name="close" size={18} />
+          </button>
+        </div>
+
+        <div className="grid gap-px bg-line">
+          {/* A. Visibility / Searches */}
+          <section className="bg-surface px-5 py-4">
+            <h4 className="text-xs font-semibold text-muted">{text.searches}</h4>
+            {item.searchAppearances !== null ? (
+              <p className="mt-2 text-2xl font-bold text-ink tabular">{formatNumber(item.searchAppearances, locale)}</p>
+            ) : (
+              <p className="mt-2 text-sm leading-6 text-muted">{text.statsUnavailable}</p>
+            )}
+          </section>
+
+          {/* B. Payment / Renewal */}
+          <section className="bg-surface px-5 py-4">
+            <h4 className="text-xs font-semibold text-muted">{text.timeRemaining}</h4>
+            {item.status !== 'approved' ? (
+              <p className="mt-2 text-sm font-semibold text-ink">{establishmentStatus(item.status, text)}</p>
+            ) : daysLeft === null ? (
+              <p className="mt-2 text-sm leading-6 text-muted">{text.renewalUnavailable}</p>
+            ) : expired ? (
+              <p className="mt-2 text-sm font-semibold text-ask">{text.renewalNeeded}</p>
+            ) : (
+              <p className="mt-2 text-2xl font-bold text-ink tabular">{daysLeft} {text.days}</p>
+            )}
+            {item.subscriptionAmountMro !== null && item.subscriptionPeriodMonths !== null && (
+              <p className="mt-1 text-xs text-muted">{formatNumber(item.subscriptionAmountMro, locale)} MRO {text.perPeriod}</p>
+            )}
+          </section>
+
+          {/* C. Profile completeness */}
+          <section className="bg-surface px-5 py-4">
+            <h4 className="text-xs font-semibold text-muted">{text.infoToComplete}</h4>
+            {profileComplete ? (
+              <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-answer">
+                <Icon name="check" size={16} />
+                {text.profileComplete}
+              </p>
+            ) : (
+              <ul className="mt-2 grid gap-1 text-sm text-ink">
+                {missingFields.map((f) => (
+                  <li key={f} className="flex items-center gap-2">
+                    <Icon name="alert" size={14} className="shrink-0 text-ask" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* D. Status summary */}
+          <section className="bg-surface px-5 py-4">
+            <dl className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <dt className="text-xs font-semibold text-muted">{text.statusLabel}</dt>
+                <dd className="mt-1 font-semibold text-ink">{establishmentStatus(item.status, text)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold text-muted">{text.branchesLabel}</dt>
+                <dd className="mt-1 font-semibold text-ink">{formatNumber(item.branchCount, locale)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold text-muted">{text.subscriptionLabel}</dt>
+                <dd className="mt-1 font-semibold text-ink">{item.subscriptionPeriodMonths === null ? '\u2014' : `${formatNumber(item.subscriptionPeriodMonths, locale)} ${locale === 'ar' ? '\u0623\u0634\u0647\u0631' : locale === 'fr' ? 'mois' : 'months'}`}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold text-muted">{text.verified}</dt>
+                <dd className="mt-1 font-semibold text-ink">{item.isVerified ? text.verified : text.notVerified}</dd>
+              </div>
+            </dl>
+          </section>
+        </div>
+      </div>
+    </div>
   )
 }
 

@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import { CalendarDays, CheckCircle, ImageIcon, Info, MapPin, Phone, Plus, Signpost, Type } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import type { AdminCreateEstablishmentParams, AdminCreateEstablishmentResponse } from '../../lib/admin'
+import type { AdminCreateEstablishmentParams, AdminCreateEstablishmentResponse, AdminEstablishmentType } from '../../lib/admin'
 import { btnGhost, cardMuted, field, fieldHint, fieldLabel } from '../../lib/ui'
 import {
   isAllowedEstablishmentImagePath,
@@ -23,20 +23,24 @@ type EstablishmentDraft = {
   closingDate: string
 }
 
-type FieldName = 'nameFr' | 'nameAr' | 'phone' | 'image'
+type FieldName = 'nameFr' | 'nameAr' | 'phone' | 'image' | 'location'
 
 const emptyDraft: EstablishmentDraft = {
   nameFr: '', nameAr: '', phone: '', image: '', location: '', nearestPlace: '', openingDate: '', closingDate: '',
 }
 
-function validate(draft: EstablishmentDraft, copy: (typeof adminCopy)['fr']['establishmentForm']) {
+function validate(draft: EstablishmentDraft, type: AdminEstablishmentType, copy: (typeof adminCopy)['fr']['establishmentForm']) {
   const errors: Partial<Record<FieldName, string>> = {}
 
   if (!draft.nameFr.trim()) errors.nameFr = copy.errorNameFr
-  if (!draft.nameAr.trim()) errors.nameAr = copy.errorNameAr
-  else if (!isRequiredArabicName(draft.nameAr)) errors.nameAr = copy.errorNameArScript
-  if (!isValidMauritanianPhone(draft.phone)) errors.phone = copy.errorPhone
-  if (!isAllowedEstablishmentImagePath(draft.image)) errors.image = copy.errorImage
+  if (type === 'private') {
+    if (!draft.nameAr.trim()) errors.nameAr = copy.errorNameAr
+    else if (!isRequiredArabicName(draft.nameAr)) errors.nameAr = copy.errorNameArScript
+    if (!isValidMauritanianPhone(draft.phone)) errors.phone = copy.errorPhone
+    if (!isAllowedEstablishmentImagePath(draft.image)) errors.image = copy.errorImage
+  } else if (!draft.location.trim()) {
+    errors.location = copy.locationRequired
+  }
 
   return errors
 }
@@ -47,6 +51,8 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 }
 
 function creationErrorMessage(status: string | undefined, copy: (typeof adminCopy)['fr']['establishmentForm']) {
+  if (status === 'invalid_type') return copy.typeQuestion
+  if (status === 'invalid_location') return copy.locationRequired
   if (status === 'invalid_name_fr') return copy.errorNameFr
   if (status === 'invalid_name_ar') return copy.errorNameArScript
   if (status === 'invalid_phone') return copy.errorPhone
@@ -76,6 +82,7 @@ export function AdminAddEstablishmentForm({
   const [draft, setDraft] = useState<EstablishmentDraft>(() => ({ ...emptyDraft, nameFr: initialNameFr }))
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({})
   const [created, setCreated] = useState<AdminCreateEstablishmentResponse | null>(null)
+  const [type, setType] = useState<AdminEstablishmentType | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -93,7 +100,8 @@ export function AdminAddEstablishmentForm({
   }
 
   const submit = async () => {
-    const nextErrors = validate(draft, copy)
+    if (!type) return
+    const nextErrors = validate(draft, type, copy)
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) return
 
@@ -101,14 +109,15 @@ export function AdminAddEstablishmentForm({
     setSubmitError(null)
     const result = await onCreate({
       nameFr: draft.nameFr.trim(),
-      nameAr: draft.nameAr.trim(),
-      phone: normalizeMauritanianPhone(draft.phone),
+      nameAr: type === 'private' ? draft.nameAr.trim() : '',
+      phone: type === 'private' ? normalizeMauritanianPhone(draft.phone) : '',
       imageUrl: draft.image.trim() || null,
       location: draft.location.trim() || null,
       nearestPlace: draft.nearestPlace.trim() || null,
       openingDate: draft.openingDate || null,
       closingDate: draft.closingDate || null,
       sourceRequestId,
+      establishmentType: type,
     })
     setSaving(false)
 
@@ -123,6 +132,7 @@ export function AdminAddEstablishmentForm({
 
   const addAnother = () => {
     setDraft(emptyDraft)
+    setType(null)
     setErrors({})
     setSubmitError(null)
     setCreated(null)
@@ -150,7 +160,29 @@ export function AdminAddEstablishmentForm({
 
   return (
     <AdminModal title={copy.title} subtitle={copy.subtitle} closeLabel={copy.cancel} onClose={onClose} size="lg">
-      {created ? (
+      {!type ? (
+        <div className="mt-5 grid gap-4">
+          <fieldset>
+            <legend className="text-sm font-bold text-ink">{copy.typeQuestion}</legend>
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              {([
+                ['private', copy.typePrivate],
+                ['public', copy.typePublic],
+                ['administrative', copy.typeAdministrative],
+              ] as const).map(([value, label]) => (
+                <label key={value} className="flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold text-ink has-[:checked]:border-brand-deep has-[:checked]:bg-brand-soft">
+                  <input type="radio" name="establishment-type" value={value} onChange={() => setType(value)} />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <p className="text-sm leading-6 text-muted">{copy.typeHelp}</p>
+          <div className="flex justify-end border-t border-line pt-4">
+            <button type="button" className={btnGhost} onClick={onClose}>{copy.cancel}</button>
+          </div>
+        </div>
+      ) : created ? (
         <div className="mt-5 space-y-4">
           <section role="status" className="rounded-2xl border border-answer/30 bg-answer-bg p-4 text-answer">
             <CheckCircle size={22} aria-hidden />
@@ -178,7 +210,7 @@ export function AdminAddEstablishmentForm({
         <fieldset className={`${cardMuted} p-3`}>
           <legend className="px-1 text-xs font-bold text-ink">{copy.requiredSection}</legend>
           <div className="mt-2 grid gap-3 sm:grid-cols-2">
-            {required.map(({ name, label, icon: LeadIcon, type, dir, placeholder, hint }) => (
+            {(type === 'private' ? required : required.filter((item) => item.name === 'nameFr')).map(({ name, label, icon: LeadIcon, type: inputType, dir, placeholder, hint }) => (
               <div key={name} className={name === 'phone' ? 'sm:col-span-2' : ''}>
                 <label className={`${fieldLabel} mb-1.5 flex items-center gap-1.5 text-xs`} htmlFor={inputId(name)}>
                   <LeadIcon size={14} aria-hidden />
@@ -186,7 +218,7 @@ export function AdminAddEstablishmentForm({
                 </label>
                 <input
                   id={inputId(name)}
-                  type={type}
+                  type={inputType}
                   dir={dir}
                   required
                   value={draft[name]}
@@ -208,7 +240,7 @@ export function AdminAddEstablishmentForm({
         <fieldset className={`${cardMuted} p-3`}>
           <legend className="px-1 text-xs font-bold text-ink">{copy.optionalSection}</legend>
           <div className="mt-2 grid gap-3 sm:grid-cols-2">
-            {optionalText.map(({ name, label, icon: LeadIcon, dir, placeholder, hint }) => (
+            {optionalText.filter(({ name }) => type === 'private' || name === 'image' || name === 'location').map(({ name, label, icon: LeadIcon, dir, placeholder, hint }) => (
               <div key={name} className={name === 'image' ? 'sm:col-span-2' : ''}>
                 <label className={`${fieldLabel} mb-1.5 flex items-center gap-1.5 text-xs`} htmlFor={inputId(name)}>
                   <LeadIcon size={14} aria-hidden />
@@ -228,9 +260,10 @@ export function AdminAddEstablishmentForm({
                 />
                 {hint && !(name === 'image' && errors.image) && <p className={`${fieldHint} mt-1.5`}>{hint}</p>}
                 {name === 'image' && <FieldError id={errorId('image')} message={errors.image} />}
+                {name === 'location' && <FieldError id={errorId('location')} message={errors.location} />}
               </div>
             ))}
-            {optionalDates.map(({ name, label }) => (
+            {type === 'private' && optionalDates.map(({ name, label }) => (
               <div key={name}>
                 <label className={`${fieldLabel} mb-1.5 flex items-center gap-1.5 text-xs`} htmlFor={inputId(name)}>
                   <CalendarDays size={14} aria-hidden />
@@ -263,7 +296,7 @@ export function AdminAddEstablishmentForm({
         {submitError && <p role="alert" className="rounded-xl border border-ask/30 bg-ask-bg px-3 py-2.5 text-xs font-semibold leading-5 text-ask">{submitError}</p>}
 
         <div className="flex flex-col-reverse gap-2 border-t border-line pt-4 sm:flex-row sm:justify-end">
-          <button type="button" className={`${btnGhost} sm:w-auto`} disabled={saving} onClick={onClose}>{copy.cancel}</button>
+          <button type="button" className={`${btnGhost} sm:w-auto`} disabled={saving} onClick={() => setType(null)}>{copy.back}</button>
           <AdminActionButton icon={Plus} label={saving ? copy.creating : copy.submit} tone="primary" className="justify-center sm:w-auto" disabled={saving} onClick={() => void submit()} />
         </div>
       </form>

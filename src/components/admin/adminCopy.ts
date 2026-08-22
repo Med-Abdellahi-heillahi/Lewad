@@ -270,6 +270,16 @@ type AdminBusinessSubmissionsCopy = {
 type AdminEstablishmentFormCopy = {
   title: string
   subtitle: string
+  typeQuestion: string
+  typePrivate: string
+  typePublic: string
+  typeAdministrative: string
+  typeHelp: string
+  privateHelp: string
+  publicHelp: string
+  locationRequired: string
+  continue: string
+  back: string
   requiredSection: string
   optionalSection: string
   nameFr: string
@@ -746,6 +756,7 @@ export const adminCopy: Record<Locale, AdminCopy> = {
     },
     establishmentForm: {
       title: 'Ajouter un établissement', subtitle: 'Créez la fiche d’un service local à partir d’une demande.',
+      typeQuestion: 'Quel type d’établissement voulez-vous ajouter ?', typePrivate: 'Privé', typePublic: 'Public', typeAdministrative: 'Administratif', typeHelp: 'Les établissements privés nécessitent les informations du propriétaire et les contacts. Les établissements publics ou administratifs nécessitent seulement le nom et l’emplacement.', privateHelp: 'Formulaire complet avec informations du propriétaire et contacts.', publicHelp: 'Seuls le nom et l’emplacement sont nécessaires.', locationRequired: 'La localisation est obligatoire.', continue: 'Continuer', back: 'Retour',
       requiredSection: 'Informations obligatoires', optionalSection: 'Informations complémentaires',
       nameFr: 'Nom en français', nameAr: 'Nom en arabe', phone: 'Téléphone',
       image: 'Image', location: 'Localisation', nearestPlace: 'Lieu le plus proche', openingDate: 'Date d’ouverture', closingDate: 'Date de fermeture',
@@ -983,6 +994,7 @@ export const adminCopy: Record<Locale, AdminCopy> = {
     },
     establishmentForm: {
       title: 'إضافة مؤسسة', subtitle: 'أنشئ بطاقة خدمة محلية انطلاقًا من طلب.',
+      typeQuestion: 'ما نوع المؤسسة التي تريد إضافتها؟', typePrivate: 'خاص', typePublic: 'عام', typeAdministrative: 'إداري', typeHelp: 'المؤسسات الخاصة تحتاج معلومات المالك ووسائل الاتصال. المؤسسات العامة أو الإدارية تحتاج فقط الاسم والموقع.', privateHelp: 'استمارة كاملة تتضمن معلومات المالك ووسائل الاتصال.', publicHelp: 'يكفي إدخال الاسم والموقع.', locationRequired: 'الموقع مطلوب.', continue: 'متابعة', back: 'رجوع',
       requiredSection: 'معلومات إلزامية', optionalSection: 'معلومات إضافية',
       nameFr: 'الاسم بالفرنسية', nameAr: 'الاسم بالعربية', phone: 'الهاتف',
       image: 'الصورة', location: 'الموقع', nearestPlace: 'أقرب مَعلَم', openingDate: 'تاريخ الافتتاح', closingDate: 'تاريخ الإغلاق',
@@ -1220,6 +1232,7 @@ export const adminCopy: Record<Locale, AdminCopy> = {
     },
     establishmentForm: {
       title: 'Add establishment', subtitle: 'Create a local service listing from a request.',
+      typeQuestion: 'What type of establishment do you want to add?', typePrivate: 'Private', typePublic: 'Public', typeAdministrative: 'Administrative', typeHelp: 'Private establishments require owner and contact information. Public or administrative establishments only require name and location.', privateHelp: 'Full form with owner and contact information.', publicHelp: 'Only the name and location are required.', locationRequired: 'Location is required.', continue: 'Continue', back: 'Back',
       requiredSection: 'Required information', optionalSection: 'Additional information',
       nameFr: 'Name in French', nameAr: 'Name in Arabic', phone: 'Phone',
       image: 'Image', location: 'Location', nearestPlace: 'Nearest place', openingDate: 'Opening date', closingDate: 'Closing date',

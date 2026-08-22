@@ -9,8 +9,10 @@ export type ClientEstablishment = {
   isVerified: boolean
   createdAt: string
   verifiedAt: string | null
+  approvedAt: string | null
   subscriptionAmountMro: number | null
   subscriptionPeriodMonths: number | null
+  submissionWebsite: string | null
   branchCount: number
   searchAppearances: number | null
   mainPhone: string | null
@@ -67,8 +69,10 @@ function readItem(value: unknown): ClientEstablishment | null {
     isVerified: booleanValue(value.is_verified),
     createdAt,
     verifiedAt: stringValue(value.verified_at),
+    approvedAt: stringValue(value.approved_at),
     subscriptionAmountMro: numberValue(value.subscription_amount_mro),
     subscriptionPeriodMonths: numberValue(value.subscription_period_months),
+    submissionWebsite: stringValue(value.submission_website),
     branchCount,
     searchAppearances: numberValue(value.search_appearances),
     mainPhone: stringValue(value.main_phone),
