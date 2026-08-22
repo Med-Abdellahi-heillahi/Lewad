@@ -1,5 +1,6 @@
-import { lazy, type FormEvent, Suspense, useEffect, useState } from 'react'
+import { lazy, type FormEvent, Suspense, useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
+import { useAccount } from '../hooks/useAccount'
 import { createBusinessSubmission } from '../lib/businessSubmissions'
 import { businessSubmissionOffer, contact, paymentApps } from '../lib/content'
 import { getActiveCategories, type Db2Category } from '../lib/db2'
@@ -25,6 +26,7 @@ const MapLocationPicker = lazy(async () => {
 
 export function BusinessSubmissionForm() {
   const { t, locale } = useI18n()
+  const { user, profile, authFullName } = useAccount()
   const copy = t.businessSubmission
   /** « 3 mois » / « 3 أشهر » — la durée vient du serveur, jamais du navigateur. */
   const periodLabel = (months: number) => copy.periodMonthsValue.replace('{months}', formatNumber(months, locale))
@@ -50,6 +52,7 @@ export function BusinessSubmissionForm() {
   const [bankingApp, setBankingApp] = useState('')
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const prefilledUserId = useRef<string | null>(null)
 
   useEffect(() => {
     let isCurrent = true
@@ -62,6 +65,16 @@ export function BusinessSubmissionForm() {
       isCurrent = false
     }
   }, [])
+
+  useEffect(() => {
+    if (!user?.id || prefilledUserId.current === user.id || (!profile && !authFullName)) return
+    const fullName = profile?.full_name?.trim() || authFullName?.trim() || ''
+    const nameParts = fullName.split(/\s+/).filter(Boolean)
+    setOwnerFirstName((current) => current || nameParts[0] || '')
+    setOwnerLastName((current) => current || nameParts.slice(1).join(' '))
+    setOwnerPhone((current) => current || profile?.phone || '')
+    prefilledUserId.current = user.id
+  }, [authFullName, profile, user?.id])
 
   function validate(): boolean {
     const next: Record<string, string> = {}
