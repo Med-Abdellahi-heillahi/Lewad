@@ -753,6 +753,15 @@ export function PublicSearchDemo() {
     setSuggestionsOpen(false);
     clearSearchState();
     setState("loading");
+
+    // The account badge may be old when another tab or a previously completed
+    // search changed the wallet. Reconcile it before this paid action so the
+    // visual change for this search is exactly the one-point server debit.
+    // A failure here is non-blocking: DB3A remains the authority for whether
+    // the search is allowed and returns the post-debit balance below.
+    await refresh();
+    if (searchId !== searchIdRef.current) return;
+
     let result: Awaited<ReturnType<typeof searchServicesWithCredit>>;
     try {
       result = await searchServicesWithCredit(requestedQuery);
@@ -774,11 +783,6 @@ export function PublicSearchDemo() {
     // immediately in the shared account state so the page and AppBar never
     // wait for a second network round-trip to show the new value.
     if (result.balance !== null) applyWalletBalance(result.balance);
-
-    // Re-read the wallet after any debit (or a confirmed insufficient balance)
-    // to keep the UI aligned with DB1 without ever mutating it from the client.
-    if (result.debitedPoints > 0 || result.status === "insufficient_credits")
-      void refresh();
 
     if (result.status === "invalid_query") {
       setValidation("minimum");

@@ -16,10 +16,15 @@ const emptyState: AccountState = { profile: null, wallet: null, loading: false, 
 export function useDb1Account(userId: string | undefined) {
   const [state, setState] = useState<AccountState>(emptyState)
   const requestId = useRef(0)
+  // A wallet read that began before an atomic search debit must never replace
+  // the debit response when it resolves afterwards. The server response is the
+  // authoritative post-debit balance for that exact operation.
+  const walletRevision = useRef(0)
 
   const refresh = useCallback(async () => {
     const currentRequestId = requestId.current + 1
     requestId.current = currentRequestId
+    const walletRevisionAtStart = walletRevision.current
 
     if (!userId) {
       setState(emptyState)
@@ -36,7 +41,23 @@ export function useDb1Account(userId: string | undefined) {
     ))
     const account = await getMyAccountSummary(userId)
     if (requestId.current !== currentRequestId) return
-    setState({ ...account, loading: false, loadedForUserId: userId })
+    setState((current) => {
+      const keepAuthoritativeWallet = (
+        current.loadedForUserId === userId
+        && walletRevision.current !== walletRevisionAtStart
+        && current.wallet !== null
+      )
+
+      return {
+        ...account,
+        // Preserve the known, atomic post-debit value instead of allowing an
+        // older browser wallet read to make the badge jump backwards or ahead.
+        wallet: keepAuthoritativeWallet ? current.wallet : account.wallet,
+        walletError: keepAuthoritativeWallet ? false : account.walletError,
+        loading: false,
+        loadedForUserId: userId,
+      }
+    })
   }, [userId])
 
   useEffect(() => {
@@ -53,6 +74,7 @@ export function useDb1Account(userId: string | undefined) {
 
     setState((current) => {
       if (current.loadedForUserId !== userId || !current.wallet) return current
+      walletRevision.current += 1
 
       return {
         ...current,

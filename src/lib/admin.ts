@@ -1,6 +1,7 @@
 import type { CreditLedgerType, Db1Profile } from './db1'
 import type { MissingServiceRequestStatus } from './db3b'
 import { paginatedResult, resolvePagination, type PaginatedResult, type PaginationParams } from './pagination'
+import { isPlaceTypeKey, type PlaceTypeKey } from './placeTypes'
 import { supabase } from './supabaseClient'
 
 type AdminResult<T> = {
@@ -107,9 +108,19 @@ export type AdminExternalPlaceDiscovery = {
   country: string
   wilaya: string | null
   source_status: 'pending_review' | 'imported' | 'rejected'
+  imported_establishment_id: string | null
+  place_types: PlaceTypeKey[]
   created_at: string
   last_seen_at: string
   user: Pick<AdminUser, 'id' | 'full_name' | 'full_name_ar' | 'email'> | null
+}
+
+export type AdminExternalPlaceReviewResponse = {
+  ok: boolean
+  status: string
+  discovery_id?: string
+  establishment_id?: string
+  branch_id?: string
 }
 
 export type AdminCategory = {
@@ -206,7 +217,8 @@ const searchLogFields = `
 
 const externalPlaceDiscoveryFields = `
   id, created_by, searched_query, provider, provider_place_id, display_name,
-  latitude, longitude, country, wilaya, source_status, created_at, last_seen_at
+  latitude, longitude, country, wilaya, source_status, imported_establishment_id, created_at, last_seen_at,
+  imported_establishment:establishments!external_place_discoveries_imported_establishment_id_fkey (place_types)
 `
 
 function errorMessage(error: { message: string } | null) {
@@ -895,8 +907,22 @@ export async function getAdminExternalPlaceDiscoveries(
 
   if (error) return { data: emptyPage({ page, pageSize }), error: errorMessage(error) }
 
-  const rows = ((data as Omit<AdminExternalPlaceDiscovery, 'user'>[] | null) ?? [])
-    .map((row) => ({ ...row, user_id: row.created_by }))
+  type DiscoveryRow = Omit<AdminExternalPlaceDiscovery, 'user' | 'place_types'> & {
+    imported_establishment: { place_types: unknown } | { place_types: unknown }[] | null
+  }
+  const rows = ((data as DiscoveryRow[] | null) ?? [])
+    .map(({ imported_establishment, ...row }) => {
+      const imported = Array.isArray(imported_establishment)
+        ? imported_establishment[0] ?? null
+        : imported_establishment
+      return {
+      ...row,
+      place_types: Array.isArray(imported?.place_types)
+        ? imported.place_types.filter(isPlaceTypeKey)
+        : [],
+      user_id: row.created_by,
+      }
+    })
   const enriched = await enrichWithProfiles(rows)
   return {
     data: paginatedResult(
@@ -907,6 +933,60 @@ export async function getAdminExternalPlaceDiscoveries(
     error: null,
     warning: enriched.warning,
   }
+}
+
+/**
+ * External discoveries are never written directly from the browser. These
+ * narrow RPCs validate the active administrator again inside PostgreSQL and
+ * keep the discovery state change and any establishment import atomic.
+ */
+async function reviewExternalPlaceDiscovery(
+  rpc: 'admin_import_external_place_discovery_with_types' | 'admin_reject_external_place_discovery',
+  discoveryId: string,
+  selectedTypes: PlaceTypeKey[] = [],
+): Promise<AdminResult<AdminExternalPlaceReviewResponse>> {
+  const params = rpc === 'admin_import_external_place_discovery_with_types'
+    ? { p_discovery_id: discoveryId, p_selected_types: selectedTypes }
+    : { p_discovery_id: discoveryId }
+  const { data, error, status } = await supabase.rpc(rpc, params)
+  const response = data && typeof data === 'object'
+    ? data as AdminExternalPlaceReviewResponse
+    : { ok: false, status: 'unavailable' }
+
+  if (error && import.meta.env.DEV) {
+    // The admin UI keeps failures generic, but local development needs the
+    // PostgREST status and safe database error fields to diagnose an RPC
+    // deployment/runtime mismatch. These fields never contain session tokens.
+    console.error('Admin external-place import RPC failed', JSON.stringify({
+      rpc,
+      httpStatus: status,
+      errorCode: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    }))
+  }
+
+  if (error || !response.ok) {
+    // Deliberately return a stable status only. Raw PostgREST messages are not
+    // suitable for the admin UI and can reveal implementation details.
+    return { data: response, error: response.status }
+  }
+
+  return { data: response, error: null }
+}
+
+export function adminImportExternalPlaceDiscovery(
+  discoveryId: string,
+  selectedTypes: PlaceTypeKey[],
+): Promise<AdminResult<AdminExternalPlaceReviewResponse>> {
+  return reviewExternalPlaceDiscovery('admin_import_external_place_discovery_with_types', discoveryId, selectedTypes)
+}
+
+export function adminRejectExternalPlaceDiscovery(
+  discoveryId: string,
+): Promise<AdminResult<AdminExternalPlaceReviewResponse>> {
+  return reviewExternalPlaceDiscovery('admin_reject_external_place_discovery', discoveryId)
 }
 
 export async function getAdminServices(

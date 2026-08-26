@@ -1,4 +1,5 @@
 import type { Locale } from '../../i18n'
+import type { PlaceTypeKey } from '../../lib/placeTypes'
 import type { AdminAlertId } from '../../lib/admin'
 
 export type AdminTabId = 'dashboard' | 'requests' | 'discoveries' | 'users' | 'credits' | 'search-logs' | 'services' | 'submissions' | 'system'
@@ -280,7 +281,29 @@ type AdminDiscoveriesCopy = {
   user: string
   date: string
   status: string
-  readOnlyNotice: string
+  actions: string
+  importAction: string
+  rejectAction: string
+  adminOnlyNotice: string
+  importConfirmTitle: string
+  importConfirmText: string
+  rejectConfirmTitle: string
+  rejectConfirmText: string
+  confirm: string
+  confirmImport: string
+  cancel: string
+  close: string
+  importing: string
+  rejecting: string
+  approvedSuccess: string
+  rejectedSuccess: string
+  invalidDiscovery: string
+  alreadyHandled: string
+  actionFailed: string
+  chooseTypeTitle: string
+  chooseTypeError: string
+  typeOptions: Record<PlaceTypeKey, string>
+  types: string
 }
 
 type AdminEstablishmentFormCopy = {
@@ -765,7 +788,16 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       title: 'Demandes de vérification', subtitle: 'Lieux trouvés par la carte et conservés pour examen interne.',
       emptyTitle: 'Aucune découverte carte', emptyText: 'Les résultats de carte enregistrés apparaîtront ici.',
       searchedQuery: 'Recherche', place: 'Lieu', provider: 'Fournisseur', context: 'Contexte', coordinates: 'Coordonnées', user: 'Client', date: 'Date', status: 'État',
-      readOnlyNotice: 'Cette vue est en lecture seule : aucune découverte ne crée un établissement automatiquement.',
+      actions: 'Actions', importAction: 'Ajouter ce lieu', rejectAction: 'Refuser',
+      adminOnlyNotice: 'Seul un administrateur peut importer ou refuser une découverte. Aucune découverte n’est créée automatiquement.',
+      importConfirmTitle: 'Importer comme établissement', importConfirmText: 'Cette action créera un établissement officiel et son agence principale avec les coordonnées de la carte.',
+      rejectConfirmTitle: 'Refuser la demande', rejectConfirmText: 'Cette action marquera cette découverte comme refusée, sans créer d’établissement.',
+      confirm: 'Approuver', confirmImport: 'Confirmer l’ajout', cancel: 'Annuler', close: 'Fermer', importing: 'Importation…', rejecting: 'Refus…',
+      approvedSuccess: 'Demande validée avec succès.', rejectedSuccess: 'Demande refusée avec succès.',
+      invalidDiscovery: 'Cette découverte ne contient pas un nom ou une localisation exploitable. Complétez ces informations avant de l’importer.',
+      alreadyHandled: 'Cette demande a déjà été traitée.', actionFailed: 'Impossible de traiter cette demande pour le moment.',
+      chooseTypeTitle: 'Choisissez le type de ce lieu', chooseTypeError: 'Choisissez au moins un type.', types: 'Types',
+      typeOptions: { establishment: 'Établissement', company: 'Société', region: 'Région', moughataa: 'Moughataa', wilaya: 'Wilaya', sports_hall: 'Salle de sport', restaurant: 'Restaurant', hall: 'Salle', administration: 'Administration', private: 'Privé', public: 'Public' },
     },
     businessSubmissions: {
       title: 'Soumissions établissements', subtitle: 'Demandes de dépôt d\'établissements soumises par les professionnels.',
@@ -1023,7 +1055,16 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       title: 'طلبات التحقق', subtitle: 'أماكن عُثر عليها عبر الخريطة وحُفظت للمراجعة الداخلية.',
       emptyTitle: 'لا توجد اكتشافات من الخريطة', emptyText: 'ستظهر هنا نتائج الخريطة المحفوظة.',
       searchedQuery: 'البحث', place: 'المكان', provider: 'المزوّد', context: 'السياق', coordinates: 'الإحداثيات', user: 'العميل', date: 'التاريخ', status: 'الحالة',
-      readOnlyNotice: 'هذه القراءة فقط: لا ينشئ أي اكتشاف مؤسسة تلقائيًا.',
+      actions: 'الإجراءات', importAction: 'إضافة هذا المكان', rejectAction: 'رفض',
+      adminOnlyNotice: 'يمكن للمشرف فقط استيراد اكتشاف أو رفضه. لا يُنشأ أي اكتشاف تلقائيًا.',
+      importConfirmTitle: 'استيراد كمؤسسة', importConfirmText: 'سينشئ هذا الإجراء مؤسسة رسمية وفرعها الرئيسي باستخدام إحداثيات الخريطة.',
+      rejectConfirmTitle: 'رفض الطلب', rejectConfirmText: 'سيُعلّم هذا الإجراء الاكتشاف كمرفوض من دون إنشاء مؤسسة.',
+      confirm: 'قبول', confirmImport: 'تأكيد الإضافة', cancel: 'إلغاء', close: 'إغلاق', importing: 'جارٍ الاستيراد…', rejecting: 'جارٍ الرفض…',
+      approvedSuccess: 'تم قبول الطلب بنجاح.', rejectedSuccess: 'تم رفض الطلب بنجاح.',
+      invalidDiscovery: 'لا يحتوي هذا الاكتشاف على اسم أو موقع صالح. أكمل هذه المعلومات قبل الاستيراد.',
+      alreadyHandled: 'تمت معالجة هذا الطلب بالفعل.', actionFailed: 'تعذر معالجة هذا الطلب حاليًا.',
+      chooseTypeTitle: 'اختر نوع هذا المكان', chooseTypeError: 'اختر نوعًا واحدًا على الأقل.', types: 'الأنواع',
+      typeOptions: { establishment: 'مؤسسة', company: 'شركة', region: 'منطقة', moughataa: 'مقاطعة', wilaya: 'ولاية', sports_hall: 'قاعة رياضة', restaurant: 'مطعم', hall: 'قاعة', administration: 'إدارة', private: 'خاص', public: 'عام' },
     },
     businessSubmissions: {
       title: 'طلبات المؤسسات', subtitle: 'طلبات إضافة مؤسسات مقدّمة من أصحاب الأعمال.',
@@ -1281,7 +1322,16 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       title: 'Verification requests', subtitle: 'Places found on the map and retained for internal review.',
       emptyTitle: 'No map discoveries', emptyText: 'Saved map results will appear here.',
       searchedQuery: 'Search', place: 'Place', provider: 'Provider', context: 'Context', coordinates: 'Coordinates', user: 'Client', date: 'Date', status: 'Status',
-      readOnlyNotice: 'This is read-only: no discovery creates an establishment automatically.',
+      actions: 'Actions', importAction: 'Add this place', rejectAction: 'Reject',
+      adminOnlyNotice: 'Only an administrator can import or reject a discovery. No discovery creates an establishment automatically.',
+      importConfirmTitle: 'Import as establishment', importConfirmText: 'This creates an official establishment and its main branch using the map coordinates.',
+      rejectConfirmTitle: 'Reject request', rejectConfirmText: 'This marks the discovery as rejected without creating an establishment.',
+      confirm: 'Approve', confirmImport: 'Confirm import', cancel: 'Cancel', close: 'Close', importing: 'Importing…', rejecting: 'Rejecting…',
+      approvedSuccess: 'Request approved successfully.', rejectedSuccess: 'Request rejected successfully.',
+      invalidDiscovery: 'This discovery is missing a usable name or map location. Complete those details before importing it.',
+      alreadyHandled: 'This request has already been handled.', actionFailed: 'Unable to process this request right now.',
+      chooseTypeTitle: 'Choose the type of this place', chooseTypeError: 'Choose at least one type.', types: 'Types',
+      typeOptions: { establishment: 'Establishment', company: 'Company', region: 'Region', moughataa: 'Moughataa', wilaya: 'Wilaya', sports_hall: 'Sports hall', restaurant: 'Restaurant', hall: 'Hall', administration: 'Administration', private: 'Private', public: 'Public' },
     },
     businessSubmissions: {
       title: 'Business submissions', subtitle: 'Business listing requests submitted by owners.',
