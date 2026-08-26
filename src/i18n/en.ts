@@ -32,6 +32,7 @@ export const en: Dictionary = {
     toDark: "Switch to dark mode",
     switchToArabic: "Switch to Arabic",
     switchToFrench: "Switch to French",
+    switchToEnglish: "Switch to English",
     sections: {
       what: "What we do",
       strip: "Overview",

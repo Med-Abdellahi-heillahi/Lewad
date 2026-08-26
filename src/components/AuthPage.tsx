@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { type Locale, useI18n } from '../i18n'
 import { signInWithEmail, signOut, signUpWithEmail, requestPasswordReset, updateUserPassword } from '../lib/auth'
 import { useAuthSession } from '../hooks/useAuthSession'
-import { appWrap, btnGhost, btnPrimary, card, eyebrow, field, fieldHint, fieldLabel, skeleton } from '../lib/ui'
+import { appWrap, btnGhost, btnPrimary, card, eyebrow, field, fieldHint, fieldLabel } from '../lib/ui'
 import { Icon } from './Icon'
 import { InlineAlert } from './system/States'
+import { SessionLoading } from './system/SessionLoading'
 import { Logo } from './Logo'
 import { AppFooter } from './shell/AppFooter'
 import { LanguageMenu } from './shell/LanguageMenu'
@@ -43,7 +44,7 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export function AuthPage() {
   const { locale, t } = useI18n()
-  const { user, loading: sessionLoading, isAuthenticated, isRecovery } = useAuthSession()
+  const { loading: sessionLoading, isAuthenticated, isRecovery } = useAuthSession()
   const copy = authCopy[locale]
   const requestedDestination = getAuthRedirectDestination()
   const [mode, setMode] = useState<Mode>('signIn')
@@ -53,7 +54,6 @@ export function AuthPage() {
   const [confirmation, setConfirmation] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [notice, setNotice] = useState<Notice>(null)
-  const [resolvedDestination, setResolvedDestination] = useState<string | null>(null)
   const [resolvingRole, setResolvingRole] = useState(false)
   const [resetEmail, setResetEmail] = useState('')
   const [newPw, setNewPw] = useState('')
@@ -75,12 +75,10 @@ export function AuthPage() {
     setResolvingRole(false)
 
     if (!resolution.profileLoaded) {
-      setResolvedDestination(null)
       setNotice({ type: 'error', text: copy.profileUnavailable })
       return null
     }
 
-    setResolvedDestination(resolution.destination)
     return resolution.destination
   }, [copy.profileUnavailable, requestedDestination])
 
@@ -99,7 +97,6 @@ export function AuthPage() {
     let active = true
     void resolveDestination().then((nextDestination) => {
       if (!active || !nextDestination) return
-      setResolvedDestination(nextDestination)
       window.location.replace(nextDestination)
     })
     return () => { active = false }
@@ -126,25 +123,27 @@ export function AuthPage() {
     event.preventDefault()
     const validationError = validate()
     if (validationError) { setNotice({ type: 'error', text: validationError }); return }
+    const submittedPassword = password
+    // Never retain a submitted password while authentication or redirection is in flight.
+    setPassword('')
+    setConfirmation('')
     setSubmitting(true)
     setNotice(null)
 
     try {
       if (mode === 'signIn') {
-        const { error } = await signInWithEmail({ email: email.trim(), password })
+        const { error } = await signInWithEmail({ email: email.trim(), password: submittedPassword })
         if (error) throw error
         const nextDestination = await resolveDestination()
         if (!nextDestination) return
-        setNotice({ type: 'success', text: copy.signedIn })
-        window.setTimeout(() => window.location.assign(nextDestination), 500)
+        window.location.replace(nextDestination)
       } else {
-        const { data, error } = await signUpWithEmail({ fullName: fullName.trim(), email: email.trim(), password })
+        const { data, error } = await signUpWithEmail({ fullName: fullName.trim(), email: email.trim(), password: submittedPassword })
         if (error) throw error
         if (data.session) {
           const nextDestination = await resolveDestination()
           if (!nextDestination) return
-          setNotice({ type: 'success', text: copy.accountCreated })
-          window.setTimeout(() => window.location.assign(nextDestination), 700)
+          window.location.replace(nextDestination)
         } else {
           setNotice({ type: 'success', text: copy.accountCreated })
           setMode('signIn')
@@ -188,10 +187,13 @@ export function AuthPage() {
     if (!newPw) { setNotice({ type: 'error', text: copy.requiredPassword }); return }
     if (!isValidLewadSignUpPassword(newPw)) { setNotice({ type: 'error', text: copy.passwordRule }); return }
     if (newPw !== confirmPw) { setNotice({ type: 'error', text: copy.passwordMismatch }); return }
+    const submittedNewPassword = newPw
+    setNewPw('')
+    setConfirmPw('')
     setSubmitting(true)
     setNotice(null)
     try {
-      const { error } = await updateUserPassword(newPw)
+      const { error } = await updateUserPassword(submittedNewPassword)
       if (error) throw error
       setNotice({ type: 'success', text: copy.passwordUpdated })
       await signOut()
@@ -201,6 +203,15 @@ export function AuthPage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const showNeutralLoading = sessionLoading
+    || submitting
+    || resolvingRole
+    || (isAuthenticated && !isRecovery && notice?.type !== 'error')
+
+  if (showNeutralLoading) {
+    return <SessionLoading label={resolvingRole || (isAuthenticated && !isRecovery) ? copy.resolvingSpace : copy.loading} />
   }
 
   return <div className="flex min-h-dvh flex-col bg-page text-ink">
@@ -244,14 +255,7 @@ export function AuthPage() {
           </div>
 
           <div className="p-6 sm:p-7">
-            {sessionLoading ? (
-              <div role="status" aria-busy="true">
-                <div className={`h-11 w-full ${skeleton}`} />
-                <div className={`mt-4 h-12 w-full ${skeleton}`} />
-                <div className={`mt-4 h-12 w-2/3 ${skeleton}`} />
-                <span className="sr-only">{copy.loading}</span>
-              </div>
-            ) : mode === 'forgotPassword' ? (
+            {mode === 'forgotPassword' ? (
               <>
                 <form className="grid gap-4" onSubmit={handleForgotPassword} noValidate>
                   <Field id="reset-email" label={copy.email} type="email" value={resetEmail} onChange={setResetEmail} autoComplete="email" />
@@ -277,25 +281,19 @@ export function AuthPage() {
               </>
             ) : isAuthenticated ? (
               <div>
-                {resolvingRole ? (
-                  <div className="grid place-items-center gap-4 py-6" role="status" aria-live="polite" aria-busy="true">
-                    <span aria-hidden="true" className="size-9 rounded-full border-2 border-brand border-e-transparent motion-safe:animate-spin" />
-                    <p className="text-sm text-muted">{copy.resolvingSpace}</p>
-                  </div>
-                ) : (
-                  <InlineAlert tone={notice?.type === 'error' ? 'error' : 'success'} title={notice?.type === 'error' ? undefined : copy.alreadySignedIn}>
-                    {notice?.type === 'error' ? notice.text : <span className="ltr-isolate">{user?.email}</span>}
-                  </InlineAlert>
-                )}
+                {notice?.type === 'error' && <InlineAlert tone="error">{notice.text}</InlineAlert>}
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  {resolvedDestination ? (
-                    <a href={resolvedDestination} className={btnPrimary}>{copy.continueToApp}<span className="rtl:rotate-180"><Icon name="arrow" size={17} /></span></a>
-                  ) : (
-                    <button type="button" className={btnPrimary} disabled={resolvingRole} onClick={() => void resolveDestination()}>{copy.retryProfile}</button>
-                  )}
-                  <button type="button" className={btnGhost} disabled={submitting || resolvingRole} onClick={() => void handleSignOut()}>{copy.signOut}</button>
+                  <button
+                    type="button"
+                    className={btnPrimary}
+                    onClick={() => void resolveDestination().then((nextDestination) => {
+                      if (nextDestination) window.location.replace(nextDestination)
+                    })}
+                  >
+                    {copy.retryProfile}
+                  </button>
+                  <button type="button" className={btnGhost} onClick={() => void handleSignOut()}>{copy.signOut}</button>
                 </div>
-                {notice?.type === 'success' && <div className="mt-4"><InlineAlert tone="success">{notice.text}</InlineAlert></div>}
               </div>
             ) : (
               <>

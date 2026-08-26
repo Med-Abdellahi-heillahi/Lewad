@@ -49,6 +49,7 @@ export const fr = {
     toDark: "Activer le mode sombre",
     switchToArabic: "Changer vers arabe",
     switchToFrench: "Changer vers français",
+    switchToEnglish: "Changer vers anglais",
     sections: {
       what: "On fait quoi ?",
       strip: "Animation",

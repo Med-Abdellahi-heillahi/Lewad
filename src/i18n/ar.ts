@@ -32,6 +32,7 @@ export const ar: Dictionary = {
     toDark: "التبديل إلى الوضع الداكن",
     switchToArabic: "التغيير إلى العربية",
     switchToFrench: "التغيير إلى الفرنسية",
+    switchToEnglish: "التغيير إلى الإنجليزية",
     sections: {
       what: "ماذا نقدّم؟",
       strip: "لمحة",
