@@ -7,6 +7,7 @@ import {
   adminCreateEstablishment,
   adminUpdateUserStatus,
   getAdminMissingRequests,
+  getAdminExternalPlaceDiscoveries,
   getAdminAnalytics,
   getAdminOverview,
   getAdminSearchLogs,
@@ -17,6 +18,7 @@ import {
   updateMissingRequestStatus,
   type AdminCreateEstablishmentParams,
   type AdminMissingRequest,
+  type AdminExternalPlaceDiscovery,
   type AdminAnalytics,
   type AdminOverview,
   type AdminSearchLog,
@@ -51,11 +53,11 @@ import { AdminRequests } from './admin/AdminRequests'
 import { AdminCredits } from './admin/AdminCredits'
 import { AdminBusinessSubmissions } from './admin/AdminBusinessSubmissions'
 import { PaginationControls } from './ui/PaginationControls'
-import { Building2, Eye, LayoutDashboard, ListChecks, Plus, Search, Users, Wallet } from 'lucide-react'
+import { Building2, Eye, LayoutDashboard, ListChecks, MapPinned, Plus, Search, Users, Wallet } from 'lucide-react'
 import { DEFAULT_PAGE_SIZE, paginatedResult, type PaginatedResult } from '../lib/pagination'
 
 type AdminTab = AdminTabId
-type AdminListPage = 'requests' | 'users' | 'wallets' | 'ledger' | 'searchLogs' | 'categories' | 'establishments' | 'branches' | 'submissions'
+type AdminListPage = 'requests' | 'discoveries' | 'users' | 'wallets' | 'ledger' | 'searchLogs' | 'categories' | 'establishments' | 'branches' | 'submissions'
 
 type DisplayUser = {
   full_name: string | null
@@ -66,6 +68,7 @@ type DisplayUser = {
 const tabs: { id: AdminTab; icon: AdminIcon }[] = [
   { id: 'dashboard', icon: LayoutDashboard },
   { id: 'requests', icon: ListChecks },
+  { id: 'discoveries', icon: MapPinned },
   { id: 'users', icon: Users },
   { id: 'credits', icon: Wallet },
   { id: 'search-logs', icon: Search },
@@ -174,6 +177,52 @@ function SearchLogsView({
   </div>
 }
 
+function DiscoveryContext({ discovery }: { discovery: AdminExternalPlaceDiscovery }) {
+  return <span dir="auto">{[discovery.wilaya, discovery.country].filter(Boolean).join(' · ')}</span>
+}
+
+function DiscoveryCoordinates({ discovery }: { discovery: AdminExternalPlaceDiscovery }) {
+  return <span className="ltr-isolate tabular">{discovery.latitude.toFixed(6)}, {discovery.longitude.toFixed(6)}</span>
+}
+
+function AdminDiscoveriesView({
+  discoveries,
+  pagination,
+  loading,
+  onPageChange,
+}: {
+  discoveries: AdminExternalPlaceDiscovery[]
+  pagination: PaginatedResult<AdminExternalPlaceDiscovery>
+  loading: boolean
+  onPageChange: (page: number) => void
+}) {
+  const { locale } = useI18n()
+  const copy = adminCopy[locale].discoveries
+
+  if (loading) return <LoadingCard label={copy.title} lines={5} />
+  if (discoveries.length === 0) return <EmptyState icon="map" title={copy.emptyTitle} text={copy.emptyText} />
+
+  return <div className="space-y-4">
+    <section className={`${cardMuted} p-4`}>
+      <h2 className="text-base font-bold text-ink">{copy.title}</h2>
+      <p className="mt-1 text-sm leading-6 text-muted">{copy.subtitle}</p>
+      <p className="mt-3 text-sm font-medium text-muted">{copy.readOnlyNotice}</p>
+    </section>
+    <MobileCardList>{discoveries.map((discovery) => <MobileCard key={discovery.id}>
+      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><TableTitle>{discovery.display_name}</TableTitle><p className="mt-1 text-xs text-muted">{discovery.searched_query}</p></div><StatusBadge value={discovery.source_status} /></div>
+      <MobileDetails>
+        <MobileDetail label={copy.provider}>{discovery.provider === 'photon' ? 'Photon' : 'Nominatim'}</MobileDetail>
+        <MobileDetail label={copy.context}><DiscoveryContext discovery={discovery} /></MobileDetail>
+        <MobileDetail label={copy.coordinates}><DiscoveryCoordinates discovery={discovery} /></MobileDetail>
+        <MobileDetail label={copy.user}>{personName(discovery.user, locale)}</MobileDetail>
+        <MobileDetail label={copy.date}><time dateTime={discovery.created_at}>{formatDate(discovery.created_at, locale)}</time></MobileDetail>
+      </MobileDetails>
+    </MobileCard>)}</MobileCardList>
+    <div className="hidden lg:block"><TableWrap><table className="min-w-[1080px] w-full border-collapse"><TableHeader><th className="px-4 py-3">{copy.searchedQuery}</th><th className="px-4 py-3">{copy.place}</th><th className="px-4 py-3">{copy.provider}</th><th className="px-4 py-3">{copy.context}</th><th className="px-4 py-3">{copy.coordinates}</th><th className="px-4 py-3">{copy.user}</th><th className="px-4 py-3">{copy.status}</th><th className="px-4 py-3">{copy.date}</th></TableHeader><tbody className="divide-y divide-line">{discoveries.map((discovery) => <tr key={discovery.id}><TableCell><span dir="auto">{discovery.searched_query}</span></TableCell><TableCell><TableTitle>{discovery.display_name}</TableTitle></TableCell><TableCell>{discovery.provider === 'photon' ? 'Photon' : 'Nominatim'}</TableCell><TableCell><DiscoveryContext discovery={discovery} /></TableCell><TableCell><DiscoveryCoordinates discovery={discovery} /></TableCell><TableCell>{personName(discovery.user, locale)}</TableCell><TableCell><StatusBadge value={discovery.source_status} /></TableCell><TableCell><time dateTime={discovery.created_at}>{formatDate(discovery.created_at, locale)}</time></TableCell></tr>)}</tbody></table></TableWrap></div>
+    {pagination.totalCount > 0 && <PaginationControls {...pagination} labels={adminCopy[locale].pagination} disabled={loading} onPageChange={onPageChange} />}
+  </div>
+}
+
 function ServicesView({
   services,
   loading,
@@ -238,6 +287,7 @@ export function AdminPage() {
   const [overview, setOverview] = useState<AdminOverview | null>(null)
   const [analytics, setAnalytics] = useState<AdminAnalytics | null>(null)
   const [requests, setRequests] = useState<PaginatedResult<AdminMissingRequest>>(() => emptyPage())
+  const [discoveries, setDiscoveries] = useState<PaginatedResult<AdminExternalPlaceDiscovery>>(() => emptyPage())
   const [users, setUsers] = useState<PaginatedResult<AdminUser>>(() => emptyPage())
   const [userFilters, setUserFilters] = useState<{
     search: string
@@ -251,7 +301,7 @@ export function AdminPage() {
   const [services, setServices] = useState<AdminServices | null>(null)
   const [submissions, setSubmissions] = useState<PaginatedResult<BusinessSubmissionSummary>>(() => emptyPage())
   const [pages, setPages] = useState<Record<AdminListPage, number>>({
-    requests: 1, users: 1, wallets: 1, ledger: 1, searchLogs: 1, categories: 1, establishments: 1, branches: 1, submissions: 1,
+    requests: 1, discoveries: 1, users: 1, wallets: 1, ledger: 1, searchLogs: 1, categories: 1, establishments: 1, branches: 1, submissions: 1,
   })
   const [rechargeRequested, setRechargeRequested] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -304,6 +354,18 @@ export function AdminPage() {
       if (result.error) {
         const error = result.error
         setErrors((value) => ({ ...value, requests: error }))
+      }
+    }
+    if (target === 'discoveries') {
+      const result = await getAdminExternalPlaceDiscoveries({ page: pages.discoveries, pageSize: DEFAULT_PAGE_SIZE })
+      setDiscoveries(result.data)
+      if (result.warning) {
+        const warning = result.warning
+        setWarnings((value) => ({ ...value, discoveries: warning }))
+      }
+      if (result.error) {
+        const error = result.error
+        setErrors((value) => ({ ...value, discoveries: error }))
       }
     }
     if (target === 'users') {
@@ -477,6 +539,7 @@ export function AdminPage() {
           {warnings[activeTab] && <InlineAlert tone="info" title={copy.content.partialProfilesUnavailable} className="mb-5">{warnings[activeTab]}</InlineAlert>}
           {activeTab === 'dashboard' && <AdminDashboard overview={overview} services={services} analytics={analytics} loading={Boolean(loading.dashboard)} />}
           {activeTab === 'requests' && <AdminRequests requests={requests.data} pagination={requests} loading={Boolean(loading.requests)} onSave={saveRequest} onCreateEstablishment={createEstablishment} onPageChange={(page) => setPage('requests', page)} displayName={(user) => personName(user, locale)} />}
+          {activeTab === 'discoveries' && <AdminDiscoveriesView discoveries={discoveries.data} pagination={discoveries} loading={Boolean(loading.discoveries)} onPageChange={(page) => setPage('discoveries', page)} />}
           {activeTab === 'users' && <AdminUsers users={users.data} pagination={users} loading={Boolean(loading.users)} currentRole="admin" filters={userFilters} onFiltersChange={setUsersFilters} onPageChange={(page) => setPage('users', page)} onStatusChange={saveUserStatus} onRoleChange={async () => copy.users.superAdminRequired} displayName={(user) => personName(user, locale)} />}
           {activeTab === 'credits' && <AdminCredits wallets={wallets.data} pagination={wallets} loading={Boolean(loading.credits)} recharges={recharges} rechargeModule={rechargeModule} onPageChange={(page) => setPage('wallets', page)} onRefresh={() => void load('credits')} displayName={(user) => personName(user, locale)} />}
           {activeTab === 'search-logs' && <SearchLogsView logs={searchLogs.data} pagination={searchLogs} loading={Boolean(loading['search-logs'])} onPageChange={(page) => setPage('searchLogs', page)} />}

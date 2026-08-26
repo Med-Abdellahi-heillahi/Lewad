@@ -395,6 +395,53 @@ export const en: Dictionary = {
     requestAddition: "Request addition",
     demoNote:
       "This close match comes from the Lewad directory. Choosing “Yes” starts a new search.",
+    locationPrompt:
+      "Lewad can use your location to search for this place near you.",
+    initialLocationPrompt:
+      "Lewad can use your location to search for services near you.",
+    allowLocation: "Allow location",
+    chooseWilaya: "Choose wilaya",
+    dismissLocationPrompt: "Not now",
+    locationPermissionDenied:
+      "Location permission was denied. Choose a wilaya to continue.",
+    locationUnavailable:
+      "Your location is unavailable. Choose a wilaya to continue.",
+    locating: "Getting your location…",
+    isInMauritania: "Is this place in Mauritania?",
+    searchInMauritania: "Yes, search in Mauritania",
+    mauritaniaOnly: "Map search is currently available in Mauritania.",
+    selectWilaya: "Select a wilaya",
+    allMauritania: "All Mauritania",
+    searchContextCurrentLocation: "Search can use your current location.",
+    searchContextWilaya: "Search will be performed in: {wilaya}.",
+    searchContextUnknown: "Choose your wilaya to improve results.",
+    changeWilaya: "Change wilaya",
+    wilayas: {
+      Adrar: "Adrar",
+      Assaba: "Assaba",
+      Brakna: "Brakna",
+      "Dakhlet Nouadhibou": "Dakhlet Nouadhibou",
+      Gorgol: "Gorgol",
+      Guidimaka: "Guidimaka",
+      "Hodh Ech Chargui": "Hodh Ech Chargui",
+      "Hodh El Gharbi": "Hodh El Gharbi",
+      Inchiri: "Inchiri",
+      "Nouakchott Nord": "Nouakchott Nord",
+      "Nouakchott Ouest": "Nouakchott Ouest",
+      "Nouakchott Sud": "Nouakchott Sud",
+      Tagant: "Tagant",
+      "Tiris Zemmour": "Tiris Zemmour",
+      Trarza: "Trarza",
+    },
+    searchOnMap: "Search on map",
+    searchingMaps: "Searching maps…",
+    foundOnMap: "Found on map",
+    mapResultSaveWarning: "The result is shown, but could not be saved right now.",
+    noMapResultFound: "No map result found.",
+    mapSearchError: "Could not search the map right now. Please try again.",
+    mapSearchRateLimited:
+      "You have made several map searches. Please try again shortly.",
+    openDirections: "Open directions",
   },
 
   profileAvatar: {

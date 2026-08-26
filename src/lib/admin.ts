@@ -95,6 +95,23 @@ export type AdminSearchLog = {
   user: Pick<AdminUser, 'id' | 'full_name' | 'full_name_ar' | 'email'> | null
 }
 
+export type AdminExternalPlaceDiscovery = {
+  id: string
+  created_by: string
+  searched_query: string
+  provider: 'photon' | 'nominatim'
+  provider_place_id: string
+  display_name: string
+  latitude: number
+  longitude: number
+  country: string
+  wilaya: string | null
+  source_status: 'pending_review' | 'imported' | 'rejected'
+  created_at: string
+  last_seen_at: string
+  user: Pick<AdminUser, 'id' | 'full_name' | 'full_name_ar' | 'email'> | null
+}
+
 export type AdminCategory = {
   id: string
   name: string
@@ -185,6 +202,11 @@ const ledgerFields = `
 
 const searchLogFields = `
   id, user_id, query, normalized_query, status, results_count, debited_points, created_at
+`
+
+const externalPlaceDiscoveryFields = `
+  id, created_by, searched_query, provider, provider_place_id, display_name,
+  latitude, longitude, country, wilaya, source_status, created_at, last_seen_at
 `
 
 function errorMessage(error: { message: string } | null) {
@@ -855,6 +877,33 @@ export async function getAdminSearchLogs(
   const enriched = await enrichWithProfiles((data as Omit<AdminSearchLog, 'user'>[] | null) ?? [])
   return {
     data: paginatedResult(enriched.data as AdminSearchLog[], count, { page, pageSize }),
+    error: null,
+    warning: enriched.warning,
+  }
+}
+
+/** Reads map discoveries through the existing administrator-only RLS policy. */
+export async function getAdminExternalPlaceDiscoveries(
+  pagination: PaginationParams = {},
+): Promise<AdminResult<PaginatedResult<AdminExternalPlaceDiscovery>>> {
+  const { page, pageSize, from, to } = resolvePagination(pagination)
+  const { data, error, count } = await supabase
+    .from('external_place_discoveries')
+    .select(externalPlaceDiscoveryFields, { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(from, to)
+
+  if (error) return { data: emptyPage({ page, pageSize }), error: errorMessage(error) }
+
+  const rows = ((data as Omit<AdminExternalPlaceDiscovery, 'user'>[] | null) ?? [])
+    .map((row) => ({ ...row, user_id: row.created_by }))
+  const enriched = await enrichWithProfiles(rows)
+  return {
+    data: paginatedResult(
+      enriched.data.map(({ user_id: _userId, ...row }) => row) as AdminExternalPlaceDiscovery[],
+      count,
+      { page, pageSize },
+    ),
     error: null,
     warning: enriched.warning,
   }

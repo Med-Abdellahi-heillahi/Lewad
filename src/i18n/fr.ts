@@ -420,6 +420,59 @@ export const fr = {
     requestAddition: "Demander l’ajout",
     demoNote:
       "Ce nom proche vient de l’annuaire Lewad. Répondre « Oui » lance une nouvelle recherche.",
+    locationPrompt:
+      "Lewad peut utiliser votre position pour chercher ce lieu autour de vous.",
+    initialLocationPrompt:
+      "Lewad peut utiliser votre position pour chercher les services autour de vous.",
+    allowLocation: "Autoriser la position",
+    chooseWilaya: "Choisir une wilaya",
+    dismissLocationPrompt: "Plus tard",
+    locationPermissionDenied:
+      "L’accès à votre position a été refusé. Choisissez une wilaya pour continuer.",
+    locationUnavailable:
+      "Votre position n’est pas disponible. Choisissez une wilaya pour continuer.",
+    locating: "Localisation en cours…",
+    isInMauritania: "Ce lieu est-il en Mauritanie ?",
+    searchInMauritania: "Oui, chercher en Mauritanie",
+    mauritaniaOnly:
+      "La recherche sur carte est actuellement disponible en Mauritanie.",
+    selectWilaya: "Sélectionner une wilaya",
+    allMauritania: "Toute la Mauritanie",
+    searchContextCurrentLocation:
+      "La recherche peut utiliser votre position actuelle.",
+    searchContextWilaya:
+      "La recherche sera effectuée dans la wilaya : {wilaya}.",
+    searchContextUnknown:
+      "Choisissez votre wilaya pour améliorer les résultats.",
+    changeWilaya: "Changer la wilaya",
+    wilayas: {
+      Adrar: "Adrar",
+      Assaba: "Assaba",
+      Brakna: "Brakna",
+      "Dakhlet Nouadhibou": "Dakhlet Nouadhibou",
+      Gorgol: "Gorgol",
+      Guidimaka: "Guidimaka",
+      "Hodh Ech Chargui": "Hodh Ech Chargui",
+      "Hodh El Gharbi": "Hodh El Gharbi",
+      Inchiri: "Inchiri",
+      "Nouakchott Nord": "Nouakchott Nord",
+      "Nouakchott Ouest": "Nouakchott Ouest",
+      "Nouakchott Sud": "Nouakchott Sud",
+      Tagant: "Tagant",
+      "Tiris Zemmour": "Tiris Zemmour",
+      Trarza: "Trarza",
+    },
+    searchOnMap: "Rechercher sur la carte",
+    searchingMaps: "Recherche sur la carte…",
+    foundOnMap: "Trouvé sur la carte",
+    mapResultSaveWarning:
+      "Le résultat est affiché, mais il n’a pas pu être enregistré pour le moment.",
+    noMapResultFound: "Aucun résultat trouvé sur la carte.",
+    mapSearchError:
+      "Impossible de chercher sur la carte pour le moment. Réessayez.",
+    mapSearchRateLimited:
+      "Vous avez effectué plusieurs recherches sur la carte. Réessayez dans un instant.",
+    openDirections: "Ouvrir l’itinéraire",
   },
 
   profileAvatar: {

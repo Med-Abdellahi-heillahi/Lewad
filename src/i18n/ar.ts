@@ -367,6 +367,54 @@ export const ar: Dictionary = {
     requestAddition: "طلب الإضافة",
     demoNote:
       "هذا الاسم القريب مأخوذ من دليل Lewad. اختيار «نعم» يبدأ بحثًا جديدًا.",
+    locationPrompt:
+      "يمكن لـ Lewad استخدام موقعك للبحث عن هذا المكان بالقرب منك.",
+    initialLocationPrompt:
+      "يمكن لـ Lewad استخدام موقعك للبحث عن الخدمات القريبة منك.",
+    allowLocation: "السماح بالموقع",
+    chooseWilaya: "اختيار ولاية",
+    dismissLocationPrompt: "لاحقًا",
+    locationPermissionDenied:
+      "تم رفض الوصول إلى موقعك. اختر ولاية للمتابعة.",
+    locationUnavailable:
+      "موقعك غير متاح. اختر ولاية للمتابعة.",
+    locating: "جارٍ تحديد الموقع…",
+    isInMauritania: "هل هذا المكان في موريتانيا؟",
+    searchInMauritania: "نعم، ابحث في موريتانيا",
+    mauritaniaOnly: "البحث عبر الخريطة متاح حاليًا في موريتانيا.",
+    selectWilaya: "اختر ولاية",
+    allMauritania: "كل موريتانيا",
+    searchContextCurrentLocation: "يمكن أن يستخدم البحث موقعك الحالي.",
+    searchContextWilaya: "سيتم البحث في الولاية: {wilaya}.",
+    searchContextUnknown: "اختر ولايتك لتحسين النتائج.",
+    changeWilaya: "تغيير الولاية",
+    wilayas: {
+      Adrar: "أدرار",
+      Assaba: "العصابة",
+      Brakna: "لبراكنة",
+      "Dakhlet Nouadhibou": "داخلت نواذيبو",
+      Gorgol: "غورغول",
+      Guidimaka: "كيدي ماغا",
+      "Hodh Ech Chargui": "الحوض الشرقي",
+      "Hodh El Gharbi": "الحوض الغربي",
+      Inchiri: "إينشيري",
+      "Nouakchott Nord": "نواكشوط الشمالية",
+      "Nouakchott Ouest": "نواكشوط الغربية",
+      "Nouakchott Sud": "نواكشوط الجنوبية",
+      Tagant: "تكانت",
+      "Tiris Zemmour": "تيرس زمور",
+      Trarza: "الترارزة",
+    },
+    searchOnMap: "البحث على الخريطة",
+    searchingMaps: "جارٍ البحث على الخريطة…",
+    foundOnMap: "تم العثور عليه على الخريطة",
+    mapResultSaveWarning:
+      "تم عرض النتيجة، لكن تعذر حفظها حاليًا.",
+    noMapResultFound: "لم يتم العثور على نتيجة على الخريطة.",
+    mapSearchError: "تعذر البحث على الخريطة الآن. حاول مرة أخرى.",
+    mapSearchRateLimited:
+      "أجريت عدة عمليات بحث على الخريطة. حاول مرة أخرى بعد قليل.",
+    openDirections: "فتح الاتجاهات",
   },
 
   profileAvatar: {

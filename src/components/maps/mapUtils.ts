@@ -2,6 +2,10 @@ export function directionsUrl(lat: number, lng: number): string {
   return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
 }
 
+export function mapUrl(lat: number, lng: number): string {
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+}
+
 export function hasCoordinates(value: { latitude: number | null; longitude: number | null }): boolean {
   return typeof value.latitude === 'number'
     && typeof value.longitude === 'number'

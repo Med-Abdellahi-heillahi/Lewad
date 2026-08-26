@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { directionsUrl, hasCoordinates } from '../src/components/maps/mapUtils'
+import { directionsUrl, hasCoordinates, mapUrl } from '../src/components/maps/mapUtils'
 
 const searchViewPath = new URL('../src/components/AppDemo.tsx', import.meta.url)
 const mapSheetPath = new URL('../src/components/maps/ServiceMapSheet.tsx', import.meta.url)
@@ -9,6 +9,7 @@ const serviceWorkerPath = new URL('../public/sw.js', import.meta.url)
 describe('search result map contracts', () => {
   it('creates a plain external directions URL only for valid coordinate pairs', () => {
     expect(directionsUrl(18.0856, -15.9785)).toBe('https://www.google.com/maps/dir/?api=1&destination=18.0856,-15.9785')
+    expect(mapUrl(18.0856, -15.9785)).toBe('https://www.google.com/maps/search/?api=1&query=18.0856,-15.9785')
     expect(hasCoordinates({ latitude: 18.0856, longitude: -15.9785 })).toBe(true)
     expect(hasCoordinates({ latitude: null, longitude: -15.9785 })).toBe(false)
     expect(hasCoordinates({ latitude: 91, longitude: -15.9785 })).toBe(false)

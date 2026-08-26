@@ -11,12 +11,25 @@ import { type Locale, useI18n } from "../i18n";
 import { type Db2Branch, type Db2Establishment } from "../lib/db2";
 import { searchServicesWithCredit } from "../lib/db3a";
 import { createMissingServiceRequest } from "../lib/db3b";
+import {
+  type ExternalPlace,
+  searchExternalPlace,
+} from "../lib/externalPlaceSearch";
 import { formatNumber } from "../lib/format";
 import { isAdminRole } from "../lib/routeAuth";
 import {
   findClosestSearchMatch,
   normalizeSearchText,
 } from "../lib/searchMatching";
+import {
+  dismissSearchLocationPrompt,
+  MAURITANIA_WILAYAS,
+  readSearchLocationContext,
+  saveSearchCoordinates,
+  saveSearchWilaya,
+  type MauritaniaWilaya,
+  type SearchCoordinates,
+} from "../lib/searchLocationContext";
 import {
   SUGGESTION_MIN_LENGTH,
   type ServiceSuggestion,
@@ -26,7 +39,7 @@ import { appPad, appWrap, btnGhost, btnPrimary, card } from "../lib/ui";
 import { useAccount } from "../hooks/useAccount";
 import { Icon, type IconName } from "./Icon";
 import { AppShell } from "./shell/AppShell";
-import { hasCoordinates, directionsUrl } from "./maps/mapUtils";
+import { directionsUrl, hasCoordinates, mapUrl } from "./maps/mapUtils";
 const ServiceMapSheet = lazy(() =>
   import("./maps/ServiceMapSheet").then((m) => ({
     default: m.ServiceMapSheet,
@@ -39,9 +52,24 @@ type SearchState =
   | "found"
   | "unavailable"
   | "insufficient"
-  | "requested";
+  | "requested"
+  | "externalFound";
 type ValidationMessage = "empty" | "minimum" | null;
 type RequestState = "idle" | "loading" | "created" | "duplicate" | "error";
+type ExternalFallbackState =
+  | "idle"
+  | "askingLocation"
+  | "choosingWilaya"
+  | "searching"
+  | "noResult"
+  | "error";
+type LocationPermissionState = "idle" | "requesting" | "allowed" | "denied" | "unavailable";
+
+function debugLocationFallback(event: string, details: Record<string, unknown> = {}) {
+  if (import.meta.env.DEV) {
+    console.debug(`[location-fallback] ${event}`, details);
+  }
+}
 
 const appCopy = {
   fr: {
@@ -560,9 +588,36 @@ export function PublicSearchDemo() {
   );
   const [lastSearchLogId, setLastSearchLogId] = useState<string | null>(null);
   const [requestState, setRequestState] = useState<RequestState>("idle");
+  const [externalFallbackState, setExternalFallbackState] =
+    useState<ExternalFallbackState>("idle");
+  const storedSearchLocation = useMemo(() => readSearchLocationContext(), []);
+  const [locationPermissionState, setLocationPermissionState] =
+    useState<LocationPermissionState>(
+      storedSearchLocation.coordinates ? "allowed" : "idle",
+    );
+  const [selectedWilaya, setSelectedWilaya] = useState<MauritaniaWilaya | "">(
+    storedSearchLocation.wilaya ?? "",
+  );
+  const [currentLocation, setCurrentLocation] = useState<SearchCoordinates | null>(
+    storedSearchLocation.coordinates,
+  );
+  const [locationPromptVisible, setLocationPromptVisible] = useState(
+    !storedSearchLocation.coordinates &&
+      !storedSearchLocation.wilaya &&
+      !storedSearchLocation.promptDismissed,
+  );
+  const [searchLocationPickerOpen, setSearchLocationPickerOpen] = useState(false);
+  const [searchInMauritania, setSearchInMauritania] = useState(true);
+  const [externalPlace, setExternalPlace] = useState<ExternalPlace | null>(
+    null,
+  );
+  const [externalSearchError, setExternalSearchError] = useState<
+    "rate_limited" | "error" | null
+  >(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionListRef = useRef<HTMLDivElement>(null);
   const searchIdRef = useRef(0);
+  const externalSearchIdRef = useRef(0);
 
   const [suggestions, setSuggestions] = useState<ServiceSuggestion[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
@@ -577,6 +632,27 @@ export function PublicSearchDemo() {
         '[role="option"]',
       ) ?? [],
     );
+
+  useEffect(() => {
+    const promptReason = locationPromptVisible
+      ? "no_saved_context"
+      : currentLocation
+        ? "current_location_available"
+        : selectedWilaya
+          ? "wilaya_selected"
+          : "dismissed";
+    debugLocationFallback("location prompt rendered or skipped", {
+      rendered: !hasUnlimitedSearches && locationPromptVisible,
+      reason: promptReason,
+      accountLoading,
+    });
+  }, [
+    accountLoading,
+    currentLocation,
+    hasUnlimitedSearches,
+    locationPromptVisible,
+    selectedWilaya,
+  ]);
 
   /*
    * Navigation clavier dans la liste : flèches pour parcourir, Échap pour
@@ -652,12 +728,18 @@ export function PublicSearchDemo() {
     setLastNotFoundQuery(null);
     setLastSearchLogId(null);
     setRequestState("idle");
+    externalSearchIdRef.current += 1;
+    setExternalFallbackState("idle");
+    setSearchInMauritania(true);
+    setExternalPlace(null);
+    setExternalSearchError(null);
   };
 
   const runSearch = async (raw = query) => {
     const requestedQuery = raw.trim();
     const normalizedQuery = normalizeSearchText(raw);
     const searchId = ++searchIdRef.current;
+    debugLocationFallback("search submitted", { query: requestedQuery });
 
     if (!normalizedQuery || normalizedQuery.length < 2) {
       clearSearchState();
@@ -671,9 +753,22 @@ export function PublicSearchDemo() {
     setSuggestionsOpen(false);
     clearSearchState();
     setState("loading");
-    const result = await searchServicesWithCredit(requestedQuery);
+    let result: Awaited<ReturnType<typeof searchServicesWithCredit>>;
+    try {
+      result = await searchServicesWithCredit(requestedQuery);
+    } catch {
+      debugLocationFallback("internal search failed", { query: requestedQuery });
+      setSearchFailed(true);
+      setState("unavailable");
+      return;
+    }
 
     if (searchId !== searchIdRef.current) return;
+    debugLocationFallback("internal search status", {
+      query: requestedQuery,
+      status: result.status,
+      resultsCount: result.resultsCount,
+    });
 
     // The RPC debits atomically and returns the post-debit balance. Reflect it
     // immediately in the shared account state so the page and AppBar never
@@ -720,9 +815,26 @@ export function PublicSearchDemo() {
       return;
     }
 
+    if (result.status !== "not_found") {
+      setSearchFailed(true);
+      setState("unavailable");
+      return;
+    }
+
     setLastNotFoundQuery(requestedQuery);
     setLastSearchLogId(result.searchLogId);
     setState("unavailable");
+    setExternalFallbackState("askingLocation");
+
+    if (currentLocation || selectedWilaya) {
+      debugLocationFallback("fallback started after not_found", {
+        query: requestedQuery,
+        wilaya: selectedWilaya || null,
+        country: "Mauritania",
+        hasLocation: Boolean(currentLocation),
+      });
+      void runExternalSearch(currentLocation, requestedQuery);
+    }
 
     // La correction orthographique ne doit jamais proposer un nom qui n'existe
     // pas : cliquer « Oui » relance une recherche payante. On sonde donc les
@@ -731,6 +843,148 @@ export function PublicSearchDemo() {
     const probe = await suggestServices(normalizedQuery.slice(0, 2));
     if (searchId !== searchIdRef.current) return;
     setDidYouMean(findClosestSearchMatch(probe.items, normalizedQuery));
+  };
+
+  const runExternalSearch = async (
+    location: SearchCoordinates | null = currentLocation,
+    fallbackQuery = lastNotFoundQuery,
+  ) => {
+    if (
+      !fallbackQuery ||
+      !searchInMauritania ||
+      externalFallbackState === "searching"
+    ) {
+      debugLocationFallback("fallback skipped", {
+        hasQuery: Boolean(fallbackQuery),
+        searchInMauritania,
+        alreadySearching: externalFallbackState === "searching",
+      });
+      return;
+    }
+
+    const externalSearchId = ++externalSearchIdRef.current;
+    setExternalSearchError(null);
+    setExternalFallbackState("searching");
+    debugLocationFallback("geocode payload", {
+      query: fallbackQuery,
+      wilaya: selectedWilaya || null,
+      country: "Mauritania",
+      hasLocation: Boolean(location),
+    });
+    let response: Awaited<ReturnType<typeof searchExternalPlace>>;
+    try {
+      response = await searchExternalPlace({
+        query: fallbackQuery,
+        wilaya: selectedWilaya || null,
+        location,
+      });
+    } catch {
+      debugLocationFallback("geocode error", { query: fallbackQuery });
+      setExternalSearchError("error");
+      setExternalFallbackState("error");
+      return;
+    }
+
+    if (externalSearchId !== externalSearchIdRef.current) return;
+
+    if (response.status === "found" && response.place) {
+      debugLocationFallback("geocode success", {
+        query: fallbackQuery,
+        discoveryStatus: response.place.discoveryStatus,
+      });
+      setExternalPlace(response.place);
+      setExternalFallbackState("idle");
+      setState("externalFound");
+      return;
+    }
+
+    if (response.status === "not_found") {
+      debugLocationFallback("geocode no result", { query: fallbackQuery });
+      setExternalFallbackState("noResult");
+      return;
+    }
+
+    debugLocationFallback("geocode error", {
+      query: fallbackQuery,
+      status: response.status,
+    });
+    setExternalSearchError(
+      response.status === "rate_limited" ? "rate_limited" : "error",
+    );
+    setExternalFallbackState("error");
+  };
+
+  const requestCurrentLocation = (
+    onAllowed?: (coordinates: SearchCoordinates) => void,
+    onUnavailable?: () => void,
+  ) => {
+    if (!navigator.geolocation) {
+      setLocationPermissionState("unavailable");
+      setLocationPromptVisible(false);
+      onUnavailable?.();
+      return;
+    }
+
+    setLocationPermissionState("requesting");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const coordinates = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+        saveSearchCoordinates(coordinates);
+        setCurrentLocation(coordinates);
+        setLocationPermissionState("allowed");
+        setLocationPromptVisible(false);
+        onAllowed?.(coordinates);
+      },
+      (error) => {
+        setLocationPermissionState(error.code === 1 ? "denied" : "unavailable");
+        setLocationPromptVisible(false);
+        onUnavailable?.();
+      },
+      { enableHighAccuracy: false, maximumAge: 300_000, timeout: 10_000 },
+    );
+  };
+
+  const requestLocationForSearchContext = () => {
+    debugLocationFallback("allow location clicked", { source: "search_context" });
+    requestCurrentLocation(undefined, () => setSearchLocationPickerOpen(true));
+  };
+
+  const requestLocationForExternalSearch = () => {
+    debugLocationFallback("allow location clicked", { source: "fallback" });
+    requestCurrentLocation(
+      (coordinates) => void runExternalSearch(coordinates),
+      () => setExternalFallbackState("choosingWilaya"),
+    );
+  };
+
+  const useWilayaFallback = () => {
+    debugLocationFallback("choose wilaya clicked", { source: "fallback" });
+    setLocationPromptVisible(false);
+    setExternalFallbackState("choosingWilaya");
+  };
+
+  const handleMauritaniaChoice = (isInMauritania: boolean) => {
+    setSearchInMauritania(isInMauritania);
+    if (!isInMauritania) setExternalFallbackState("noResult");
+  };
+
+  const handleWilayaChange = (value: string) => {
+    const wilaya = MAURITANIA_WILAYAS.find((item) => item === value) ?? "";
+    debugLocationFallback("wilaya selected", { wilaya: wilaya || null });
+    setSelectedWilaya(wilaya);
+    saveSearchWilaya(wilaya || null);
+    setLocationPromptVisible(false);
+    setSearchLocationPickerOpen(false);
+    setSearchInMauritania(true);
+  };
+
+  const dismissInitialLocationPrompt = () => {
+    debugLocationFallback("location prompt dismissed");
+    dismissSearchLocationPrompt();
+    setLocationPromptVisible(false);
   };
 
   const handleRequestMissingService = async () => {
@@ -786,6 +1040,20 @@ export function PublicSearchDemo() {
   const searchedQueryLabel = lastNotFoundQuery
     ? copy.searchedQuery.replace("{query}", lastNotFoundQuery)
     : "";
+  const selectedWilayaLabel = selectedWilaya
+    ? searchCopy.wilayas[selectedWilaya]
+    : null;
+  const searchContextMessage = selectedWilayaLabel
+    ? searchCopy.searchContextWilaya.replace("{wilaya}", selectedWilayaLabel)
+    : currentLocation
+      ? searchCopy.searchContextCurrentLocation
+      : searchCopy.searchContextUnknown;
+
+  const openSearchLocationPicker = () => {
+    debugLocationFallback("change wilaya clicked", { source: "search_context" });
+    setLocationPromptVisible(false);
+    setSearchLocationPickerOpen(true);
+  };
 
   return (
     <AppShell active="search" documentTitle={copy.title} skipLabel={copy.input}>
@@ -840,6 +1108,7 @@ export function PublicSearchDemo() {
                     setQuery(event.target.value);
                     setValidation(null);
                     setDidYouMean(null);
+                    setExternalFallbackState("idle");
                     setState("initial");
                     setSuggestionsOpen(true);
                   }}
@@ -958,6 +1227,92 @@ export function PublicSearchDemo() {
                 {copy[validation]}
               </p>
             )}
+
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-surface-2 px-3.5 py-3 text-sm text-muted">
+              <p className="flex min-w-0 items-center gap-2 leading-6">
+                <Icon name="pin" size={16} className="shrink-0 text-brand-deep" />
+                <span>{searchContextMessage}</span>
+              </p>
+              <button
+                type="button"
+                className="min-h-11 shrink-0 rounded-lg px-2.5 text-sm font-semibold text-brand-deep underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-brand-deep/30"
+                onClick={openSearchLocationPicker}
+              >
+                {searchCopy.changeWilaya}
+              </button>
+            </div>
+
+            {searchLocationPickerOpen && (
+              <div className="mt-3 rounded-xl border border-line bg-surface p-3.5 shadow-sm sm:max-w-md">
+                <label
+                  className="block text-sm font-semibold text-ink"
+                  htmlFor="search-context-wilaya"
+                >
+                  {searchCopy.selectWilaya}
+                </label>
+                <select
+                  id="search-context-wilaya"
+                  value={selectedWilaya}
+                  onChange={(event) => handleWilayaChange(event.target.value)}
+                  className="mt-2 min-h-11 w-full rounded-xl border border-line bg-surface px-3 text-base text-ink outline-none focus:border-brand-deep focus:ring-2 focus:ring-brand-deep/15"
+                >
+                  <option value="">{searchCopy.allMauritania}</option>
+                  {MAURITANIA_WILAYAS.map((wilaya) => (
+                    <option key={wilaya} value={wilaya}>
+                      {searchCopy.wilayas[wilaya]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {!hasUnlimitedSearches &&
+              locationPromptVisible && (
+                <section
+                  className={`${card} mt-4 border-brand-deep/20 bg-brand-soft/45 p-4 sm:p-5`}
+                  role="status"
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-surface text-brand-deep shadow-sm">
+                      <Icon name="pin" size={19} />
+                    </span>
+                    <p className="pt-1 text-sm leading-6 text-ink">
+                      {searchCopy.initialLocationPrompt}
+                    </p>
+                  </div>
+                  <div className="mt-4 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
+                    <button
+                      type="button"
+                      className={`${btnPrimary} w-full sm:w-auto`}
+                      disabled={locationPermissionState === "requesting"}
+                      onClick={requestLocationForSearchContext}
+                    >
+                      <Icon
+                        name={locationPermissionState === "requesting" ? "clock" : "pin"}
+                        size={18}
+                      />
+                      {locationPermissionState === "requesting"
+                        ? searchCopy.locating
+                        : searchCopy.allowLocation}
+                    </button>
+                    <button
+                      type="button"
+                      className={`${btnGhost} w-full sm:w-auto`}
+                      onClick={openSearchLocationPicker}
+                    >
+                      <Icon name="map" size={18} />
+                      {searchCopy.chooseWilaya}
+                    </button>
+                    <button
+                      type="button"
+                      className="min-h-11 self-center px-2 text-sm font-semibold text-muted underline-offset-4 hover:text-ink hover:underline"
+                      onClick={dismissInitialLocationPrompt}
+                    >
+                      {searchCopy.dismissLocationPrompt}
+                    </button>
+                  </div>
+                </section>
+              )}
           </form>
 
           <div className="-mx-4 mt-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 lg:col-start-1">
@@ -1063,6 +1418,69 @@ export function PublicSearchDemo() {
               </div>
             )}
 
+            {state === "externalFound" && externalPlace && (
+              <section className={`${card} overflow-hidden`}>
+                {debited && (
+                  <p
+                    className="m-5 flex items-center gap-2 rounded-xl border border-answer/25 bg-answer-bg px-3.5 py-3 text-sm font-medium text-answer sm:m-7"
+                    role="status"
+                  >
+                    <Icon name="check" size={17} />
+                    {copy.debitNotice}
+                  </p>
+                )}
+                <div className="p-6 sm:p-8">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3 py-1.5 text-xs font-bold text-brand-deep dark:text-brand">
+                        <Icon name="map" size={14} />
+                        {searchCopy.foundOnMap}
+                      </span>
+                      <h2 dir="auto" className="mt-4 text-2xl font-bold tracking-tight text-ink">
+                        {externalPlace.displayName}
+                      </h2>
+                      <p dir="auto" className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+                        {externalPlace.address}
+                      </p>
+                    </div>
+                  </div>
+                  {externalPlace.discoveryStatus === "error" && (
+                    <p className="mt-5 text-sm font-medium text-muted" role="status">
+                      {searchCopy.mapResultSaveWarning}
+                    </p>
+                  )}
+
+                  <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
+                    <a
+                      className={`${btnPrimary} w-full sm:w-auto`}
+                      href={mapUrl(externalPlace.latitude, externalPlace.longitude)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <Icon name="map" size={18} />
+                      {copy.viewOnMap}
+                    </a>
+                    <a
+                      className={`${btnGhost} w-full sm:w-auto`}
+                      href={directionsUrl(externalPlace.latitude, externalPlace.longitude)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <Icon name="route" size={18} />
+                      {searchCopy.openDirections}
+                    </a>
+                    <button
+                      type="button"
+                      className={`${btnGhost} w-full sm:w-auto`}
+                      onClick={reset}
+                    >
+                      {copy.reset}
+                    </button>
+                  </div>
+                </div>
+              </section>
+            )}
+
             {state === "unavailable" && (
               <section className={`${card} p-6 sm:p-8`}>
                 <span className="grid size-11 place-items-center rounded-xl bg-brand-soft text-brand-deep">
@@ -1079,7 +1497,193 @@ export function PublicSearchDemo() {
                   </p>
                 )}
 
-                {didYouMean ? (
+                {externalFallbackState === "askingLocation" ? (
+                  <>
+                    <h2 className="mt-5 text-xl font-bold tracking-tight sm:text-2xl">
+                      {copy.unavailableTitle}
+                    </h2>
+                    {lastNotFoundQuery && (
+                      <p
+                        dir="auto"
+                        className="mt-3 inline-flex max-w-full items-center gap-2 rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-sm"
+                      >
+                        <Icon name="search" size={15} className="shrink-0 text-muted" />
+                        <span className="truncate font-semibold text-ink">
+                          {searchedQueryLabel}
+                        </span>
+                      </p>
+                    )}
+                    <p className="mt-3 max-w-xl text-[15px] leading-7 text-muted sm:text-base">
+                      {searchCopy.locationPrompt}
+                    </p>
+                    <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                      <button
+                        type="button"
+                        className={`${btnPrimary} w-full sm:w-auto`}
+                        disabled={locationPermissionState === "requesting"}
+                        onClick={requestLocationForExternalSearch}
+                      >
+                        <Icon
+                          name={locationPermissionState === "requesting" ? "clock" : "pin"}
+                          size={18}
+                        />
+                        {locationPermissionState === "requesting"
+                          ? searchCopy.locating
+                          : searchCopy.allowLocation}
+                      </button>
+                      <button
+                        type="button"
+                        className={`${btnGhost} w-full sm:w-auto`}
+                        onClick={useWilayaFallback}
+                      >
+                        <Icon name="map" size={18} />
+                        {searchCopy.chooseWilaya}
+                      </button>
+                    </div>
+                  </>
+                ) : externalFallbackState === "choosingWilaya" ? (
+                  <>
+                    <h2 className="mt-5 text-xl font-bold tracking-tight sm:text-2xl">
+                      {searchCopy.chooseWilaya}
+                    </h2>
+                    {locationPermissionState === "denied" && (
+                      <p className="mt-3 text-sm leading-6 text-muted" role="status">
+                        {searchCopy.locationPermissionDenied}
+                      </p>
+                    )}
+                    {locationPermissionState === "unavailable" && (
+                      <p className="mt-3 text-sm leading-6 text-muted" role="status">
+                        {searchCopy.locationUnavailable}
+                      </p>
+                    )}
+                    <label className="mt-5 flex min-h-11 items-center gap-3 rounded-xl border border-line bg-surface-2 px-3.5 py-3 text-sm font-semibold text-ink">
+                      <input
+                        type="checkbox"
+                        checked={searchInMauritania}
+                        onChange={(event) => handleMauritaniaChoice(event.target.checked)}
+                        className="size-4 accent-[var(--brand-deep)]"
+                      />
+                      <span>{searchCopy.isInMauritania}</span>
+                    </label>
+                    <p className="mt-2 text-sm text-muted">
+                      {searchCopy.searchInMauritania}
+                    </p>
+                    <label className="mt-5 block text-sm font-semibold text-ink" htmlFor="external-place-wilaya">
+                      {searchCopy.selectWilaya}
+                    </label>
+                    <select
+                      id="external-place-wilaya"
+                      value={selectedWilaya}
+                      onChange={(event) => handleWilayaChange(event.target.value)}
+                      className="mt-2 min-h-11 w-full rounded-xl border border-line bg-surface px-3 text-base text-ink outline-none focus:border-brand-deep focus:ring-2 focus:ring-brand-deep/15 sm:max-w-sm"
+                    >
+                      <option value="">{searchCopy.allMauritania}</option>
+                      {MAURITANIA_WILAYAS.map((wilaya) => (
+                        <option key={wilaya} value={wilaya}>
+                          {searchCopy.wilayas[wilaya]}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                      <button
+                        type="button"
+                        className={`${btnPrimary} w-full sm:w-auto`}
+                        disabled={!searchInMauritania}
+                        onClick={() => void runExternalSearch()}
+                      >
+                        <Icon name="map" size={18} />
+                        {searchCopy.searchOnMap}
+                      </button>
+                      <button
+                        type="button"
+                        className={`${btnGhost} w-full sm:w-auto`}
+                        onClick={reset}
+                      >
+                        {copy.reset}
+                      </button>
+                    </div>
+                  </>
+                ) : externalFallbackState === "searching" ? (
+                  <div className="py-4" role="status" aria-busy="true">
+                    <span className="block h-5 w-40 rounded bg-surface-2 motion-safe:animate-pulse" />
+                    <p className="mt-4 text-sm font-medium text-muted">
+                      {searchCopy.searchingMaps}
+                    </p>
+                  </div>
+                ) : externalFallbackState === "noResult" ? (
+                  <>
+                    <h2 className="mt-5 text-xl font-bold tracking-tight sm:text-2xl">
+                      {searchCopy.noMapResultFound}
+                    </h2>
+                    <p className="mt-3 max-w-xl text-[15px] leading-7 text-muted sm:text-base">
+                      {searchInMauritania
+                        ? copy.unavailableText
+                        : searchCopy.mauritaniaOnly}
+                    </p>
+                    {requestState === "error" && (
+                      <p className="mt-4 flex items-center gap-2 text-sm font-medium text-ask" role="alert">
+                        <Icon name="alert" size={17} />
+                        {copy.requestError}
+                      </p>
+                    )}
+                    <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                      {lastNotFoundQuery && (
+                        <button
+                          type="button"
+                          className={`${btnPrimary} w-full sm:w-auto`}
+                          disabled={requestState === "loading"}
+                          onClick={() => void handleRequestMissingService()}
+                        >
+                          <Icon name={requestState === "loading" ? "clock" : "plus"} size={18} />
+                          {requestState === "loading" ? copy.requesting : copy.request}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className={`${btnGhost} w-full sm:w-auto`}
+                        onClick={useWilayaFallback}
+                      >
+                        <Icon name="map" size={18} />
+                        {searchCopy.changeWilaya}
+                      </button>
+                      <button
+                        type="button"
+                        className={`${btnGhost} w-full sm:w-auto`}
+                        onClick={reset}
+                      >
+                        {copy.reset}
+                      </button>
+                    </div>
+                  </>
+                ) : externalFallbackState === "error" ? (
+                  <>
+                    <h2 className="mt-5 text-xl font-bold tracking-tight sm:text-2xl">
+                      {copy.searchErrorTitle}
+                    </h2>
+                    <p className="mt-3 max-w-xl text-[15px] leading-7 text-muted sm:text-base">
+                      {externalSearchError === "rate_limited"
+                        ? searchCopy.mapSearchRateLimited
+                        : searchCopy.mapSearchError}
+                    </p>
+                    <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                      <button
+                        type="button"
+                        className={`${btnPrimary} w-full sm:w-auto`}
+                        onClick={useWilayaFallback}
+                      >
+                        <Icon name="map" size={18} />
+                        {searchCopy.changeWilaya}
+                      </button>
+                      <button
+                        type="button"
+                        className={`${btnGhost} w-full sm:w-auto`}
+                        onClick={reset}
+                      >
+                        {copy.reset}
+                      </button>
+                    </div>
+                  </>
+                ) : didYouMean ? (
                   <>
                     <h2 className="mt-5 text-xl font-bold tracking-tight sm:text-2xl">
                       {didYouMeanLabel}
@@ -1103,16 +1707,6 @@ export function PublicSearchDemo() {
                         {searchCopy.no}
                       </button>
                     </div>
-                    {lastNotFoundQuery && (
-                      <button
-                        type="button"
-                        className={`${btnGhost} mt-3 w-full sm:w-auto`}
-                        onClick={() => void handleRequestMissingService()}
-                      >
-                        <Icon name="plus" size={18} />
-                        {copy.request}
-                      </button>
-                    )}
                   </>
                 ) : (
                   <>

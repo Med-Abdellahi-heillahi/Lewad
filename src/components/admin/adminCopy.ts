@@ -1,7 +1,7 @@
 import type { Locale } from '../../i18n'
 import type { AdminAlertId } from '../../lib/admin'
 
-export type AdminTabId = 'dashboard' | 'requests' | 'users' | 'credits' | 'search-logs' | 'services' | 'submissions' | 'system'
+export type AdminTabId = 'dashboard' | 'requests' | 'discoveries' | 'users' | 'credits' | 'search-logs' | 'services' | 'submissions' | 'system'
 export type SuperAdminTabId = 'overview' | 'admins' | 'users' | 'audit' | 'settings'
 
 type AlertText = { title: string; text: string }
@@ -265,6 +265,22 @@ type AdminBusinessSubmissionsCopy = {
   pending: string
   approved: string
   rejected: string
+}
+
+type AdminDiscoveriesCopy = {
+  title: string
+  subtitle: string
+  emptyTitle: string
+  emptyText: string
+  searchedQuery: string
+  place: string
+  provider: string
+  context: string
+  coordinates: string
+  user: string
+  date: string
+  status: string
+  readOnlyNotice: string
 }
 
 type AdminEstablishmentFormCopy = {
@@ -546,6 +562,7 @@ type AdminCopy = {
   users: AdminUsersCopy
   credits: AdminCreditsCopy
   requests: AdminRequestsCopy
+  discoveries: AdminDiscoveriesCopy
   businessSubmissions: AdminBusinessSubmissionsCopy
   establishmentForm: AdminEstablishmentFormCopy
   /** Pages compte de l'espace admin : profil et paramètres, hors espace membre. */
@@ -637,7 +654,7 @@ type AdminCopy = {
 
 export const adminCopy: Record<Locale, AdminCopy> = {
   fr: {
-    tabs: { dashboard: 'Tableau de bord', requests: 'Demandes', users: 'Utilisateurs', credits: 'Crédits', 'search-logs': 'Recherches', services: 'Services', submissions: 'Soumissions', system: 'Système' },
+    tabs: { dashboard: 'Tableau de bord', requests: 'Demandes', discoveries: 'Demandes de vérification', users: 'Utilisateurs', credits: 'Crédits', 'search-logs': 'Recherches', services: 'Services', submissions: 'Soumissions', system: 'Système' },
     access: {
       unavailableTitle: 'Impossible de vérifier l’accès', deniedTitle: 'Accès refusé',
       unavailableText: 'Votre profil n’a pas pu être chargé. Réessayez dans un instant.', deniedText: 'Cette page est réservée à l’équipe Lewad.',
@@ -743,6 +760,12 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       requestQuery: 'Recherche', normalizedQuery: 'Requête normalisée', userMessage: 'Message de l’utilisateur',
       requestUpdated: 'Demande mise à jour.', requestUpdateFailed: 'Impossible de mettre à jour la demande.', serviceAddedSuccess: 'Service ajouté avec succès.', serviceAddFailed: 'Impossible d’ajouter ce service.', requestMarkedAdded: 'Demande marquée comme ajoutée.',
       close: 'Fermer', dismiss: 'Fermer la notification', reviewActions: 'Actions de traitement',
+    },
+    discoveries: {
+      title: 'Demandes de vérification', subtitle: 'Lieux trouvés par la carte et conservés pour examen interne.',
+      emptyTitle: 'Aucune découverte carte', emptyText: 'Les résultats de carte enregistrés apparaîtront ici.',
+      searchedQuery: 'Recherche', place: 'Lieu', provider: 'Fournisseur', context: 'Contexte', coordinates: 'Coordonnées', user: 'Client', date: 'Date', status: 'État',
+      readOnlyNotice: 'Cette vue est en lecture seule : aucune découverte ne crée un établissement automatiquement.',
     },
     businessSubmissions: {
       title: 'Soumissions établissements', subtitle: 'Demandes de dépôt d\'établissements soumises par les professionnels.',
@@ -889,7 +912,7 @@ export const adminCopy: Record<Locale, AdminCopy> = {
     },
   },
   ar: {
-    tabs: { dashboard: 'لوحة التحكم', requests: 'الطلبات', users: 'المستخدمون', credits: 'النقاط', 'search-logs': 'عمليات البحث', services: 'الخدمات', submissions: 'الطلبات', system: 'النظام' },
+    tabs: { dashboard: 'لوحة التحكم', requests: 'الطلبات', discoveries: 'طلبات التحقق', users: 'المستخدمون', credits: 'النقاط', 'search-logs': 'عمليات البحث', services: 'الخدمات', submissions: 'الطلبات', system: 'النظام' },
     access: {
       unavailableTitle: 'تعذر التحقق من الوصول', deniedTitle: 'تم رفض الوصول',
       unavailableText: 'تعذر تحميل ملفك الشخصي. أعد المحاولة لاحقاً.', deniedText: 'هذه الصفحة مخصصة لفريق Lewad.',
@@ -995,6 +1018,12 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       requestQuery: 'البحث', normalizedQuery: 'الصيغة الموحّدة', userMessage: 'رسالة المستخدم',
       requestUpdated: 'تم تحديث الطلب.', requestUpdateFailed: 'تعذر تحديث الطلب.', serviceAddedSuccess: 'تمت إضافة الخدمة بنجاح.', serviceAddFailed: 'تعذر إضافة هذه الخدمة.', requestMarkedAdded: 'تم تعليم الطلب كمضاف.',
       close: 'إغلاق', dismiss: 'إغلاق الإشعار', reviewActions: 'إجراءات المعالجة',
+    },
+    discoveries: {
+      title: 'طلبات التحقق', subtitle: 'أماكن عُثر عليها عبر الخريطة وحُفظت للمراجعة الداخلية.',
+      emptyTitle: 'لا توجد اكتشافات من الخريطة', emptyText: 'ستظهر هنا نتائج الخريطة المحفوظة.',
+      searchedQuery: 'البحث', place: 'المكان', provider: 'المزوّد', context: 'السياق', coordinates: 'الإحداثيات', user: 'العميل', date: 'التاريخ', status: 'الحالة',
+      readOnlyNotice: 'هذه القراءة فقط: لا ينشئ أي اكتشاف مؤسسة تلقائيًا.',
     },
     businessSubmissions: {
       title: 'طلبات المؤسسات', subtitle: 'طلبات إضافة مؤسسات مقدّمة من أصحاب الأعمال.',
@@ -1141,7 +1170,7 @@ export const adminCopy: Record<Locale, AdminCopy> = {
     },
   },
   en: {
-    tabs: { dashboard: 'Dashboard', requests: 'Requests', users: 'Users', credits: 'Credits', 'search-logs': 'Search logs', services: 'Services', submissions: 'Submissions', system: 'System' },
+    tabs: { dashboard: 'Dashboard', requests: 'Requests', discoveries: 'Verification requests', users: 'Users', credits: 'Credits', 'search-logs': 'Search logs', services: 'Services', submissions: 'Submissions', system: 'System' },
     access: {
       unavailableTitle: 'Unable to verify access', deniedTitle: 'Access denied',
       unavailableText: 'Your profile could not be loaded. Please try again later.', deniedText: 'This page is reserved for the Lewad team.',
@@ -1247,6 +1276,12 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       requestQuery: 'Search', normalizedQuery: 'Normalized query', userMessage: 'User message',
       requestUpdated: 'Request updated.', requestUpdateFailed: 'Could not update request.', serviceAddedSuccess: 'Service added successfully.', serviceAddFailed: 'Could not add this service.', requestMarkedAdded: 'Request marked as added.',
       close: 'Close', dismiss: 'Dismiss notification', reviewActions: 'Review actions',
+    },
+    discoveries: {
+      title: 'Verification requests', subtitle: 'Places found on the map and retained for internal review.',
+      emptyTitle: 'No map discoveries', emptyText: 'Saved map results will appear here.',
+      searchedQuery: 'Search', place: 'Place', provider: 'Provider', context: 'Context', coordinates: 'Coordinates', user: 'Client', date: 'Date', status: 'Status',
+      readOnlyNotice: 'This is read-only: no discovery creates an establishment automatically.',
     },
     businessSubmissions: {
       title: 'Business submissions', subtitle: 'Business listing requests submitted by owners.',
