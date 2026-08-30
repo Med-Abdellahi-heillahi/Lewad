@@ -2511,6 +2511,13 @@ function SettingsPage({ text }: { text: Copy }) {
           href="/profile"
           linkLabel={text.profile}
         />
+        <SettingsCard
+          title={text.contact}
+          text={text.contactText}
+          icon="message"
+          href="/contact"
+          linkLabel={text.contact}
+        />
       </div>
     </>
   );

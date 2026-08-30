@@ -7,13 +7,10 @@ import { SectionHeading } from '../SectionHeading'
 const androidScreenshots = [
   '/assets/install_app_image/android/android-1-menu.jpeg',
   '/assets/install_app_image/android/android-2-installer-raccourci.jpeg',
-  '/assets/install_app_image/android/android-3-confirmer-installation.jpeg',
 ] as const
 
 const iphoneScreenshots = [
   '/assets/install_app_image/iphone/1.jpeg',
-  '/assets/install_app_image/iphone/2.jpeg',
-  '/assets/install_app_image/iphone/3.jpeg',
 ] as const
 
 type PlatformCopy = {

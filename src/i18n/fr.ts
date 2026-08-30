@@ -222,7 +222,6 @@ export const fr = {
         visuals: [
           "Menu de Chrome : ouvrez les options du navigateur.",
           "Dans le menu, choisissez « Installer » ou « Installer et créer un raccourci ».",
-          "Confirmez l’installation de Lewad.",
         ],
       },
       iphone: {
@@ -235,8 +234,6 @@ export const fr = {
         ],
         visuals: [
           "Lewad ouvert dans Safari : utilisez le bouton Partager.",
-          "Dans le menu de partage, choisissez « Ajouter à l’écran d’accueil ».",
-          "Vérifiez le nom Lewad puis confirmez avec « Ajouter ».",
         ],
       },
     },

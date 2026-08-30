@@ -200,7 +200,6 @@ export const en: Dictionary = {
         visuals: [
           "Chrome menu: open the browser options.",
           "In the menu, choose “Install” or “Install and create shortcut”.",
-          "Confirm the Lewad installation.",
         ],
       },
       iphone: {
@@ -213,8 +212,6 @@ export const en: Dictionary = {
         ],
         visuals: [
           "Lewad open in Safari: use the Share button.",
-          "In the share menu, choose “Add to Home Screen”.",
-          "Check the Lewad name, then confirm with “Add”.",
         ],
       },
     },
