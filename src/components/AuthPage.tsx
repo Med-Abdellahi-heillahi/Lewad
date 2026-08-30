@@ -31,21 +31,21 @@ function resetLocaleFromUrl(): Locale | null {
 const authCopy = {
   fr: {
     title: 'Connexion', eyebrow: 'Lewad V1', subtitle: 'Connectez-vous pour retrouver votre espace Lewad.', signIn: 'Connexion', signUp: 'Inscription', fullName: 'Nom complet', email: 'Adresse e-mail', password: 'Mot de passe', confirmPassword: 'Confirmer le mot de passe',
-    signInButton: 'Se connecter', signUpButton: 'Créer mon compte', backHome: 'Retour à l’accueil', language: 'Choisir la langue', loading: 'Connexion en cours…', createLoading: 'Création en cours…',
+    signInButton: 'Se connecter', signUpButton: 'Créer mon compte', language: 'Choisir la langue', loading: 'Connexion en cours…', createLoading: 'Création en cours…',
     requiredName: 'Veuillez saisir votre nom complet.', requiredEmail: 'Veuillez saisir votre adresse e-mail.', invalidEmail: 'Veuillez saisir une adresse e-mail valide.', requiredPassword: 'Veuillez saisir votre mot de passe.', passwordRule: 'Le mot de passe doit contenir au moins 8 caractères, au moins une lettre et au moins un chiffre.', passwordMismatch: 'Les mots de passe ne correspondent pas.', invalidCredentials: 'Adresse e-mail ou mot de passe incorrect.', accountExists: 'Un compte existe déjà avec cette adresse e-mail.', genericError: 'Une erreur est survenue. Veuillez réessayer.', accountCreated: 'Compte créé. Vous pouvez maintenant utiliser Lewad.', signedIn: 'Connexion réussie. Redirection vers Lewad…', alreadySignedIn: 'Vous êtes déjà connecté.', continueToApp: 'Aller vers Lewad', signOut: 'Se déconnecter', signedOut: 'Vous êtes déconnecté.', showPassword: 'Afficher le mot de passe', hidePassword: 'Masquer le mot de passe', resolvingSpace: 'Préparation de votre espace Lewad…', profileUnavailable: 'Impossible de charger votre profil Lewad. Réessayez dans un instant.', retryProfile: 'Réessayer',
     forgotPassword: 'Mot de passe oublié ?', forgotPasswordTitle: 'Réinitialisation du mot de passe', forgotPasswordDesc: 'Utilisez l’adresse e-mail saisie dans le formulaire de connexion.', enterEmailBeforeReset: 'Veuillez d’abord saisir une adresse e-mail valide dans le formulaire de connexion.', sendResetLink: 'Envoyer le lien', sendingResetLink: 'Envoi…', resetLinkSent: 'Si ce compte existe, un e-mail de réinitialisation sera envoyé.', resetLinkFailed: 'Impossible d\'envoyer l\'e-mail. Réessayez plus tard.', backToSignIn: 'Retour à la connexion',
     resetPasswordTitle: 'Nouveau mot de passe', resetPasswordDesc: 'Définissez un nouveau mot de passe pour votre compte.', newPassword: 'Nouveau mot de passe', confirmPasswordLabel: 'Confirmer le mot de passe', updatePassword: 'Mettre à jour', updatingPassword: 'Mise à jour…', passwordUpdated: 'Mot de passe mis à jour. Vous pouvez maintenant vous connecter.', passwordUpdateFailed: 'Impossible de mettre à jour le mot de passe. Le lien a peut-être expiré.',
   },
   ar: {
     title: 'تسجيل الدخول', eyebrow: 'Lewad V1', subtitle: 'سجّل الدخول للعودة إلى مساحة Lewad الخاصة بك.', signIn: 'تسجيل الدخول', signUp: 'إنشاء حساب', fullName: 'الاسم الكامل', email: 'البريد الإلكتروني', password: 'كلمة المرور', confirmPassword: 'تأكيد كلمة المرور',
-    signInButton: 'تسجيل الدخول', signUpButton: 'إنشاء حسابي', backHome: 'العودة للرئيسية', language: 'اختيار اللغة', loading: 'جارٍ تسجيل الدخول…', createLoading: 'جارٍ إنشاء الحساب…',
+    signInButton: 'تسجيل الدخول', signUpButton: 'إنشاء حسابي', language: 'اختيار اللغة', loading: 'جارٍ تسجيل الدخول…', createLoading: 'جارٍ إنشاء الحساب…',
     requiredName: 'يرجى إدخال الاسم الكامل.', requiredEmail: 'يرجى إدخال بريدك الإلكتروني.', invalidEmail: 'يرجى إدخال بريد إلكتروني صالح.', requiredPassword: 'يرجى إدخال كلمة المرور.', passwordRule: 'يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل، وحرف واحد على الأقل، ورقم واحد على الأقل.', passwordMismatch: 'كلمتا المرور غير متطابقتين.', invalidCredentials: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.', accountExists: 'يوجد حساب بهذا البريد الإلكتروني بالفعل.', genericError: 'حدث خطأ. يرجى المحاولة مجددًا.', accountCreated: 'تم إنشاء الحساب. يمكنك الآن استخدام Lewad.', signedIn: 'تم تسجيل الدخول. جارٍ الانتقال إلى Lewad…', alreadySignedIn: 'أنت مسجل الدخول بالفعل.', continueToApp: 'الذهاب إلى Lewad', signOut: 'تسجيل الخروج', signedOut: 'تم تسجيل الخروج.', showPassword: 'إظهار كلمة المرور', hidePassword: 'إخفاء كلمة المرور', resolvingSpace: 'جارٍ تجهيز مساحة Lewad…', profileUnavailable: 'تعذر تحميل ملف Lewad الشخصي. يرجى المحاولة بعد لحظات.', retryProfile: 'إعادة المحاولة',
     forgotPassword: 'نسيت كلمة المرور؟', forgotPasswordTitle: 'إعادة تعيين كلمة المرور', forgotPasswordDesc: 'سيتم استخدام البريد الإلكتروني الذي أدخلته في نموذج تسجيل الدخول.', enterEmailBeforeReset: 'يرجى أولاً إدخال بريد إلكتروني صالح في نموذج تسجيل الدخول.', sendResetLink: 'إرسال الرابط', sendingResetLink: 'جارٍ الإرسال…', resetLinkSent: 'إذا كان هذا الحساب موجودًا، فسيتم إرسال بريد إلكتروني لإعادة التعيين.', resetLinkFailed: 'تعذر إرسال البريد الإلكتروني. أعد المحاولة لاحقاً.', backToSignIn: 'العودة إلى تسجيل الدخول',
     resetPasswordTitle: 'كلمة مرور جديدة', resetPasswordDesc: 'أعد إعداد كلمة المرور لحسابك.', newPassword: 'كلمة المرور الجديدة', confirmPasswordLabel: 'تأكيد كلمة المرور', updatePassword: 'تحديث', updatingPassword: 'جارٍ التحديث…', passwordUpdated: 'تم تحديث كلمة المرور. يمكنك الآن تسجيل الدخول.', passwordUpdateFailed: 'تعذر تحديث كلمة المرور. ربما انتهت صلاحية الرابط.',
   },
   en: {
     title: 'Sign in', eyebrow: 'Lewad V1', subtitle: 'Sign in to return to your Lewad space.', signIn: 'Sign in', signUp: 'Sign up', fullName: 'Full name', email: 'Email address', password: 'Password', confirmPassword: 'Confirm password',
-    signInButton: 'Sign in', signUpButton: 'Create my account', backHome: 'Back to home', language: 'Choose language', loading: 'Signing in…', createLoading: 'Creating account…',
+    signInButton: 'Sign in', signUpButton: 'Create my account', language: 'Choose language', loading: 'Signing in…', createLoading: 'Creating account…',
     requiredName: 'Please enter your full name.', requiredEmail: 'Please enter your email address.', invalidEmail: 'Please enter a valid email address.', requiredPassword: 'Please enter your password.', passwordRule: 'Password must contain at least 8 characters, at least one letter, and at least one digit.', passwordMismatch: 'Passwords do not match.', invalidCredentials: 'Incorrect email address or password.', accountExists: 'An account already exists with this email address.', genericError: 'Something went wrong. Please try again.', accountCreated: 'Account created. You can now use Lewad.', signedIn: 'Signed in. Redirecting to Lewad…', alreadySignedIn: 'You are already signed in.', continueToApp: 'Go to Lewad', signOut: 'Sign out', signedOut: 'You have been signed out.', showPassword: 'Show password', hidePassword: 'Hide password', resolvingSpace: 'Preparing your Lewad space…', profileUnavailable: 'Your Lewad profile could not be loaded. Please try again in a moment.', retryProfile: 'Try again',
     forgotPassword: 'Forgot password?', forgotPasswordTitle: 'Password reset', forgotPasswordDesc: 'We will use the email entered in the login form.', enterEmailBeforeReset: 'Please enter a valid email address in the sign-in form first.', sendResetLink: 'Send reset link', sendingResetLink: 'Sending…', resetLinkSent: 'If this account exists, a reset email will be sent.', resetLinkFailed: 'Could not send the email. Please try again later.', backToSignIn: 'Back to sign in',
     resetPasswordTitle: 'New password', resetPasswordDesc: 'Set a new password for your account.', newPassword: 'New password', confirmPasswordLabel: 'Confirm password', updatePassword: 'Update', updatingPassword: 'Updating…', passwordUpdated: 'Password updated. You can now sign in.', passwordUpdateFailed: 'Could not update password. The link may have expired.',
@@ -275,6 +275,12 @@ export function AuthPage() {
 
         <section className={`${card} w-full overflow-hidden`} aria-labelledby="auth-title">
           <div className="border-b border-line bg-page-alt p-6 sm:p-7">
+            {(mode === 'signIn' || mode === 'signUp') && (
+              <a href="/" className="inline-flex min-h-11 items-center text-sm font-semibold text-muted transition-colors hover:text-ink">
+                <span className="rtl:rotate-180"><Icon name="arrow" size={16} /></span>
+                {t.system.backHome}
+              </a>
+            )}
             <span className={`${eyebrow} lg:hidden`}>
               <span className="size-1.5 rounded-full bg-brand-deep dark:bg-brand" />
               {copy.eyebrow}
@@ -389,9 +395,6 @@ export function AuthPage() {
               </>
             )}
 
-            <div className="mt-6 flex justify-center text-sm">
-              <a href="/" className="inline-flex min-h-11 items-center text-muted transition-colors hover:text-ink">{copy.backHome}</a>
-            </div>
           </div>
         </section>
       </div>

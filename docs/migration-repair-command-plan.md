@@ -67,7 +67,7 @@ There are 17 local files but only 16 distinct version values:
 
 Before the first repair command, the owner must confirm all of the following in the intended linked project:
 
-1. The schema verification described in [remote-migration-reconciliation-report.md](C:/dev/Lewad/docs/remote-migration-reconciliation-report.md) is retained in the deployment record.
+1. The schema verification described in [remote-migration-reconciliation-report.md](./remote-migration-reconciliation-report.md) is retained in the deployment record.
 2. The 15 non-duplicate version effects listed below are present remotely.
 3. Both `20260819000005` effects are present manually: the admin policy/helper side and the phone/avatar side, including later Security 2B and avatar-repair replacements.
 4. The owner accepts the documented residual mismatch for `20260819000005` and understands that this plan repairs metadata only.
@@ -157,7 +157,7 @@ No baseline migration is created by this plan.
   npx supabase migration list
   ```
 
-- The read-only SQL evidence checks in [remote-migration-reconciliation-report.md](C:/dev/Lewad/docs/remote-migration-reconciliation-report.md), if a re-check is needed.
+- The read-only SQL evidence checks in [remote-migration-reconciliation-report.md](./remote-migration-reconciliation-report.md), if a re-check is needed.
 - The isolated-clone `migration list` validation required by the recommended archival strategy. It must not be followed by `db push` during that validation.
 
 ## What the Owner Must Not Run

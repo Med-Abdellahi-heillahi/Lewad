@@ -5,12 +5,12 @@ import { useInstallPrompt } from '../../lib/useInstallPrompt'
 import { SectionHeading } from '../SectionHeading'
 
 const androidScreenshots = [
-  '/assets/install_app_image/android/android-1-menu.jpeg',
-  '/assets/install_app_image/android/android-2-installer-raccourci.jpeg',
+  { src: '/assets/install_app_image/android/android-1-menu.jpeg', width: 540, height: 1170 },
+  { src: '/assets/install_app_image/android/android-2-installer-raccourci.jpeg', width: 540, height: 1170 },
 ] as const
 
 const iphoneScreenshots = [
-  '/assets/install_app_image/iphone/1.jpeg',
+  { src: '/assets/install_app_image/iphone/1.jpeg', width: 591, height: 1280 },
 ] as const
 
 type PlatformCopy = {
@@ -19,7 +19,13 @@ type PlatformCopy = {
   visuals: readonly string[]
 }
 
-function PlatformGuide({ id, copy, screenshots }: { id: 'android' | 'iphone'; copy: PlatformCopy; screenshots: readonly string[] }) {
+type InstallScreenshot = {
+  src: string
+  width: number
+  height: number
+}
+
+function PlatformGuide({ id, copy, screenshots }: { id: 'android' | 'iphone'; copy: PlatformCopy; screenshots: readonly InstallScreenshot[] }) {
   return (
     <section className={`${card} min-w-0 p-5 sm:p-6`} aria-labelledby={`install-${id}`}>
       <h3 id={`install-${id}`} className="text-lg font-bold tracking-tight text-ink">{copy.title}</h3>
@@ -37,13 +43,13 @@ function PlatformGuide({ id, copy, screenshots }: { id: 'android' | 'iphone'; co
 
       {screenshots.length > 0 && (
         <div className="mt-5 -me-1 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 pe-3 md:grid md:grid-cols-3 md:overflow-visible md:pe-0">
-          {screenshots.map((src, index) => (
-            <figure key={src} className="w-[min(76vw,18rem)] shrink-0 snap-start overflow-hidden rounded-2xl border border-line bg-page-alt md:w-auto">
+          {screenshots.map((screenshot, index) => (
+            <figure key={screenshot.src} className="w-[min(76vw,18rem)] shrink-0 snap-start overflow-hidden rounded-2xl border border-line bg-page-alt md:w-auto">
               <img
-                src={src}
+                src={screenshot.src}
                 alt={copy.visuals[index] ?? copy.steps[index] ?? copy.title}
-                width={591}
-                height={1280}
+                width={screenshot.width}
+                height={screenshot.height}
                 loading="lazy"
                 decoding="async"
                 className="h-[28rem] w-full bg-page object-contain sm:h-[31rem] md:h-[25rem]"

@@ -209,6 +209,21 @@ describe('DB4 business-submission contracts', () => {
     expect(source).not.toContain('p_amount_mro')
   })
 
+  it('accepts the rejection payload without establishment or branch ids', () => {
+    const source = readFileSync(dataLayerPath, 'utf8')
+
+    // The rejection RPC returns only its submission id because it creates no
+    // establishment or branch. Missing creation ids must normalize to null,
+    // while an approved response still requires all three ids.
+    expect(baseMigration()).toContain(
+      "return jsonb_build_object('ok', true, 'status', 'rejected', 'submission_id', v_submission.id);",
+    )
+    expect(source).toContain("function optionalDecisionString(value: unknown)")
+    expect(source).toContain("const successShapeValid = expectedStatus === 'approved'")
+    expect(source).toContain("? Boolean(submissionId && establishmentId && branchId)")
+    expect(source).toContain(": Boolean(submissionId)")
+  })
+
   it('keeps technical submission identifiers out of WhatsApp messages', () => {
     const source = readFileSync(new URL('../src/components/BusinessSubmissionForm.tsx', import.meta.url), 'utf8')
     const messageStart = source.indexOf('const submissionWhatsAppHref')

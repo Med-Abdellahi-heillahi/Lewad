@@ -577,7 +577,7 @@ export const ar: Dictionary = {
   system: {
     loading: "جارٍ تجهيز Lewad",
     accountLoading: "جارٍ تحميل مساحتك…",
-    backHome: "العودة إلى الرئيسية",
+    backHome: "العودة إلى الصفحة الرئيسية",
     retry: "إعادة المحاولة",
     offlineTitle: "انقطع الاتصال",
     offlineText: "تعذّر الوصول إلى Lewad. تحقق من اتصالك، ثم أعد المحاولة.",

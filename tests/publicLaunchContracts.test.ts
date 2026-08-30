@@ -34,6 +34,14 @@ const indexHtmlPath = new URL('../index.html', import.meta.url)
 const installSectionPath = new URL('../src/components/sections/InstallApp.tsx', import.meta.url)
 const installModalPath = new URL('../src/components/InstallPromptModal.tsx', import.meta.url)
 const serviceWorkerPath = new URL('../public/sw.js', import.meta.url)
+const icon192Path = new URL('../public/icons/icon-192.png', import.meta.url)
+const icon512Path = new URL('../public/icons/icon-512.png', import.meta.url)
+const maskable512Path = new URL('../public/icons/maskable-512.png', import.meta.url)
+
+function pngSize(path: URL) {
+  const bytes = readFileSync(path)
+  return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) }
+}
 
 const publicCopyPaths = [
   new URL('../src/i18n/fr.ts', import.meta.url),
@@ -102,22 +110,46 @@ describe('public launch contracts', () => {
   })
 
   it('uses the supplied Lewad logo asset for installed-app, browser, and service-worker icons', () => {
-    const manifest = JSON.parse(read(manifestPath)) as { icons: Array<{ src: string }> }
+    const manifest = JSON.parse(read(manifestPath)) as {
+      icons: Array<{ src: string; sizes: string; type: string; purpose: string }>
+    }
     const indexHtml = read(indexHtmlPath)
     const serviceWorker = read(serviceWorkerPath)
-    const iconPath = '/assets/logo_lewad.png?v=launch-20260830-3'
 
-    expect(manifest.icons).toHaveLength(2)
-    expect(manifest.icons.every((icon) => icon.src === iconPath)).toBe(true)
-    expect(indexHtml).toContain('rel="manifest" href="/manifest.webmanifest?v=launch-20260830-3"')
-    expect(indexHtml).toContain(`rel="icon" type="image/png" href="${iconPath}"`)
-    expect(indexHtml).toContain(`rel="apple-touch-icon" href="${iconPath}"`)
-    expect(serviceWorker).toContain("const STATIC_CACHE = 'lewad-static-v3'")
-    expect(serviceWorker).toContain("const LEWAD_ICON_PATH = '/assets/logo_lewad.png?v=launch-20260830-3'")
-    expect(serviceWorker).not.toContain("'/icons/icon-")
+    expect(manifest.icons).toEqual([
+      {
+        src: '/icons/icon-192.png?v=launch-20260830-4',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icons/icon-512.png?v=launch-20260830-4',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icons/maskable-512.png?v=launch-20260830-4',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+    ])
+    expect(pngSize(icon192Path)).toEqual({ width: 192, height: 192 })
+    expect(pngSize(icon512Path)).toEqual({ width: 512, height: 512 })
+    expect(pngSize(maskable512Path)).toEqual({ width: 512, height: 512 })
+    expect(indexHtml).toContain('rel="manifest" href="/manifest.webmanifest?v=launch-20260830-4"')
+    expect(indexHtml).toContain('rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png?v=launch-20260830-4"')
+    expect(indexHtml).toContain('rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png?v=launch-20260830-4"')
+    expect(serviceWorker).toContain("const STATIC_CACHE = 'lewad-static-v4'")
+    expect(serviceWorker).toContain("'/icons/icon-192.png?v=launch-20260830-4'")
+    expect(serviceWorker).toContain("'/icons/icon-512.png?v=launch-20260830-4'")
+    expect(serviceWorker).toContain("'/icons/maskable-512.png?v=launch-20260830-4'")
+    expect(serviceWorker).not.toContain("'/assets/logo_lewad.png")
   })
 
-  it('uses the owner-provided Android and iPhone screenshot files directly', () => {
+  it('uses every launch-safe install screenshot and excludes only the unsafe ones', () => {
     const root = fileURLToPath(new URL('../public/assets/install_app_image/', import.meta.url))
     const iphoneDirectory = join(root, 'iphone')
     const androidDirectory = join(root, 'android')
@@ -139,13 +171,22 @@ describe('public launch contracts', () => {
     expect(installSection).toContain('/assets/install_app_image/android/android-1-menu.jpeg')
     expect(installSection).toContain('/assets/install_app_image/android/android-2-installer-raccourci.jpeg')
     expect(installSection).toContain('/assets/install_app_image/iphone/1.jpeg')
+    // These captures are retained for the owner but are not launch-safe to
+    // render: the Android/iPhone confirmation screens show the retired pin,
+    // while iPhone step 2 also exposes an AI-tool browser action.
     expect(installSection).not.toContain('/assets/install_app_image/android/android-3-confirmer-installation.jpeg')
     expect(installSection).not.toContain('/assets/install_app_image/iphone/2.jpeg')
     expect(installSection).not.toContain('/assets/install_app_image/iphone/3.jpeg')
     expect(installSection).toContain('id="android"')
     expect(installSection).toContain('id="iphone"')
     expect(installSection).toContain('alt={copy.visuals[index]')
+    expect(installSection).toContain('width={screenshot.width}')
+    expect(installSection).toContain('height={screenshot.height}')
     expect(installSection).toContain('object-contain')
+    expect(installSection).toContain('copy.steps.map')
+    expect(installSection).toContain('<div id="install-steps"')
+    expect(installSection).toContain('screenshots={androidScreenshots}')
+    expect(installSection).toContain('screenshots={iphoneScreenshots}')
     expect(installSection).not.toMatch(/https?:\/\//)
   })
 
@@ -163,6 +204,13 @@ describe('public launch contracts', () => {
     expect(read(arPath)).toContain('التثبيت على iPhone')
     expect(read(enPath)).toContain('Install on Android')
     expect(read(enPath)).toContain('Install on iPhone')
+    expect(read(frPath)).toContain('Ouvrez Lewad dans Chrome.')
+    expect(read(frPath)).toContain('Appuyez sur le menu du navigateur.')
+    expect(read(frPath)).toContain('Choisissez « Installer » ou « Installer et créer un raccourci ».')
+    expect(read(frPath)).toContain('Ouvrez Lewad dans Safari.')
+    expect(read(frPath)).toContain('Appuyez sur le bouton Partager.')
+    expect(read(frPath)).toContain('Choisissez « Ajouter à l’écran d’accueil ».')
+    expect(read(frPath)).toContain('Confirmez avec « Ajouter ».')
     expect(modal).toContain("document.getElementById('install')?.scrollIntoView")
     expect(read(installSectionPath)).toContain('id="install-steps"')
     expect(read(installSectionPath)).not.toContain('useInstallInvitation')
@@ -209,7 +257,8 @@ describe('public launch contracts', () => {
 
   it('keeps all three install-section titles localized', () => {
     expect(read(frPath)).toContain('Comment installer Lewad sur votre téléphone')
-    expect(read(arPath)).toContain('كيفية تثبيت Lewad على هاتفك')
+    expect(read(arPath)).toMatch(/title: ".*Lewad.*"/)
+    expect(read(arPath)).not.toContain('لواد')
     expect(read(enPath)).toContain('How to install Lewad on your phone')
   })
 

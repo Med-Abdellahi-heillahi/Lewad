@@ -26,7 +26,7 @@ The owner completed the read-only verification after this report was created. Th
 
 The owner then repaired migration metadata for the 15 non-duplicate versions. `npx supabase migration list` now aligns Local and Remote for every unique version. The two local `20260819000005` rows intentionally remain unmatched because one history version cannot represent the two historical files.
 
-The current next step is the final duplicate strategy in [migration-repair-command-plan.md](C:/dev/Lewad/docs/migration-repair-command-plan.md): controlled archival outside the active migration directory after isolated-clone validation, plus a clean baseline for any future empty environment. Do not run `db push` while the duplicates remain active.
+The current next step is the final duplicate strategy in [migration-repair-command-plan.md](./migration-repair-command-plan.md): controlled archival outside the active migration directory after isolated-clone validation, plus a clean baseline for any future empty environment. Do not run `db push` while the duplicates remain active.
 
 ## Local Migration Inventory and Duplicate Status
 
@@ -61,7 +61,7 @@ Do **not** rename either historical file. Do **not** replay either file verbatim
 - Replaying `phase_admin_v1_policies` would restore an old direct `UPDATE` path for `missing_service_requests` that Security 2B deliberately removed.
 - Replaying `profile_phone_unique_and_avatar_storage` would restore the broken avatar folder predicate that `20260821000000` corrected.
 
-The existing owner runbook, [med-001-migration-history-owner-action.md](C:/dev/Lewad/docs/med-001-migration-history-owner-action.md), contains the detailed collision analysis. This report supplies the missing full-object inventory needed to determine the live state.
+The existing owner runbook, [med-001-migration-history-owner-action.md](./med-001-migration-history-owner-action.md), contains the detailed collision analysis. This report supplies the missing full-object inventory needed to determine the live state.
 
 ## Read-Only SQL Checks for the Owner
 
@@ -277,7 +277,7 @@ This checklist records the objects that required verification when the report wa
 
 The B/D condition is now confirmed: the reviewed schema exists remotely and the unique-version metadata repair is complete. The remaining issue is not remote schema uncertainty; it is local active-file discovery of the duplicate historical timestamp.
 
-The recommended final strategy is therefore controlled archival of both `20260819000005` files outside active `supabase/migrations/`, but only after a documented archive record and isolated-clone `migration list` validation. A separate clean baseline is required for any future empty environment. The detailed owner sequence is maintained in [migration-repair-command-plan.md](C:/dev/Lewad/docs/migration-repair-command-plan.md).
+The recommended final strategy is therefore controlled archival of both `20260819000005` files outside active `supabase/migrations/`, but only after a documented archive record and isolated-clone `migration list` validation. A separate clean baseline is required for any future empty environment. The detailed owner sequence is maintained in [migration-repair-command-plan.md](./migration-repair-command-plan.md).
 
 No `db push` is permitted while both duplicate files remain active.
 

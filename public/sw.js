@@ -3,15 +3,19 @@
  * origin and is intentionally left to the browser network stack, so sessions,
  * searches, recharges, wallet data and admin data are never cached by Lewad.
  */
-const STATIC_CACHE = 'lewad-static-v3'
+const STATIC_CACHE = 'lewad-static-v4'
 const APP_SHELL = '/'
-const MANIFEST_PATH = '/manifest.webmanifest?v=launch-20260830-3'
-const LEWAD_ICON_PATH = '/assets/logo_lewad.png?v=launch-20260830-3'
+const MANIFEST_PATH = '/manifest.webmanifest?v=launch-20260830-4'
+const LEWAD_ICON_PATHS = [
+  '/icons/icon-192.png?v=launch-20260830-4',
+  '/icons/icon-512.png?v=launch-20260830-4',
+  '/icons/maskable-512.png?v=launch-20260830-4',
+]
 const APP_SHELL_FILES = [
   APP_SHELL,
   '/index.html',
   MANIFEST_PATH,
-  LEWAD_ICON_PATH,
+  ...LEWAD_ICON_PATHS,
 ]
 
 self.addEventListener('install', (event) => {

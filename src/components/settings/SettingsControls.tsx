@@ -111,14 +111,18 @@ function PasswordChangePanel({ userEmail, locale }: { userEmail: string | null; 
     setNotice(null)
     if (!newPw || !isValidLewadSignUpPassword(newPw)) { setNotice({ tone: 'error', text: copy.errorRule }); return }
     if (newPw !== confirmPw) { setNotice({ tone: 'error', text: copy.errorMismatch }); return }
+    const submittedPassword = newPw
+    // Do not retain submitted credentials while the remote update is in flight,
+    // including when the request ultimately fails.
+    setNewPw('')
+    setConfirmPw('')
     setSubmitting(true)
     try {
-      const { error } = await updateUserPassword(newPw)
+      const { error } = await updateUserPassword(submittedPassword)
       if (error) {
         setNotice({ tone: 'error', text: copy.errorGeneric })
       } else {
         setNotice({ tone: 'success', text: copy.success })
-        setNewPw(''); setConfirmPw('')
       }
     } catch {
       setNotice({ tone: 'error', text: copy.errorGeneric })

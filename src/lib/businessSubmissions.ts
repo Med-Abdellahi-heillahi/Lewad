@@ -125,6 +125,10 @@ function nullableStringValue(value: unknown) {
   return value === null || typeof value === 'string' ? value : undefined
 }
 
+function optionalDecisionString(value: unknown) {
+  return value === undefined ? null : nullableStringValue(value)
+}
+
 function numberValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
@@ -408,16 +412,20 @@ function readDecision(data: unknown, expectedStatus: 'approved' | 'rejected'): A
   }
 
   const status = decisionStatus(data.status)
-  const submissionId = nullableStringValue(data.submission_id)
-  const establishmentId = nullableStringValue(data.establishment_id)
-  const branchId = nullableStringValue(data.branch_id)
+  const submissionId = optionalDecisionString(data.submission_id)
+  const establishmentId = optionalDecisionString(data.establishment_id)
+  const branchId = optionalDecisionString(data.branch_id)
 
   if (submissionId === undefined || establishmentId === undefined || branchId === undefined) {
     return { ok: false, status: 'error', submissionId: null, establishmentId: null, branchId: null }
   }
 
+  const successShapeValid = expectedStatus === 'approved'
+    ? Boolean(submissionId && establishmentId && branchId)
+    : Boolean(submissionId)
+
   return {
-    ok: data.ok === true && status === expectedStatus,
+    ok: data.ok === true && status === expectedStatus && successShapeValid,
     status,
     submissionId,
     establishmentId,
