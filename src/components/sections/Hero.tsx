@@ -46,7 +46,7 @@ export function Hero() {
         {/* Le premier bouton mène à l'inscription : la landing doit ouvrir sur
             le produit réel, pas seulement sur son explication. */}
         <m.div {...rise(0.18)} className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap">
-          <a href="/auth" className={`${btnPrimary} w-full sm:w-auto`}>
+          <a href="/auth?mode=signup" className={`${btnPrimary} w-full sm:w-auto`}>
             {t.hero.primary}
             <span className="rtl:rotate-180">
               <Icon name="arrow" size={16} />

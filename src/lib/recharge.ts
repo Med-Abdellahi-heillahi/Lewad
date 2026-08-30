@@ -2,6 +2,23 @@ import { supabase } from './supabaseClient'
 
 export type RechargeOfferCode = 'starter_10' | 'regular_30' | 'advanced_100'
 
+/**
+ * Public display mirror of the offer codes resolved by
+ * `create_recharge_request` in PostgreSQL. The RPC remains authoritative for
+ * every actual recharge request; this lets public and authenticated screens
+ * show the same reviewed catalogue without inventing a second set of prices.
+ */
+export const rechargeOffers = [
+  { code: 'starter_10', points: 10, amountMro: 50, featured: false },
+  { code: 'regular_30', points: 30, amountMro: 100, featured: true },
+  { code: 'advanced_100', points: 100, amountMro: 500, featured: false },
+] as const satisfies readonly {
+  code: RechargeOfferCode
+  points: number
+  amountMro: number
+  featured: boolean
+}[]
+
 export type RechargeRequest = {
   id: string
   offerLabel: string

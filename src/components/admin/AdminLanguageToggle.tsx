@@ -14,25 +14,19 @@ type AdminLanguageToggleProps = {
 
 /**
  * Quick language toggle for admin/super-admin navbar.
- * Cycles through all supported locales, including English.
+ * Switches directly between French and Arabic. English remains available in
+ * internal settings but is intentionally not part of the quick toggle.
  * Shows flag emoji + short label.
  */
 export function AdminLanguageToggle({ className = '' }: AdminLanguageToggleProps) {
   const { locale, setLocale, t } = useI18n()
 
-  const nextLocaleMap = { fr: 'ar', ar: 'en', en: 'fr' } as const
-  const nextLocale = nextLocaleMap[locale]
-  const labelMap = {
-    fr: t.nav.switchToArabic,
-    ar: t.nav.switchToEnglish,
-    en: t.nav.switchToFrench,
-  } as const
+  const nextLocale = locale === 'fr' ? 'ar' : 'fr'
+  const label = nextLocale === 'ar' ? t.nav.switchToArabic : t.nav.switchToFrench
 
   const toggle = () => {
     setLocale(nextLocale)
   }
-
-  const label = labelMap[locale]
 
   return (
     <button

@@ -87,7 +87,7 @@ export async function resolvePostLoginDestination(options: { redirectTo?: string
 /** Builds the sign-in URL while retaining the local route the visitor requested. */
 export function authUrlForCurrentRoute() {
   const requestedPath = `${window.location.pathname}${window.location.search}${window.location.hash}`
-  return `/auth?redirect=${encodeURIComponent(requestedPath)}`
+  return `/auth?mode=login&redirect=${encodeURIComponent(requestedPath)}`
 }
 
 /**

@@ -129,7 +129,7 @@ export const ar: Dictionary = {
       },
       {
         title: "اكتب اسم الخدمة",
-        caption: "اكتب ما تبحث عنه: بنكيلي، قاعة رياضة، صيدلية…",
+        caption: "اكتب ما تبحث عنه: Bankily، قاعة رياضة، صيدلية…",
       },
       {
         title: "شاهد النتيجة",
@@ -142,7 +142,7 @@ export const ar: Dictionary = {
     ] as DemoStep[],
     ui: {
       searchPlaceholder: "ابحث عن خدمة",
-      query: "بنكيلي",
+      query: "Bankily",
       points: "نقطة",
       results: "نتيجة واحدة",
       open: "مفتوح",
@@ -159,7 +159,7 @@ export const ar: Dictionary = {
 
   install: {
     eyebrow: "على هاتفك",
-    title: "أضف Lewad إلى هاتفك",
+    title: "كيفية تثبيت Lewad على هاتفك",
     text: "يعمل Lewad مباشرة من المتصفح، ويمكنك أيضاً إضافته إلى شاشة هاتفك الرئيسية لفتحه مثل تطبيق.",
     stepsLabel: "ثلاث خطوات",
     steps: [
@@ -167,6 +167,35 @@ export const ar: Dictionary = {
       "اضغط على قائمة المتصفح",
       "اختر «إضافة إلى الشاشة الرئيسية»",
     ],
+    platforms: {
+      android: {
+        title: "التثبيت على Android",
+        steps: [
+          "افتح Lewad في Chrome.",
+          "اضغط على قائمة المتصفح.",
+          "اختر «تثبيت» أو «تثبيت وإنشاء اختصار».",
+        ],
+        visuals: [
+          "قائمة Chrome: افتح خيارات المتصفح.",
+          "من القائمة، اختر «تثبيت» أو «تثبيت وإنشاء اختصار».",
+          "أكّد تثبيت Lewad.",
+        ],
+      },
+      iphone: {
+        title: "التثبيت على iPhone",
+        steps: [
+          "افتح Lewad في Safari.",
+          "اضغط على زر المشاركة.",
+          "اختر «إضافة إلى الشاشة الرئيسية».",
+          "أكّد بالضغط على «إضافة».",
+        ],
+        visuals: [
+          "Lewad مفتوح في Safari: استخدم زر المشاركة.",
+          "من قائمة المشاركة، اختر «إضافة إلى الشاشة الرئيسية».",
+          "تأكد من اسم Lewad ثم أكّد بالضغط على «إضافة».",
+        ],
+      },
+    },
     installCta: "تثبيت Lewad",
     guideCta: "طريقة الإضافة",
     browsers:
@@ -209,7 +238,7 @@ export const ar: Dictionary = {
         q: "وأنا كمستخدم، ماذا عليّ أن أفعل؟",
         a: [
           "لا شيء معقّد.",
-          "يكفي أن تنشئ حسابًا بعنوان بريدك الإلكتروني وكلمة مرور. قد يتوفر لاحقًا تسجيل الدخول برقم الهاتف ورمز التحقق (OTP).",
+          "يكفي أن تنشئ حسابًا باستخدام بريدك الإلكتروني وكلمة مرور.",
         ],
       },
       {
@@ -226,9 +255,9 @@ export const ar: Dictionary = {
         ],
       },
       {
-        q: "كمستخدم لLewad، ماذا أربح؟",
+        q: "بصفتي مستخدمًا في Lewad، ماذا أحصل؟",
         a: [
-          "تحصل على 5 نقاط مجانية عند تسجيلك الأول، لتجرّب Lewad وتقوم بأولى عمليات بحثك.",
+          "تحصل على 5 نقاط مجانية عند إنشاء حسابك لأول مرة، لتجرّب Lewad وتقوم بأولى عمليات بحثك.",
         ],
       },
       {
@@ -240,20 +269,20 @@ export const ar: Dictionary = {
       },
       {
         q: "كيف أحصل على نقاط؟",
-        a: ["أمامك عدة طرق للحصول على النقاط:"],
+        a: ["اختر أحد عروض الشحن الثابتة التي يقدمها Lewad:"],
         steps: [
-          "اختيار عرض جاهز للشحن من قسم العروض.",
-          "شراء عدد النقاط الذي تريده.",
-          "مشاركة Lewad: كل مشاركة قد تمنحك نقطة.",
+          "اختر عرضًا من قسم العروض.",
+          "أرسل المبلغ الظاهر إلى رقم Lewad.",
+          "أرسل طلبك إلى فريق Lewad عبر واتساب.",
         ],
         link: true,
       },
       {
         q: "لديّ مؤسسة، كيف أضيفها إلى Lewad؟",
         a: [
-          "إضافة المؤسسة من طرف صاحبها ستتوفر قريبًا.",
-          "ستملأ استمارة من حسابك، ثم يتحقّق فريق Lewad من المعلومات قبل النشر.",
-          "وفي انتظار ذلك، راسلنا عبر قسم التواصل وسنضيف مؤسستك.",
+          "من حسابك، افتح «إضافة مؤسسة» واملأ الاستمارة.",
+          "حدّد موقع المؤسسة على الخريطة؛ لا حاجة إلى كتابة الإحداثيات.",
+          "يراجع فريق Lewad المعلومات قبل النشر ويتواصل معك عبر واتساب.",
         ],
       },
     ] as FaqItem[],
@@ -262,14 +291,14 @@ export const ar: Dictionary = {
   offers: {
     eyebrow: "العروض",
     title: "اشحن نقاطك.",
-    text: "اختر عرضًا جاهزًا أو عدد النقاط الذي يناسبك.",
+    text: "اختر أحد العروض الثلاثة الثابتة حسب عدد عمليات البحث التي تحتاج إليها.",
     soon: "قريبًا",
+    startCta: "أنشئ حسابًا للشحن",
     pointsLabel: "نقطة",
     cards: [
       {
         name: "عرض الاكتشاف",
         tagline: "لتجرّب Lewad وتقوم بأولى عمليات بحثك.",
-        points: "—",
         features: [
           "مناسب للبداية",
           "بحث من حين لآخر",
@@ -279,7 +308,6 @@ export const ar: Dictionary = {
       {
         name: "العرض العادي",
         tagline: "لبحث منتظم في يومك.",
-        points: "—",
         features: [
           "أفضل نسبة نقاط مقابل السعر",
           "للاستعمال المتكرر",
@@ -287,10 +315,13 @@ export const ar: Dictionary = {
         ],
       },
       {
-        name: "العرض المرن",
-        tagline: "تختار بنفسك عدد النقاط.",
-        points: "—",
-        features: ["مبلغ حر", "تدفع بقدر حاجتك", "النقاط صالحة لكل الخدمات"],
+        name: "العرض المتقدم",
+        tagline: "للمزيد من عمليات البحث عندما تحتاج إليها.",
+        features: [
+          "رصيد 100 نقطة",
+          "لاستخدام أكثر كثافة",
+          "النقاط صالحة لكل الخدمات",
+        ],
       },
     ] as Offer[],
   },
@@ -363,7 +394,7 @@ export const ar: Dictionary = {
     yes: "نعم",
     no: "لا",
     addEstablishment: "إضافة مؤسسة",
-    addEstablishmentMessage: "سيكون طلب إضافة مؤسسة متاحًا قريبًا.",
+    addEstablishmentMessage: "افتح «إضافة مؤسسة» من ملفك الشخصي لإرسال طلبك.",
     unavailable: "هذه الخدمة غير متاحة على Lewad بعد.",
     requestAddition: "طلب الإضافة",
     demoNote:
@@ -375,10 +406,8 @@ export const ar: Dictionary = {
     allowLocation: "السماح بالموقع",
     chooseWilaya: "اختيار ولاية",
     dismissLocationPrompt: "لاحقًا",
-    locationPermissionDenied:
-      "تم رفض الوصول إلى موقعك. اختر ولاية للمتابعة.",
-    locationUnavailable:
-      "موقعك غير متاح. اختر ولاية للمتابعة.",
+    locationPermissionDenied: "تم رفض الوصول إلى موقعك. اختر ولاية للمتابعة.",
+    locationUnavailable: "موقعك غير متاح. اختر ولاية للمتابعة.",
     locating: "جارٍ تحديد الموقع…",
     isInMauritania: "هل هذا المكان في موريتانيا؟",
     searchInMauritania: "نعم، ابحث في موريتانيا",
@@ -409,8 +438,7 @@ export const ar: Dictionary = {
     searchOnMap: "البحث على الخريطة",
     searchingMaps: "جارٍ البحث على الخريطة…",
     foundOnMap: "تم العثور عليه على الخريطة",
-    mapResultSaveWarning:
-      "تم عرض النتيجة، لكن تعذر حفظها حاليًا.",
+    mapResultSaveWarning: "تم عرض النتيجة، لكن تعذر حفظها حاليًا.",
     noMapResultFound: "لم يتم العثور على نتيجة على الخريطة.",
     mapSearchError: "تعذر البحث على الخريطة الآن. حاول مرة أخرى.",
     mapSearchRateLimited:
@@ -466,7 +494,7 @@ export const ar: Dictionary = {
   },
 
   footer: {
-    madeBy: "من إنجاز Wasla Soft",
+    madeBy: "من إنجاز Wasla Tech",
     rights: "© 2026 — جميع الحقوق محفوظة",
     version: "الإصدار v1.0.0",
     tagline: "البحث المحلي في موريتانيا.",
@@ -564,8 +592,31 @@ export const ar: Dictionary = {
     subtitle: "سجّل مؤسستك لتظهر في نتائج بحث Lewad.",
     introTitle: "كيف يعمل؟",
     introText:
-      "املأ النموذج أدناه. ستتحقق فريقنا من طلبك وتنشئ مؤسستك على Lewad. سنتواصل معك لإتمام التسجيل.",
-    stepsLabel: 'الخطوات', stepOne: 'الخطوة 1', stepTwo: 'الخطوة 2', stepThree: 'الخطوة 3', continue: 'متابعة', back: 'رجوع', paymentTitle: 'معلومات الدفع', paymentInstruction: 'أرسل 200 أوقية إلى رقم Lewad: {number}', senderPhone: 'الرقم المستخدم في الإرسال', bankingApp: 'التطبيق البنكي', chooseBankingApp: 'اختر التطبيق البنكي', acceptedBankingApps: 'التطبيقات المقبولة', reviewTitle: 'راجع طلبك', whatsappSend: 'إرسال الطلب عبر واتساب', paymentValidation: 'يرجى ملء هذا الحقل.', whatsappIntro: 'السلام عليكم فريق Lewad،\nأريد إضافة مؤسسة.', clientName: 'اسم العميل', establishmentName: 'اسم المؤسسة', establishmentPhone: 'هاتف المؤسسة', establishmentWhatsapp: 'واتساب المؤسسة', amountSent: 'المبلغ المرسل', durationRequested: 'المدة المطلوبة', paymentNumberLabel: 'رقم Lewad الذي تم الدفع إليه', whatsappThanks: 'شكرًا.',
+      "املأ النموذج أدناه. سيراجع فريقنا طلبك ويُنشئ مؤسستك على Lewad بعد الموافقة. سنتواصل معك لإتمام التسجيل.",
+    stepsLabel: "الخطوات",
+    stepOne: "الخطوة 1",
+    stepTwo: "الخطوة 2",
+    stepThree: "الخطوة 3",
+    continue: "متابعة",
+    back: "رجوع",
+    paymentTitle: "معلومات الدفع",
+    paymentInstruction: "أرسل 200 أوقية إلى رقم Lewad: {number}",
+    senderPhone: "الرقم المستخدم في الإرسال",
+    bankingApp: "التطبيق البنكي",
+    chooseBankingApp: "اختر التطبيق البنكي",
+    acceptedBankingApps: "التطبيقات المقبولة",
+    reviewTitle: "راجع طلبك",
+    whatsappSend: "إرسال الطلب عبر واتساب",
+    paymentValidation: "يرجى ملء هذا الحقل.",
+    whatsappIntro: "السلام عليكم فريق Lewad،\nأريد إضافة مؤسسة.",
+    clientName: "اسم العميل",
+    establishmentName: "اسم المؤسسة",
+    establishmentPhone: "هاتف المؤسسة",
+    establishmentWhatsapp: "واتساب المؤسسة",
+    amountSent: "المبلغ المرسل",
+    durationRequested: "المدة المطلوبة",
+    paymentNumberLabel: "رقم Lewad الذي تم الدفع إليه",
+    whatsappThanks: "شكرًا.",
     ownerSection: "معلومات المالك",
     ownerFirstName: "الاسم الأول",
     ownerLastName: "اسم العائلة",
@@ -575,7 +626,7 @@ export const ar: Dictionary = {
     businessNameFr: "الاسم بالفرنسية",
     businessNameFrHint: "الاسم كما سيظهر في نتائج البحث.",
     businessNameAr: "الاسم بالعربية",
-    businessNameArHint: "الاسم بالعربية للمستخدمين العرب.",
+    businessNameArHint: "الاسم الذي سيظهر للمستخدمين عند اختيار العربية.",
     businessPhone: "هاتف المؤسسة",
     businessPhoneHint: "الرقم العام الذي سيستخدمه العملاء للتواصل.",
     optionalSection: "معلومات اختيارية",
@@ -613,7 +664,7 @@ export const ar: Dictionary = {
     submit: "إرسال الطلب",
     submitting: "جارٍ الإرسال…",
     successTitle: "تم إرسال الطلب",
-    successText: "تم تسجيل طلبك. ستقوم فريقنا بمراجعته في أقرب وقت.",
+    successText: "تم تسجيل طلبك. سيراجع فريقنا طلبك في أقرب وقت.",
     submissionId: "رقم الطلب",
     pendingReview: "في انتظار التحقق",
     whatsappContact: "التواصل عبر واتساب",

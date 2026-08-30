@@ -11,20 +11,14 @@
   "theme_color": "#0f100f",
   "icons": [
     {
-      "src": "/icons/icon-192.png",
-      "sizes": "192x192",
+      "src": "/assets/logo_lewad.png?v=launch-20260830-3",
+      "sizes": "500x500",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/maskable-512.png",
-      "sizes": "512x512",
+      "src": "/assets/logo_lewad.png?v=launch-20260830-3",
+      "sizes": "500x500",
       "type": "image/png",
       "purpose": "maskable"
     }

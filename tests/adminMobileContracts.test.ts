@@ -13,11 +13,12 @@ function read(path: URL) {
 }
 
 describe('admin mobile shell contracts', () => {
-  it('cycles the compact admin language control through French, Arabic, and English', () => {
+  it('switches the compact admin language control directly between French and Arabic', () => {
     const source = read(languageTogglePath)
 
-    expect(source).toContain("{ fr: 'ar', ar: 'en', en: 'fr' }")
-    expect(source).toContain('ar: t.nav.switchToEnglish')
+    expect(source).toContain("locale === 'fr' ? 'ar' : 'fr'")
+    expect(source).toContain("nextLocale === 'ar' ? t.nav.switchToArabic : t.nav.switchToFrench")
+    expect(source).not.toContain('switchToEnglish')
     expect(read(frPath)).toContain('switchToEnglish: "Changer vers anglais"')
     expect(read(arPath)).toContain('switchToEnglish: "التغيير إلى الإنجليزية"')
     expect(read(enPath)).toContain('switchToEnglish: "Switch to English"')

@@ -11,7 +11,6 @@ export type DemoStep = { title: string; caption: string };
 export type Offer = {
   name: string;
   tagline: string;
-  points: string;
   features: string[];
 };
 /** Une carte du bandeau animé. */
@@ -52,7 +51,7 @@ export const fr = {
     switchToEnglish: "Changer vers anglais",
     sections: {
       what: "On fait quoi ?",
-      strip: "Animation",
+      strip: "Découvrir",
       service: "Service",
       demo: "Démo",
       install: "Application",
@@ -96,7 +95,7 @@ export const fr = {
   },
 
   strip: {
-    eyebrow: "Animation",
+    eyebrow: "À découvrir",
     title: "Tout ce que vous cherchez au quotidien.",
     text: "Boutiques, marchés, santé, sport, restaurants, services : Lewad couvre la vie locale.",
     items: [
@@ -204,7 +203,7 @@ export const fr = {
 
   install: {
     eyebrow: "Sur votre téléphone",
-    title: "Ajoutez Lewad à votre téléphone",
+    title: "Comment installer Lewad sur votre téléphone",
     text: "Lewad fonctionne directement depuis le navigateur, mais vous pouvez aussi l’ajouter à l’écran d’accueil de votre téléphone pour l’ouvrir comme une application.",
     stepsLabel: "Trois étapes",
     steps: [
@@ -212,6 +211,35 @@ export const fr = {
       "Appuyez sur le menu de votre navigateur",
       "Choisissez « Ajouter à l’écran d’accueil »",
     ],
+    platforms: {
+      android: {
+        title: "Installer sur Android",
+        steps: [
+          "Ouvrez Lewad dans Chrome.",
+          "Appuyez sur le menu du navigateur.",
+          "Choisissez « Installer » ou « Installer et créer un raccourci ».",
+        ],
+        visuals: [
+          "Menu de Chrome : ouvrez les options du navigateur.",
+          "Dans le menu, choisissez « Installer » ou « Installer et créer un raccourci ».",
+          "Confirmez l’installation de Lewad.",
+        ],
+      },
+      iphone: {
+        title: "Installer sur iPhone",
+        steps: [
+          "Ouvrez Lewad dans Safari.",
+          "Appuyez sur le bouton Partager.",
+          "Choisissez « Ajouter à l’écran d’accueil ».",
+          "Confirmez avec « Ajouter ».",
+        ],
+        visuals: [
+          "Lewad ouvert dans Safari : utilisez le bouton Partager.",
+          "Dans le menu de partage, choisissez « Ajouter à l’écran d’accueil ».",
+          "Vérifiez le nom Lewad puis confirmez avec « Ajouter ».",
+        ],
+      },
+    },
     installCta: "Installer Lewad",
     guideCta: "Voir comment l’ajouter",
     browsers:
@@ -254,7 +282,7 @@ export const fr = {
         q: "Moi comme utilisateur, je suis obligé de faire quoi ?",
         a: [
           "Rien de compliqué.",
-          "Il suffit de créer un compte avec votre adresse e-mail et un mot de passe. La connexion par téléphone avec un code OTP pourra être proposée ultérieurement.",
+          "Il suffit de créer un compte avec votre adresse e-mail et un mot de passe.",
         ],
       },
       {
@@ -285,20 +313,20 @@ export const fr = {
       },
       {
         q: "Comment je peux obtenir des points ?",
-        a: ["Vous avez plusieurs façons d’obtenir des points :"],
+        a: ["Choisissez l’une des offres fixes de recharge proposées par Lewad :"],
         steps: [
-          "Choisir une offre prête à recharger depuis la section Offres.",
-          "Acheter le nombre de points que vous voulez.",
-          "Partager Lewad : chaque partage peut vous donner un point.",
+          "Choisissez une offre dans la section Offres.",
+          "Envoyez le montant indiqué au numéro Lewad.",
+          "Transmettez votre demande à l’équipe Lewad sur WhatsApp.",
         ],
         link: true,
       },
       {
         q: "J’ai un établissement, comment je peux le mettre dans Lewad ?",
         a: [
-          "L’ajout d’un établissement par son propriétaire arrive prochainement.",
-          "Vous remplirez un formulaire depuis votre compte, puis l’équipe Lewad vérifiera les informations avant la mise en ligne.",
-          "En attendant, écrivez-nous depuis la section Contact et nous ajoutons votre établissement.",
+          "Depuis votre compte, ouvrez « Ajouter un établissement » et remplissez le formulaire.",
+          "Choisissez l’emplacement sur la carte : vous n’avez pas besoin de saisir des coordonnées.",
+          "L’équipe Lewad vérifie les informations avant la mise en ligne et vous contacte sur WhatsApp.",
         ],
       },
     ] as FaqItem[],
@@ -307,14 +335,14 @@ export const fr = {
   offers: {
     eyebrow: "Offres",
     title: "Recharger vos points.",
-    text: "Choisissez une offre prête à l’emploi ou le nombre de points qui vous convient.",
+    text: "Choisissez l’une des trois offres fixes selon le nombre de recherches dont vous avez besoin.",
     soon: "Bientôt disponible",
+    startCta: "Créer un compte pour recharger",
     pointsLabel: "points",
     cards: [
       {
         name: "Offre Découverte",
         tagline: "Pour tester Lewad et faire vos premières recherches.",
-        points: "—",
         features: [
           "Idéale pour démarrer",
           "Recherches ponctuelles",
@@ -324,7 +352,6 @@ export const fr = {
       {
         name: "Offre Standard",
         tagline: "Pour des recherches régulières au quotidien.",
-        points: "—",
         features: [
           "Le meilleur rapport points/prix",
           "Pour un usage fréquent",
@@ -332,12 +359,11 @@ export const fr = {
         ],
       },
       {
-        name: "Offre Flexible",
-        tagline: "Vous choisissez vous-même le nombre de points.",
-        points: "—",
+        name: "Offre Avancée",
+        tagline: "Pour davantage de recherches quand vous en avez besoin.",
         features: [
-          "Montant libre",
-          "Vous payez ce dont vous avez besoin",
+          "Réserve de 100 points",
+          "Pour un usage plus soutenu",
           "Points valables sur tous les services",
         ],
       },
@@ -416,7 +442,7 @@ export const fr = {
     no: "Non",
     addEstablishment: "Ajouter un établissement",
     addEstablishmentMessage:
-      "La demande d’ajout d’un établissement sera disponible prochainement.",
+      "Ouvrez « Ajouter un établissement » depuis votre profil pour envoyer votre demande.",
     unavailable: "Ce service n’est pas encore disponible sur Lewad.",
     requestAddition: "Demander l’ajout",
     demoNote:
@@ -527,7 +553,7 @@ export const fr = {
   },
 
   footer: {
-    madeBy: "Fait par Wasla Soft",
+    madeBy: "Fait par Wasla Tech",
     rights: "© 2026 — Tous droits réservés",
     version: "Version v1.0.0",
     tagline: "La recherche locale en Mauritanie.",
@@ -630,11 +656,35 @@ export const fr = {
   businessSubmission: {
     title: "Ajouter mon établissement",
     subtitle:
-      "Soumettez votre établissement pour apparaitre dans les résultats de recherche Lewad.",
+      "Soumettez votre établissement pour apparaître dans les résultats de recherche Lewad.",
     introTitle: "Comment ça marche ?",
     introText:
       "Remplissez le formulaire ci-dessous. Notre équipe vérifiera votre demande et créera votre établissement sur Lewad. Vous serez contacté pour finaliser l'inscription.",
-    stepsLabel: 'Étapes', stepOne: 'Étape 1', stepTwo: 'Étape 2', stepThree: 'Étape 3', continue: 'Continuer', back: 'Retour', paymentTitle: 'Informations de paiement', paymentInstruction: 'Envoyez 200 MRO au numéro Lewad : {number}', senderPhone: 'Numéro utilisé pour l’envoi', bankingApp: 'Application bancaire', chooseBankingApp: 'Choisissez une application', acceptedBankingApps: 'Applications acceptées', reviewTitle: 'Vérifiez votre demande', whatsappSend: 'Envoyer ma demande sur WhatsApp', paymentValidation: 'Veuillez renseigner ce champ.', whatsappIntro: 'Bonjour l’équipe Lewad,\nJe souhaite ajouter un établissement.', clientName: 'Nom du client', establishmentName: 'Nom de l’établissement', establishmentPhone: 'Téléphone établissement', establishmentWhatsapp: 'WhatsApp établissement', amountSent: 'Montant envoyé', durationRequested: 'Durée demandée', paymentNumberLabel: 'Numéro Lewad payé', whatsappThanks: 'Merci.',
+    stepsLabel: "Étapes",
+    stepOne: "Étape 1",
+    stepTwo: "Étape 2",
+    stepThree: "Étape 3",
+    continue: "Continuer",
+    back: "Retour",
+    paymentTitle: "Informations de paiement",
+    paymentInstruction: "Envoyez 200 MRO au numéro Lewad : {number}",
+    senderPhone: "Numéro utilisé pour l’envoi",
+    bankingApp: "Application bancaire",
+    chooseBankingApp: "Choisissez une application",
+    acceptedBankingApps: "Applications acceptées",
+    reviewTitle: "Vérifiez votre demande",
+    whatsappSend: "Envoyer ma demande sur WhatsApp",
+    paymentValidation: "Veuillez renseigner ce champ.",
+    whatsappIntro:
+      "Bonjour l’équipe Lewad,\nJe souhaite ajouter un établissement.",
+    clientName: "Nom du client",
+    establishmentName: "Nom de l’établissement",
+    establishmentPhone: "Téléphone établissement",
+    establishmentWhatsapp: "WhatsApp établissement",
+    amountSent: "Montant envoyé",
+    durationRequested: "Durée demandée",
+    paymentNumberLabel: "Numéro Lewad payé",
+    whatsappThanks: "Merci.",
     ownerSection: "Informations du propriétaire",
     ownerFirstName: "Prénom",
     ownerLastName: "Nom de famille",
@@ -659,7 +709,7 @@ export const fr = {
     location: "Adresse / Ville",
     locationHint: "Adresse ou quartier de votre établissement.",
     nearestPlace: "Lieu le plus proche",
-    nearestPlaceHint: "Point de repère facilite la localisation.",
+    nearestPlaceHint: "Un point de repère facilite la localisation.",
     mapPickerLabel: "Emplacement sur la carte",
     mapPickerHelper:
       "Pas besoin de connaître la latitude ou la longitude. Touchez simplement la carte.",

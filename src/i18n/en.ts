@@ -181,7 +181,7 @@ export const en: Dictionary = {
 
   install: {
     eyebrow: "On your phone",
-    title: "Add Lewad to your phone",
+    title: "How to install Lewad on your phone",
     text: "Lewad works directly from your browser, and you can also add it to your phone home screen to open it like an app.",
     stepsLabel: "Three steps",
     steps: [
@@ -189,6 +189,35 @@ export const en: Dictionary = {
       "Tap your browser menu",
       "Choose “Add to home screen”",
     ],
+    platforms: {
+      android: {
+        title: "Install on Android",
+        steps: [
+          "Open Lewad in Chrome.",
+          "Tap the browser menu.",
+          "Choose “Install” or “Install and create shortcut”.",
+        ],
+        visuals: [
+          "Chrome menu: open the browser options.",
+          "In the menu, choose “Install” or “Install and create shortcut”.",
+          "Confirm the Lewad installation.",
+        ],
+      },
+      iphone: {
+        title: "Install on iPhone",
+        steps: [
+          "Open Lewad in Safari.",
+          "Tap the Share button.",
+          "Choose “Add to Home Screen”.",
+          "Confirm with “Add”.",
+        ],
+        visuals: [
+          "Lewad open in Safari: use the Share button.",
+          "In the share menu, choose “Add to Home Screen”.",
+          "Check the Lewad name, then confirm with “Add”.",
+        ],
+      },
+    },
     installCta: "Install Lewad",
     guideCta: "See how to add it",
     browsers:
@@ -231,7 +260,7 @@ export const en: Dictionary = {
         q: "As a user, what do I have to do?",
         a: [
           "Nothing complicated.",
-          "Just create an account with your email address and a password. Phone sign-in with an OTP code may be offered in the future.",
+          "Just create an account with your email address and a password.",
         ],
       },
       {
@@ -262,20 +291,20 @@ export const en: Dictionary = {
       },
       {
         q: "How can I get points?",
-        a: ["There are several ways to get points:"],
+        a: ["Choose one of Lewad’s fixed recharge offers:"],
         steps: [
-          "Pick a ready-made top-up offer from the Offers section.",
-          "Buy the number of points you want.",
-          "Share Lewad — each share can earn you a point.",
+          "Choose an offer in the Offers section.",
+          "Send the displayed amount to the Lewad number.",
+          "Send your request to the Lewad team on WhatsApp.",
         ],
         link: true,
       },
       {
         q: "I own a business — how do I add it to Lewad?",
         a: [
-          "Adding a business yourself is coming soon.",
-          "You will fill in a form from your account, then the Lewad team will check the details before it goes live.",
-          "In the meantime, write to us from the Contact section and we will add your business.",
+          "From your account, open “Add an establishment” and complete the form.",
+          "Choose the location on the map — you do not need to enter coordinates.",
+          "The Lewad team checks the details before publication and contacts you on WhatsApp.",
         ],
       },
     ] as FaqItem[],
@@ -284,14 +313,14 @@ export const en: Dictionary = {
   offers: {
     eyebrow: "Offers",
     title: "Top up your points.",
-    text: "Pick a ready-made offer, or the number of points that suits you.",
+    text: "Choose one of three fixed offers based on how many searches you need.",
     soon: "Coming soon",
+    startCta: "Create an account to recharge",
     pointsLabel: "points",
     cards: [
       {
         name: "Starter offer",
         tagline: "To try Lewad and run your first searches.",
-        points: "—",
         features: [
           "Ideal to get started",
           "Occasional searches",
@@ -301,7 +330,6 @@ export const en: Dictionary = {
       {
         name: "Standard offer",
         tagline: "For regular, everyday searching.",
-        points: "—",
         features: [
           "Best points-to-price ratio",
           "For frequent use",
@@ -309,12 +337,11 @@ export const en: Dictionary = {
         ],
       },
       {
-        name: "Flexible offer",
-        tagline: "You choose the number of points yourself.",
-        points: "—",
+        name: "Advanced offer",
+        tagline: "For more searches when you need them.",
         features: [
-          "Any amount",
-          "Pay for what you need",
+          "100-point reserve",
+          "For heavier use",
           "Points valid across all services",
         ],
       },
@@ -391,7 +418,7 @@ export const en: Dictionary = {
     no: "No",
     addEstablishment: "Add an establishment",
     addEstablishmentMessage:
-      "The establishment-addition request will be available soon.",
+      "Open “Add an establishment” from your profile to send your request.",
     unavailable: "This service is not available on Lewad yet.",
     requestAddition: "Request addition",
     demoNote:
@@ -437,7 +464,8 @@ export const en: Dictionary = {
     searchOnMap: "Search on map",
     searchingMaps: "Searching maps…",
     foundOnMap: "Found on map",
-    mapResultSaveWarning: "The result is shown, but could not be saved right now.",
+    mapResultSaveWarning:
+      "The result is shown, but could not be saved right now.",
     noMapResultFound: "No map result found.",
     mapSearchError: "Could not search the map right now. Please try again.",
     mapSearchRateLimited:
@@ -495,7 +523,7 @@ export const en: Dictionary = {
   },
 
   footer: {
-    madeBy: "Made by Wasla Soft",
+    madeBy: "Made by Wasla Tech",
     rights: "© 2026 — All rights reserved",
     version: "Version v1.0.0",
     tagline: "Local search in Mauritania.",
@@ -599,7 +627,30 @@ export const en: Dictionary = {
     introTitle: "How it works",
     introText:
       "Fill out the form below. Our team will review your submission and create your business on Lewad. You will be contacted to complete the registration.",
-    stepsLabel: 'Steps', stepOne: 'Step 1', stepTwo: 'Step 2', stepThree: 'Step 3', continue: 'Continue', back: 'Back', paymentTitle: 'Payment information', paymentInstruction: 'Send 200 MRO to Lewad number: {number}', senderPhone: 'Sender phone number', bankingApp: 'Banking app', chooseBankingApp: 'Choose a banking app', acceptedBankingApps: 'Accepted banking apps', reviewTitle: 'Review your request', whatsappSend: 'Send request on WhatsApp', paymentValidation: 'Please complete this field.', whatsappIntro: 'Hello Lewad team,\nI want to add an establishment.', clientName: 'Client name', establishmentName: 'Establishment name', establishmentPhone: 'Establishment phone', establishmentWhatsapp: 'Establishment WhatsApp', amountSent: 'Amount sent', durationRequested: 'Requested duration', paymentNumberLabel: 'Lewad payment number', whatsappThanks: 'Thank you.',
+    stepsLabel: "Steps",
+    stepOne: "Step 1",
+    stepTwo: "Step 2",
+    stepThree: "Step 3",
+    continue: "Continue",
+    back: "Back",
+    paymentTitle: "Payment information",
+    paymentInstruction: "Send 200 MRO to Lewad number: {number}",
+    senderPhone: "Sender phone number",
+    bankingApp: "Banking app",
+    chooseBankingApp: "Choose a banking app",
+    acceptedBankingApps: "Accepted banking apps",
+    reviewTitle: "Review your request",
+    whatsappSend: "Send request on WhatsApp",
+    paymentValidation: "Please complete this field.",
+    whatsappIntro: "Hello Lewad team,\nI want to add an establishment.",
+    clientName: "Client name",
+    establishmentName: "Establishment name",
+    establishmentPhone: "Establishment phone",
+    establishmentWhatsapp: "Establishment WhatsApp",
+    amountSent: "Amount sent",
+    durationRequested: "Requested duration",
+    paymentNumberLabel: "Lewad payment number",
+    whatsappThanks: "Thank you.",
     ownerSection: "Owner information",
     ownerFirstName: "First name",
     ownerLastName: "Last name",

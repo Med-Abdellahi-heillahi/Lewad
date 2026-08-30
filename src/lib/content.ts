@@ -8,13 +8,13 @@ import type { Db2Establishment } from './db2'
  */
 
 export const contact = {
-  phoneDisplay: '+222 30 68 75 43',
-  phoneHref: 'tel:+22230687543',
-  whatsappDisplay: '+222 30 68 75 43',
-  whatsappHref: 'https://wa.me/22230687543',
-  paymentNumber: '30687543',
-  email: 'dedahisdh@gmail.com',
-  emailHref: 'mailto:dedahisdh@gmail.com',
+  phoneDisplay: '+222 42 01 54 64',
+  phoneHref: 'tel:+22242015464',
+  whatsappDisplay: '+222 42 01 54 64',
+  whatsappHref: 'https://wa.me/22242015464',
+  paymentNumber: '42015464',
+  email: 'lewad.help@gmail.com',
+  emailHref: 'mailto:lewad.help@gmail.com',
 }
 
 export const paymentApps = ['Bankily', 'Sedad', 'Masrivi', 'Bimbank', 'Gazapay', 'Bamis Digital', 'Barid Cash', 'Click'] as const

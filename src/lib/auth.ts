@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient'
+import type { Locale } from '../i18n'
 
 export async function signUpWithEmail(params: { fullName: string; email: string; password: string }) {
   const { fullName, email, password } = params
@@ -24,10 +25,18 @@ export async function signOut() {
   return supabase.auth.signOut()
 }
 
-/** Sends the signed-in member a recovery link without exposing Auth errors to the UI. */
-export async function requestPasswordReset(email: string) {
+/**
+ * Sends a recovery link without exposing Auth errors to the UI. Supabase's
+ * hosted mail template is global, so the locale travels only to the localized
+ * reset page after the recipient opens the link.
+ */
+export async function requestPasswordReset(email: string, locale: Locale = 'fr') {
+  const redirect = new URL('/auth', window.location.origin)
+  redirect.searchParams.set('mode', 'reset')
+  redirect.searchParams.set('lang', locale)
+
   return supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/auth`,
+    redirectTo: redirect.toString(),
   })
 }
 

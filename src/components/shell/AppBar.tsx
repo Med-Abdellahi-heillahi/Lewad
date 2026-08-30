@@ -187,7 +187,7 @@ export function AppBar({ active, homeHref = "/app", admin }: AppBarProps) {
                 />
               </div>
             ) : (
-              <a href="/auth" className={`${btnPrimary} hidden lg:inline-flex`}>
+              <a href="/auth?mode=login" className={`${btnPrimary} hidden lg:inline-flex`}>
                 {copy.signIn}
               </a>
             )}
@@ -276,7 +276,7 @@ export function AppBar({ active, homeHref = "/app", admin }: AppBarProps) {
                 />
               </div>
             ) : (
-              <a href="/auth" className={`${btnPrimary} hidden lg:inline-flex`}>
+              <a href="/auth?mode=login" className={`${btnPrimary} hidden lg:inline-flex`}>
                 {copy.signIn}
               </a>
             )}
@@ -340,7 +340,7 @@ export function AppBar({ active, homeHref = "/app", admin }: AppBarProps) {
           </div>
         ) : (
           <a
-            href="/auth"
+            href="/auth?mode=login"
             onClick={closeDrawer}
             className={`${btnPrimary} w-full`}
           >

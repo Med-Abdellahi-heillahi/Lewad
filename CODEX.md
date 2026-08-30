@@ -142,6 +142,18 @@ workflow, request-to-service workflow, and minimal PWA are implemented.
   owner confirmation.
 - `npx tsc --noEmit -p tsconfig.app.json`, `npm test`, and `npm run build`
   pass. The Vite chunk-size advisory is non-blocking.
+- **Public recharge pricing TODO:** the landing reads `rechargeOffers` in
+  `src/lib/recharge.ts`, a reviewed display mirror of the fixed offer mapping
+  resolved by `create_recharge_request` in PostgreSQL. The browser must never
+  decide a recharge price. Add an unauthenticated, read-only server catalogue
+  only when the backend is ready to own public pricing end-to-end.
+- **Password-reset locale:** Supabase hosted Auth email templates are global
+  dashboard configuration and cannot be selected safely per browser request
+  with `resetPasswordForEmail`. Lewad includes `mode=reset&lang=fr|ar|en` in
+  the recovery redirect so the reset page is localized after the link opens.
+  Per-recipient email language requires a future custom mail provider or
+  narrowly scoped Edge Function; do not claim that the hosted email body is
+  dynamic until that integration exists.
 - **Client history pagination TODO:** `/history` currently uses frontend
   pagination with 10 items per page, which is acceptable for V1. Future backend
   work must implement server-side pagination and return only the requested page

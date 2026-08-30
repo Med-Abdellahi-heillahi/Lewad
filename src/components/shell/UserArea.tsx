@@ -26,7 +26,7 @@ type UserAreaProps = {
  * Elle ne lit aucune session et n'appelle aucun service : le parent fournit le nom,
  * le solde et les entrées de menu. Prête à recevoir l'utilisateur connecté plus tard.
  */
-export function UserArea({ user = null, credits = null, items = [], signInHref = '/auth' }: UserAreaProps) {
+export function UserArea({ user = null, credits = null, items = [], signInHref = '/auth?mode=login' }: UserAreaProps) {
   const { t } = useI18n()
   const reduce = useReducedMotion()
   const [open, setOpen] = useState(false)

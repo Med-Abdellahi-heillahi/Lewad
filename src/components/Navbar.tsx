@@ -28,9 +28,9 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const [spaceHref, setSpaceHref] = useState('/app')
-  const accountHref = isAuthenticated ? spaceHref : '/auth'
+  const accountHref = isAuthenticated ? spaceHref : '/auth?mode=signup'
   const accountLabel = isAuthenticated ? t.nav.mySpace : t.nav.signUp
-  const signInHref = '/auth'
+  const signInHref = '/auth?mode=login'
 
   const closeDrawer = useCallback(() => setDrawerOpen(false), [])
 

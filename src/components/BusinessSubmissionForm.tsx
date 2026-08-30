@@ -174,7 +174,7 @@ export function BusinessSubmissionForm() {
 
     if (!result.ok || result.status === 'error') {
       setFormState('error')
-      setServerError(result.message ?? copy.genericError)
+      setServerError(copy.genericError)
       return
     }
 

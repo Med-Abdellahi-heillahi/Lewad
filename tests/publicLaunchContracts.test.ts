@@ -1,0 +1,201 @@
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { describe, expect, it } from 'vitest'
+
+function read(path: URL) {
+  return readFileSync(path, 'utf8').replaceAll('\r\n', '\n')
+}
+
+function sourceFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name)
+    if (entry.isDirectory()) return sourceFiles(path)
+    return /\.(?:ts|tsx)$/.test(entry.name) ? [readFileSync(path, 'utf8')] : []
+  })
+}
+
+const contentPath = new URL('../src/lib/content.ts', import.meta.url)
+const rechargePath = new URL('../src/lib/recharge.ts', import.meta.url)
+const rechargeMigrationPath = new URL('../supabase/migrations/20260820000003_create_recharge_request_rpc.sql', import.meta.url)
+const offersPath = new URL('../src/components/sections/Offers.tsx', import.meta.url)
+const appPagesPath = new URL('../src/components/AppPages.tsx', import.meta.url)
+const languageMenuPath = new URL('../src/components/shell/LanguageMenu.tsx', import.meta.url)
+const navbarPath = new URL('../src/components/Navbar.tsx', import.meta.url)
+const heroPath = new URL('../src/components/sections/Hero.tsx', import.meta.url)
+const authPagePath = new URL('../src/components/AuthPage.tsx', import.meta.url)
+const authPath = new URL('../src/lib/auth.ts', import.meta.url)
+const routeAuthPath = new URL('../src/lib/routeAuth.ts', import.meta.url)
+const frPath = new URL('../src/i18n/fr.ts', import.meta.url)
+const arPath = new URL('../src/i18n/ar.ts', import.meta.url)
+const enPath = new URL('../src/i18n/en.ts', import.meta.url)
+const manifestPath = new URL('../public/manifest.webmanifest', import.meta.url)
+const indexHtmlPath = new URL('../index.html', import.meta.url)
+const installSectionPath = new URL('../src/components/sections/InstallApp.tsx', import.meta.url)
+const installModalPath = new URL('../src/components/InstallPromptModal.tsx', import.meta.url)
+const serviceWorkerPath = new URL('../public/sw.js', import.meta.url)
+
+describe('public launch contracts', () => {
+  it('keeps official support details in the centralized contact object without old details in frontend source', () => {
+    const contact = read(contentPath)
+    const frontend = sourceFiles(fileURLToPath(new URL('../src/', import.meta.url))).join('\n')
+    const retiredPhone = ['306', '87543'].join('')
+    const retiredEmail = ['deda', 'hisdh'].join('') + '@gmail.com'
+
+    expect(contact).toContain("phoneHref: 'tel:+22242015464'")
+    expect(contact).toContain("whatsappHref: 'https://wa.me/22242015464'")
+    expect(contact).toContain("email: 'lewad.help@gmail.com'")
+    expect(frontend).not.toContain(retiredPhone)
+    expect(frontend).not.toContain(retiredEmail)
+  })
+
+  it('uses the reviewed recharge contract catalogue on both landing and member recharge screens', () => {
+    const recharge = read(rechargePath)
+    const offers = read(offersPath)
+    const appPages = read(appPagesPath)
+    const migration = read(rechargeMigrationPath)
+
+    for (const offer of [
+      "{ code: 'starter_10', points: 10, amountMro: 50, featured: false }",
+      "{ code: 'regular_30', points: 30, amountMro: 100, featured: true }",
+      "{ code: 'advanced_100', points: 100, amountMro: 500, featured: false }",
+    ]) {
+      expect(recharge).toContain(offer)
+    }
+    expect(offers).toContain('rechargeOffers.map')
+    expect(offers).toContain('formatCurrency(rechargeOffer.amountMro, locale)')
+    expect(appPages).toContain('rechargeOffers.map')
+    expect(appPages).not.toContain("{ code: 'starter_10', points: 10, amountMro: 50")
+    expect(migration).toContain("v_offer_label := '10 points · 50 MRO'")
+    expect(migration).toContain("v_offer_label := '30 points · 100 MRO'")
+    expect(migration).toContain("v_offer_label := '100 points · 500 MRO'")
+  })
+
+  it('makes the public quick language control a direct French–Arabic toggle', () => {
+    const menu = read(languageMenuPath)
+
+    expect(menu).toContain("const nextLocale = locale === 'fr' ? 'ar' : 'fr'")
+    expect(menu).toContain('onClick={() => setLocale(nextLocale)}')
+    expect(menu).not.toContain('AnimatePresence')
+    expect(menu).not.toContain('locales.map')
+  })
+
+  it('does not expose the internal Animation label in French landing copy', () => {
+    const french = read(frPath)
+
+    expect(french).not.toContain('strip: "Animation"')
+    expect(french).not.toContain('eyebrow: "Animation"')
+  })
+
+  it('uses the supplied Lewad logo asset for installed-app, browser, and service-worker icons', () => {
+    const manifest = JSON.parse(read(manifestPath)) as { icons: Array<{ src: string }> }
+    const indexHtml = read(indexHtmlPath)
+    const serviceWorker = read(serviceWorkerPath)
+    const iconPath = '/assets/logo_lewad.png?v=launch-20260830-3'
+
+    expect(manifest.icons).toHaveLength(2)
+    expect(manifest.icons.every((icon) => icon.src === iconPath)).toBe(true)
+    expect(indexHtml).toContain('rel="manifest" href="/manifest.webmanifest?v=launch-20260830-3"')
+    expect(indexHtml).toContain(`rel="icon" type="image/png" href="${iconPath}"`)
+    expect(indexHtml).toContain(`rel="apple-touch-icon" href="${iconPath}"`)
+    expect(serviceWorker).toContain("const STATIC_CACHE = 'lewad-static-v3'")
+    expect(serviceWorker).toContain("const LEWAD_ICON_PATH = '/assets/logo_lewad.png?v=launch-20260830-3'")
+    expect(serviceWorker).not.toContain("'/icons/icon-")
+  })
+
+  it('uses the owner-provided Android and iPhone screenshot files directly', () => {
+    const root = fileURLToPath(new URL('../public/assets/install_app_image/', import.meta.url))
+    const iphoneDirectory = join(root, 'iphone')
+    const androidDirectory = join(root, 'android')
+    const installSection = read(installSectionPath)
+
+    expect(existsSync(iphoneDirectory)).toBe(true)
+    expect(existsSync(androidDirectory)).toBe(true)
+    expect(readdirSync(iphoneDirectory).sort()).toEqual([
+      '1.jpeg',
+      '2.jpeg',
+      '3.jpeg',
+    ])
+    expect(readdirSync(androidDirectory).sort()).toEqual([
+      '.gitkeep',
+      'android-1-menu.jpeg',
+      'android-2-installer-raccourci.jpeg',
+      'android-3-confirmer-installation.jpeg',
+    ])
+    expect(installSection).toContain('/assets/install_app_image/android/android-1-menu.jpeg')
+    expect(installSection).toContain('/assets/install_app_image/android/android-2-installer-raccourci.jpeg')
+    expect(installSection).toContain('/assets/install_app_image/android/android-3-confirmer-installation.jpeg')
+    expect(installSection).toContain('/assets/install_app_image/iphone/1.jpeg')
+    expect(installSection).toContain('/assets/install_app_image/iphone/2.jpeg')
+    expect(installSection).toContain('/assets/install_app_image/iphone/3.jpeg')
+    expect(installSection).toContain('id="android"')
+    expect(installSection).toContain('id="iphone"')
+    expect(installSection).toContain('alt={copy.visuals[index]')
+    expect(installSection).toContain('object-contain')
+    expect(installSection).not.toMatch(/https?:\/\//)
+  })
+
+  it('provides Android and iPhone steps in every supported language and keeps the compact modal linked to the guide', () => {
+    const modal = read(installModalPath)
+
+    for (const dictionary of [read(frPath), read(arPath), read(enPath)]) {
+      expect(dictionary).toContain('platforms: {')
+      expect(dictionary).toContain('android: {')
+      expect(dictionary).toContain('iphone: {')
+    }
+    expect(read(frPath)).toContain('Installer sur Android')
+    expect(read(frPath)).toContain('Installer sur iPhone')
+    expect(read(arPath)).toContain('التثبيت على Android')
+    expect(read(arPath)).toContain('التثبيت على iPhone')
+    expect(read(enPath)).toContain('Install on Android')
+    expect(read(enPath)).toContain('Install on iPhone')
+    expect(modal).toContain("document.getElementById('install')?.scrollIntoView")
+    expect(read(installSectionPath)).toContain('id="install-steps"')
+    expect(read(installSectionPath)).not.toContain('useInstallInvitation')
+    expect(read(installSectionPath)).not.toContain('<Reveal')
+  })
+
+  it('opens connection and registration in their intended auth modes and retains protected redirects', () => {
+    const navbar = read(navbarPath)
+    const hero = read(heroPath)
+    const authPage = read(authPagePath)
+    const routeAuth = read(routeAuthPath)
+
+    expect(navbar).toContain("const signInHref = '/auth?mode=login'")
+    expect(navbar).toContain("const accountHref = isAuthenticated ? spaceHref : '/auth?mode=signup'")
+    expect(hero).toContain('href="/auth?mode=signup"')
+    expect(authPage).toContain("if (mode === 'signup') return 'signUp'")
+    expect(authPage).toContain(": mode === 'signUp'\n        ? copy.signUp")
+    expect(routeAuth).toContain('`/auth?mode=login&redirect=${encodeURIComponent(requestedPath)}`')
+  })
+
+  it('uses the typed sign-in email read-only for a neutral forgot-password flow', () => {
+    const authPage = read(authPagePath)
+
+    expect(authPage).toContain('value={email} onChange={setEmail} autoComplete="email" readOnly')
+    expect(authPage).toContain('const startForgotPassword = () =>')
+    expect(authPage).toContain("requestPasswordReset(email.trim(), locale)")
+    expect(authPage).toContain('Si ce compte existe, un e-mail de réinitialisation sera envoyé.')
+    expect(authPage).toContain('إذا كان هذا الحساب موجودًا، فسيتم إرسال بريد إلكتروني لإعادة التعيين.')
+    expect(authPage).toContain('If this account exists, a reset email will be sent.')
+    expect(authPage).not.toContain('resetEmail')
+  })
+
+  it('carries reset locale only in the return URL and keeps passwords and service roles out of frontend source', () => {
+    const auth = read(authPath)
+    const frontend = sourceFiles(fileURLToPath(new URL('../src/', import.meta.url))).join('\n')
+
+    expect(auth).toContain("redirect.searchParams.set('mode', 'reset')")
+    expect(auth).toContain("redirect.searchParams.set('lang', locale)")
+    expect(read(authPagePath)).toContain('function resetLocaleFromUrl()')
+    expect(frontend).not.toContain('service_role')
+    expect(frontend).not.toMatch(/(?:localStorage|sessionStorage)\.(?:setItem|getItem)\([^\n]*password/i)
+    expect(frontend).not.toMatch(/console\.(?:log|debug|info|warn|error)\([^\n]*(?:password|credentials|authData|formState)/i)
+  })
+
+  it('keeps all three install-section titles localized', () => {
+    expect(read(frPath)).toContain('Comment installer Lewad sur votre téléphone')
+    expect(read(arPath)).toContain('كيفية تثبيت Lewad على هاتفك')
+    expect(read(enPath)).toContain('How to install Lewad on your phone')
+  })
+})

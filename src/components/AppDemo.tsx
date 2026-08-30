@@ -1948,12 +1948,6 @@ function EstablishmentResult({
                 <h2 className="text-2xl font-bold tracking-tight">
                   {establishment.name}
                 </h2>
-                {establishment.is_verified && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-answer-bg px-2 py-1 text-xs font-bold text-answer">
-                    <Icon name="check" size={14} />
-                    {copy.verified}
-                  </span>
-                )}
               </div>
               <p className="mt-1 text-sm text-muted">
                 {establishment.category?.name ?? copy.categoryUnavailable}

@@ -161,9 +161,9 @@ function PasswordResetPanel({ userEmail, locale }: { userEmail: string | null; l
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
 
   const copy = {
-    fr: { title: 'Réinitialisation par e-mail', desc: 'Vous ne vous souvenez pas de votre mot de passe actuel ? Envoyez-vous un lien de réinitialisation.', submit: 'Envoyer le lien', sending: 'Envoi…', success: 'Un e-mail de réinitialisation vous a été envoyé. Vérifiez votre boîte de réception.', noEmail: 'Aucun e-mail associé à ce compte.', error: "Impossible d'envoyer l'e-mail. Réessayez plus tard." },
-    ar: { title: 'إعادة التعيين بالبريد الإلكتروني', desc: 'لا تتذكر كلمة المرور الحالية؟ أرسل رابطاً لإعادة التعيين.', submit: 'إرسال الرابط', sending: 'جارٍ الإرسال…', success: 'تم إرسال بريد إلكتروني لإعادة التعيين. تحقق من صندوق الوارد.', noEmail: 'لا يوجد بريد إلكتروني مرتبط بهذا الحساب.', error: 'تعذر إرسال البريد الإلكتروني. أعد المحاولة لاحقاً.' },
-    en: { title: 'Email reset', desc: 'Cannot remember your current password? Send yourself a reset link.', submit: 'Send reset link', sending: 'Sending…', success: 'A password reset email has been sent. Check your inbox.', noEmail: 'No email associated with this account.', error: 'Could not send the email. Please try again later.' },
+    fr: { title: 'Réinitialisation par e-mail', desc: 'Vous ne vous souvenez pas de votre mot de passe actuel ? Envoyez-vous un lien de réinitialisation.', submit: 'Envoyer le lien', sending: 'Envoi…', success: 'Si ce compte existe, un e-mail de réinitialisation sera envoyé.', noEmail: 'Aucun e-mail associé à ce compte.', error: "Impossible d'envoyer l'e-mail. Réessayez plus tard." },
+    ar: { title: 'إعادة التعيين بالبريد الإلكتروني', desc: 'لا تتذكر كلمة المرور الحالية؟ أرسل رابطاً لإعادة التعيين.', submit: 'إرسال الرابط', sending: 'جارٍ الإرسال…', success: 'إذا كان هذا الحساب موجودًا، فسيتم إرسال بريد إلكتروني لإعادة التعيين.', noEmail: 'لا يوجد بريد إلكتروني مرتبط بهذا الحساب.', error: 'تعذر إرسال البريد الإلكتروني. أعد المحاولة لاحقاً.' },
+    en: { title: 'Email reset', desc: 'Cannot remember your current password? Send yourself a reset link.', submit: 'Send reset link', sending: 'Sending…', success: 'If this account exists, a reset email will be sent.', noEmail: 'No email associated with this account.', error: 'Could not send the email. Please try again later.' },
   }[locale]
 
   const handleSend = async () => {
@@ -171,7 +171,7 @@ function PasswordResetPanel({ userEmail, locale }: { userEmail: string | null; l
     setSending(true)
     setNotice(null)
     try {
-      const { error } = await requestPasswordReset(userEmail)
+      const { error } = await requestPasswordReset(userEmail, locale)
       setNotice(error ? { tone: 'error', text: copy.error } : { tone: 'success', text: copy.success })
     } catch {
       setNotice({ tone: 'error', text: copy.error })

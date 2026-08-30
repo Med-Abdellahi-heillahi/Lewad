@@ -1,0 +1,42 @@
+# Version control and local tooling
+.git/
+.github/
+.claude/
+.codex/
+.agents/
+.vscode/
+.idea/
+
+# Dependencies and build/test output
+node_modules/
+dist/
+build/
+.vite/
+.cache/
+coverage/
+playwright-report/
+test-results/
+
+# Environment files and local Supabase state
+.env
+.env.*
+supabase/.temp/
+supabase/.branches/
+supabase/.env
+supabase/.env.*
+
+# Logs and temporary files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+
+# Local/private artefacts
+Supabase.docx
+test

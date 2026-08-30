@@ -138,11 +138,16 @@ export function InstallPromptModal() {
   const copy = t.installPrompt
   const reduce = useReducedMotion()
   const { open, dismiss } = useInstallInvitation()
-  const [expanded, setExpanded] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
   const titleId = useId()
   const stepLabels = [copy.step1Label, copy.step2Label, copy.step3Label]
   const displayedStep = reduce ? 0 : currentStep
+  const seeGuide = () => {
+    dismiss()
+    window.requestAnimationFrame(() => {
+      document.getElementById('install')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+    })
+  }
 
   useEffect(() => {
     if (reduce || !open) return
@@ -196,36 +201,12 @@ export function InstallPromptModal() {
             {stepLabels[displayedStep]}
           </p>
 
-          <AnimatePresence initial={false}>
-            {expanded && (
-              <m.ol
-                initial={reduce ? undefined : { opacity: 0, height: 0 }}
-                animate={reduce ? undefined : { opacity: 1, height: 'auto' }}
-                exit={reduce ? undefined : { opacity: 0, height: 0 }}
-                transition={{ duration: 0.25, ease }}
-                className="mt-3 grid overflow-hidden rounded-xl border border-line bg-surface"
-              >
-                {stepLabels.map((label, index) => (
-                  <li key={label} className="flex items-center gap-2.5 border-b border-line p-2.5 last:border-b-0">
-                    <span className="tabular grid size-6 shrink-0 place-items-center rounded-lg bg-brand-soft text-[11px] font-bold text-brand-deep">
-                      {index + 1}
-                    </span>
-                    <span className="min-w-0 flex-1 text-xs leading-snug font-medium text-ink-soft">{label}</span>
-                    <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-page-alt">
-                      {index === 0 ? <Smartphone size={17} className="text-brand-deep" /> : index === 1 ? <EllipsisVertical size={18} className="text-brand-deep" /> : <Check size={17} className="text-answer" />}
-                    </span>
-                  </li>
-                ))}
-              </m.ol>
-            )}
-          </AnimatePresence>
-
           <div className="mt-4 flex items-center justify-between gap-3">
             <StepIndicator current={displayedStep} />
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setExpanded((value) => !value)}
+                onClick={seeGuide}
                 className="inline-flex min-h-11 items-center rounded-xl border border-line bg-surface px-3 text-xs font-semibold text-ink transition-colors hover:bg-surface-2"
               >
                 {copy.seeSteps}
