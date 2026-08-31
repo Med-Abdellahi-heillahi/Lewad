@@ -32,6 +32,7 @@ import { adminCopy, type SuperAdminTabId } from './admin/adminCopy'
 import { AdminUsers } from './admin/AdminUsers'
 import { AdminManagement, SuperAdminAuditLog } from './super-admin/AdminManagement'
 import { SuperAdminOverview } from './super-admin/SuperAdminOverview'
+import { SuperAdminServices } from './super-admin/SuperAdminServices'
 import { SuperAdminSidebar, superAdminTabs } from './super-admin/SuperAdminSidebar'
 import { SuperAdminBottomNav } from './super-admin/SuperAdminBottomNav'
 
@@ -267,6 +268,7 @@ export function SuperAdminPage() {
               <header className={`${card} border-brand/45 p-5 sm:p-6`}><AdminSectionHeader icon={UsersRound} title={copy.superSpace.people.usersTitle} text={copy.superSpace.people.usersText} /></header>
               <AdminUsers users={users.data} pagination={users} loading={loading} currentRole="super_admin" filters={filters} onFiltersChange={updateFilters} onPageChange={setUsersPage} onStatusChange={saveStatus} onRoleChange={saveRole} displayName={displayName} />
             </div>}
+            {activeTab === 'services' && <SuperAdminServices />}
             {activeTab === 'audit' && <SuperAdminAuditLog />}
             {activeTab === 'settings' && <SuperAdminSettingsPanel />}
           </section>

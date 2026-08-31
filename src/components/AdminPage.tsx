@@ -39,11 +39,14 @@ import {
   type BusinessSubmissionSummary,
 } from '../lib/businessSubmissions'
 import type { MissingServiceRequestStatus } from '../lib/db3b'
-import { formatDate, formatNumber, formatSignedPoints } from '../lib/format'
+import { formatDate, formatNumber } from '../lib/format'
+import type {
+  AdminExternalPlaceImportInput,
+  AdminExternalPlaceImportSubmitResult,
+} from '../lib/adminExternalPlaceImport'
 import { appWrap, btnGhost, btnPrimary, card, cardMuted, field, pill } from '../lib/ui'
-import { Icon, type IconName } from './Icon'
 import { AppShell } from './shell/AppShell'
-import { EmptyState, InlineAlert, LoadingCard, Skeleton } from './system/States'
+import { EmptyState, InlineAlert, LoadingCard } from './system/States'
 import { adminCopy, type AdminTabId } from './admin/adminCopy'
 export { RequireAdmin } from './admin/AdminAccess'
 import { AdminDashboard } from './admin/AdminDashboard'
@@ -54,10 +57,11 @@ import { AdminUsers } from './admin/AdminUsers'
 import { AdminRequests } from './admin/AdminRequests'
 import { AdminCredits } from './admin/AdminCredits'
 import { AdminBusinessSubmissions } from './admin/AdminBusinessSubmissions'
+import { AdminExternalPlaceImportModal } from './admin/AdminExternalPlaceImportModal'
 import { PaginationControls } from './ui/PaginationControls'
 import { Building2, Check, Eye, LayoutDashboard, ListChecks, MapPinned, Plus, Search, Users, Wallet, X } from 'lucide-react'
 import { DEFAULT_PAGE_SIZE, paginatedResult, type PaginatedResult } from '../lib/pagination'
-import { PLACE_TYPE_KEYS, type PlaceTypeKey } from '../lib/placeTypes'
+import type { PlaceTypeKey } from '../lib/placeTypes'
 
 type AdminTab = AdminTabId
 type AdminListPage = 'requests' | 'discoveries' | 'users' | 'wallets' | 'ledger' | 'searchLogs' | 'categories' | 'establishments' | 'branches' | 'submissions'
@@ -200,21 +204,24 @@ function AdminDiscoveriesView({
   pagination,
   loading,
   onPageChange,
-  onReview,
+  onImport,
+  onReject,
 }: {
   discoveries: AdminExternalPlaceDiscovery[]
   pagination: PaginatedResult<AdminExternalPlaceDiscovery>
   loading: boolean
   onPageChange: (page: number) => void
-  onReview: (discovery: AdminExternalPlaceDiscovery, action: 'import' | 'reject', selectedTypes?: PlaceTypeKey[]) => Promise<string | null>
+  onImport: (
+    discovery: AdminExternalPlaceDiscovery,
+    input: Omit<AdminExternalPlaceImportInput, 'discoveryId'>,
+  ) => Promise<AdminExternalPlaceImportSubmitResult>
+  onReject: (discovery: AdminExternalPlaceDiscovery) => Promise<string | null>
 }) {
   const { locale } = useI18n()
   const copy = adminCopy[locale].discoveries
   const [dialog, setDialog] = useState<{ action: 'import' | 'reject'; discovery: AdminExternalPlaceDiscovery } | null>(null)
   const [saving, setSaving] = useState(false)
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
-  const [selectedTypes, setSelectedTypes] = useState<PlaceTypeKey[]>([])
-  const [typeError, setTypeError] = useState(false)
 
   useEffect(() => {
     if (!notice) return
@@ -224,38 +231,34 @@ function AdminDiscoveriesView({
 
   const errorText = (status: string) => {
     if (status === 'invalid_types') return copy.chooseTypeError
+    if (status === 'conflicting_natures') return copy.conflictingTypesError
+    if (status === 'invalid_phone') return copy.invalidPhone
+    if (status === 'invalid_whatsapp') return copy.invalidWhatsapp
+    if (status === 'backend_update_required') return copy.backendUpdateRequired
     if (status === 'invalid_discovery' || status === 'invalid_coordinates') return copy.invalidDiscovery
     if (status === 'not_pending' || status === 'already_imported') return copy.alreadyHandled
     return copy.actionFailed
   }
 
   const openReview = (action: 'import' | 'reject', discovery: AdminExternalPlaceDiscovery) => {
-    setSelectedTypes([])
-    setTypeError(false)
     setDialog({ action, discovery })
   }
 
-  const toggleType = (type: PlaceTypeKey) => {
-    setTypeError(false)
-    setSelectedTypes((current) => current.includes(type)
-      ? current.filter((item) => item !== type)
-      : [...current, type])
-  }
-
-  const submitReview = async () => {
-    if (!dialog) return
-    if (dialog.action === 'import' && selectedTypes.length === 0) {
-      setTypeError(true)
-      return
-    }
+  const submitReject = async () => {
+    if (!dialog || dialog.action !== 'reject') return
     setSaving(true)
-    const error = await onReview(dialog.discovery, dialog.action, dialog.action === 'import' ? selectedTypes : undefined)
-    setSaving(false)
-    setNotice({
-      tone: error ? 'error' : 'success',
-      text: error ? errorText(error) : dialog.action === 'import' ? copy.approvedSuccess : copy.rejectedSuccess,
-    })
-    if (!error) setDialog(null)
+    try {
+      const error = await onReject(dialog.discovery)
+      setNotice({
+        tone: error ? 'error' : 'success',
+        text: error ? errorText(error) : copy.rejectedSuccess,
+      })
+      if (!error) setDialog(null)
+    } catch {
+      setNotice({ tone: 'error', text: copy.actionFailed })
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (loading) return <LoadingCard label={copy.title} lines={5} />
@@ -285,11 +288,22 @@ function AdminDiscoveriesView({
     </MobileCard>)}</MobileCardList>
     <div className="hidden lg:block"><TableWrap><table className="min-w-[1200px] w-full border-collapse"><TableHeader><th className="px-4 py-3">{copy.searchedQuery}</th><th className="px-4 py-3">{copy.place}</th><th className="px-4 py-3">{copy.provider}</th><th className="px-4 py-3">{copy.context}</th><th className="px-4 py-3">{copy.coordinates}</th><th className="px-4 py-3">{copy.user}</th><th className="px-4 py-3">{copy.status}</th><th className="px-4 py-3">{copy.date}</th><th className="px-4 py-3">{copy.actions}</th></TableHeader><tbody className="divide-y divide-line">{discoveries.map((discovery) => <tr key={discovery.id}><TableCell><span dir="auto">{discovery.searched_query}</span></TableCell><TableCell><TableTitle>{discovery.display_name}</TableTitle>{discovery.place_types.length > 0 && <p className="mt-1 text-xs text-muted"><DiscoveryTypeLabels types={discovery.place_types} /></p>}</TableCell><TableCell>{discovery.provider === 'photon' ? 'Photon' : 'Nominatim'}</TableCell><TableCell><DiscoveryContext discovery={discovery} /></TableCell><TableCell><DiscoveryCoordinates discovery={discovery} /></TableCell><TableCell>{personName(discovery.user, locale)}</TableCell><TableCell><StatusBadge value={discovery.source_status} /></TableCell><TableCell><time dateTime={discovery.created_at}>{formatDate(discovery.created_at, locale)}</time></TableCell><TableCell>{discovery.source_status === 'pending_review' && <div className="flex flex-wrap gap-1.5"><AdminActionButton icon={Check} label={copy.importAction} title={copy.importAction} tone="success" iconOnly disabled={saving} onClick={() => openReview('import', discovery)} /><AdminActionButton icon={X} label={copy.rejectAction} title={copy.rejectAction} tone="danger" iconOnly disabled={saving} onClick={() => openReview('reject', discovery)} /></div>}</TableCell></tr>)}</tbody></table></TableWrap></div>
     {pagination.totalCount > 0 && <PaginationControls {...pagination} labels={adminCopy[locale].pagination} disabled={loading} onPageChange={onPageChange} />}
-    {dialog && <AdminModal title={dialog.action === 'import' ? copy.importConfirmTitle : copy.rejectConfirmTitle} closeLabel={copy.close} onClose={() => !saving && setDialog(null)}>
-      <p className="mt-4 text-sm leading-6 text-muted">{dialog.action === 'import' ? copy.importConfirmText : copy.rejectConfirmText}</p>
+    {dialog?.action === 'import' && <AdminExternalPlaceImportModal
+      discovery={dialog.discovery}
+      onClose={() => setDialog(null)}
+      onSubmit={async ({ selectedTypes, details }) => {
+        const result = await onImport(dialog.discovery, { selectedTypes, details })
+        return result.error ? { ...result, error: errorText(result.error) } : result
+      }}
+      onComplete={(status) => {
+        setNotice({ tone: 'success', text: status === 'imported_existing' ? copy.linkedExistingSuccess : copy.approvedSuccess })
+        setDialog(null)
+      }}
+    />}
+    {dialog?.action === 'reject' && <AdminModal title={copy.rejectConfirmTitle} closeLabel={copy.close} onClose={() => !saving && setDialog(null)}>
+      <p className="mt-4 text-sm leading-6 text-muted">{copy.rejectConfirmText}</p>
       <p dir="auto" className="mt-3 rounded-lg bg-page-alt px-3 py-2 text-sm font-semibold text-ink">{dialog.discovery.display_name}</p>
-      {dialog.action === 'import' && <fieldset className="mt-5 border-t border-line pt-4"><legend className="text-sm font-bold text-ink">{copy.chooseTypeTitle}</legend><div className="mt-3 grid gap-2 sm:grid-cols-2">{PLACE_TYPE_KEYS.map((type) => <label key={type} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-line bg-surface px-3 text-sm text-ink-soft transition-colors has-checked:border-brand has-checked:bg-brand-soft"><input type="checkbox" checked={selectedTypes.includes(type)} onChange={() => toggleType(type)} className="size-4 accent-brand" />{copy.typeOptions[type]}</label>)}</div>{typeError && <p className="mt-2 text-sm font-medium text-ask" role="alert">{copy.chooseTypeError}</p>}</fieldset>}
-      <div className="mt-5 flex flex-wrap gap-2 border-t border-line pt-4"><button type="button" className={`${btnGhost} flex-1`} disabled={saving} onClick={() => setDialog(null)}>{copy.cancel}</button><button type="button" className={`${btnPrimary} flex-1`} disabled={saving} onClick={() => void submitReview()}>{saving ? (dialog.action === 'import' ? copy.importing : copy.rejecting) : dialog.action === 'import' ? copy.confirmImport : copy.confirm}</button></div>
+      <div className="mt-5 flex flex-wrap gap-2 border-t border-line pt-4"><button type="button" className={`${btnGhost} flex-1`} disabled={saving} onClick={() => setDialog(null)}>{copy.cancel}</button><button type="button" className={`${btnPrimary} flex-1`} disabled={saving} onClick={() => void submitReject()}>{saving ? copy.rejecting : copy.confirm}</button></div>
     </AdminModal>}
   </div>
 }
@@ -572,33 +586,49 @@ export function AdminPage() {
     return null
   }
 
-  const reviewDiscovery = async (
+  const importDiscovery = async (
     discovery: AdminExternalPlaceDiscovery,
-    action: 'import' | 'reject',
-    selectedTypes: PlaceTypeKey[] = [],
-  ) => {
-    const result = action === 'import'
-      ? await adminImportExternalPlaceDiscovery(discovery.id, selectedTypes)
-      : await adminRejectExternalPlaceDiscovery(discovery.id)
+    input: Omit<AdminExternalPlaceImportInput, 'discoveryId'>,
+  ): Promise<AdminExternalPlaceImportSubmitResult> => {
+    const result = await adminImportExternalPlaceDiscovery({ discoveryId: discovery.id, ...input })
+    if (result.error || !result.data.ok) {
+      return { error: result.data.status || 'unavailable', status: result.data.status || 'unavailable' }
+    }
 
-    if (result.error || !result.data.ok) return result.data.status || 'unavailable'
-
-    const sourceStatus = action === 'import' ? 'imported' : 'rejected'
     setDiscoveries((value) => ({
       ...value,
       data: value.data.map((item) => item.id === discovery.id ? {
         ...item,
-        source_status: sourceStatus,
-        place_types: action === 'import' ? selectedTypes : item.place_types,
+        source_status: 'imported',
+        place_types: input.selectedTypes,
       } : item),
     }))
-    if (action === 'import') void load('services')
+    if (result.data.status === 'imported') void load('services')
+    void load('dashboard')
+    return { error: null, status: result.data.status }
+  }
+
+  const rejectDiscovery = async (discovery: AdminExternalPlaceDiscovery) => {
+    const result = await adminRejectExternalPlaceDiscovery(discovery.id)
+    if (result.error || !result.data.ok) return result.data.status || 'unavailable'
+
+    setDiscoveries((value) => ({
+      ...value,
+      data: value.data.map((item) => item.id === discovery.id ? { ...item, source_status: 'rejected' } : item),
+    }))
     void load('dashboard')
     return null
   }
 
   const activeLabel = copy.tabs[activeTab]
   const adminRole = isSuperAdmin ? copy.header.superAdmin : copy.header.admin
+  const activeError = errors[activeTab]
+  let activeErrorText = activeError
+  if (activeTab === 'discoveries' && activeError) {
+    activeErrorText = activeError === 'backend_update_required'
+      ? copy.discoveries.backendUpdateRequired
+      : copy.discoveries.actionFailed
+  }
   const openRechargePanel = () => {
     setRechargeRequested(true)
     setActiveTab('dashboard')
@@ -631,11 +661,11 @@ export function AdminPage() {
           <AdminSidebar tabs={tabs} activeTab={activeTab} collapsed={sidebarCollapsed} mobileOpen={mobileSidebarOpen} isSuperAdmin={isSuperAdmin} signingOut={signingOut} onMobileOpenChange={setMobileSidebarOpen} onSelectTab={setActiveTab} onSelectRecharge={openRechargePanel} onSignOut={() => void endSession()} superAdminHref={isSuperAdmin ? '/super-admin' : undefined} />
 
           <section className="min-w-0" aria-label={activeLabel}>
-          {errors[activeTab] && <InlineAlert tone="error" title={copy.header.dataErrorTitle} className="mb-5">{errors[activeTab]} {copy.header.dataErrorText}</InlineAlert>}
+          {activeErrorText && <InlineAlert tone="error" title={copy.header.dataErrorTitle} className="mb-5">{activeErrorText} {copy.header.dataErrorText}</InlineAlert>}
           {warnings[activeTab] && <InlineAlert tone="info" title={copy.content.partialProfilesUnavailable} className="mb-5">{warnings[activeTab]}</InlineAlert>}
           {activeTab === 'dashboard' && <AdminDashboard overview={overview} services={services} analytics={analytics} loading={Boolean(loading.dashboard)} />}
           {activeTab === 'requests' && <AdminRequests requests={requests.data} pagination={requests} loading={Boolean(loading.requests)} onSave={saveRequest} onCreateEstablishment={createEstablishment} onPageChange={(page) => setPage('requests', page)} displayName={(user) => personName(user, locale)} />}
-          {activeTab === 'discoveries' && <AdminDiscoveriesView discoveries={discoveries.data} pagination={discoveries} loading={Boolean(loading.discoveries)} onPageChange={(page) => setPage('discoveries', page)} onReview={reviewDiscovery} />}
+          {activeTab === 'discoveries' && <AdminDiscoveriesView discoveries={discoveries.data} pagination={discoveries} loading={Boolean(loading.discoveries)} onPageChange={(page) => setPage('discoveries', page)} onImport={importDiscovery} onReject={rejectDiscovery} />}
           {activeTab === 'users' && <AdminUsers users={users.data} pagination={users} loading={Boolean(loading.users)} currentRole="admin" filters={userFilters} onFiltersChange={setUsersFilters} onPageChange={(page) => setPage('users', page)} onStatusChange={saveUserStatus} onRoleChange={async () => copy.users.superAdminRequired} displayName={(user) => personName(user, locale)} />}
           {activeTab === 'credits' && <AdminCredits wallets={wallets.data} pagination={wallets} loading={Boolean(loading.credits)} recharges={recharges} rechargeModule={rechargeModule} onPageChange={(page) => setPage('wallets', page)} onRefresh={() => void load('credits')} displayName={(user) => personName(user, locale)} />}
           {activeTab === 'search-logs' && <SearchLogsView logs={searchLogs.data} pagination={searchLogs} loading={Boolean(loading['search-logs'])} onPageChange={(page) => setPage('searchLogs', page)} />}

@@ -123,14 +123,6 @@ html[data-text-size='xl'] { font-size: 18px; }
   --panel-muted: rgb(245 246 247 / 0.72);
   --panel-line: rgb(245 246 247 / 0.16);
 
-  /* Carte illustrative : gris neutre, comme un fond de plan « silver ». */
-  --map-bg: #e9ebee;
-  --map-line: rgb(15 16 18 / 0.16);
-  --map-road: rgb(255 255 255 / 0.9);
-  /* Repères secondaires : la distinction entre agences reste fonctionnelle. */
-  --pin-2: #6a65c9;
-  --pin-3: #b87a52;
-
   --focus: #17181a;
 }
 
@@ -157,13 +149,65 @@ html[data-text-size='xl'] { font-size: 18px; }
   --panel-muted: rgb(242 243 244 / 0.72);
   --panel-line: rgb(242 243 244 / 0.14);
 
+  --focus: #f2f3f4;
+}
+
+/* Jetons fonctionnels partagés par les cartes client et admin. */
+[data-surface='app'],
+[data-surface='client'] {
+  --map-bg: #e9ebee;
+  --map-line: rgb(15 16 18 / 0.16);
+  --map-road: rgb(255 255 255 / 0.9);
+  --pin-2: #6a65c9;
+  --pin-3: #b87a52;
+}
+
+[data-theme='dark'] [data-surface='app'],
+[data-theme='dark'] [data-surface='client'] {
   --map-bg: #1a1c1f;
   --map-line: rgb(240 242 245 / 0.12);
   --map-road: rgb(240 242 245 / 0.24);
   --pin-2: #8f8bdd;
   --pin-3: #d09a72;
+}
 
-  --focus: #f2f3f4;
+/* =====================================================================
+   Espace client — identité de la landing, sans toucher aux espaces admin.
+
+   Contrairement à `[data-surface='app']`, cette surface ne redéfinit pas la
+   palette : elle hérite volontairement des tokens sable / forêt / citron de
+   `:root` et de leurs équivalents sombres. Seul le fond est composé ici, avec
+   des halos issus des tokens existants plutôt qu'avec de nouvelles couleurs.
+   ===================================================================== */
+[data-surface='client'] {
+  background-color: var(--page-alt);
+  background-image:
+    radial-gradient(
+      circle at 8% 0%,
+      color-mix(in srgb, var(--brand) 16%, transparent) 0,
+      transparent 30rem
+    ),
+    radial-gradient(
+      circle at 94% 28%,
+      color-mix(in srgb, var(--tint-1) 32%, transparent) 0,
+      transparent 34rem
+    ),
+    linear-gradient(180deg, var(--page) 0%, var(--page-alt) 100%);
+}
+
+[data-theme='dark'] [data-surface='client'] {
+  background-image:
+    radial-gradient(
+      circle at 8% 0%,
+      color-mix(in srgb, var(--brand) 9%, transparent) 0,
+      transparent 30rem
+    ),
+    radial-gradient(
+      circle at 94% 28%,
+      color-mix(in srgb, var(--tint-1) 18%, transparent) 0,
+      transparent 34rem
+    ),
+    linear-gradient(180deg, var(--page) 0%, var(--page-alt) 100%);
 }
 
 @theme inline {
@@ -325,6 +369,79 @@ html[data-text-size='xl'] { font-size: 18px; }
 
   .tabular {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Les ombres produit restent confinées à l'espace client : `card` est aussi
+     consommé par la landing et l'administration. */
+  [data-surface='client'] .card-elevated {
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.06), 0 8px 24px rgb(0 0 0 / 0.04);
+  }
+  [data-theme='dark'] [data-surface='client'] .card-elevated {
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.2), 0 8px 24px rgb(0 0 0 / 0.15);
+  }
+
+  /* Halo décoratif subtil derrière un en-tête de page client. */
+  [data-surface='client'] .page-glow {
+    position: relative;
+    isolation: isolate;
+  }
+  [data-surface='client'] .page-glow::before {
+    content: '';
+    position: absolute;
+    inset-inline: -8%;
+    top: -6rem;
+    height: 18rem;
+    border-radius: 50%;
+    background: var(--brand);
+    opacity: 0.07;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: -1;
+  }
+  [data-theme='dark'] [data-surface='client'] .page-glow::before {
+    opacity: 0.04;
+  }
+
+  [data-surface='client'] .client-tab-bar {
+    box-shadow: 0 -10px 32px color-mix(in srgb, var(--ink) 8%, transparent);
+  }
+  [data-theme='dark'] [data-surface='client'] .client-tab-bar {
+    box-shadow: 0 -10px 32px rgb(0 0 0 / 0.3);
+  }
+
+  [data-surface='client'] .client-state-surface {
+    background-color: color-mix(in srgb, var(--surface) 88%, transparent);
+    backdrop-filter: blur(10px);
+  }
+  [data-surface='client'] .client-inline-alert {
+    border-radius: 1rem;
+  }
+  [data-surface='client'] .client-empty-state {
+    border-style: solid;
+  }
+  [data-surface='client'] .client-state-icon {
+    background-color: var(--brand-soft);
+    color: var(--brand-deep);
+  }
+  [data-theme='dark'] [data-surface='client'] .client-state-icon {
+    color: var(--brand);
+  }
+
+  [data-surface='client'] .settings-section {
+    border-color: color-mix(in srgb, var(--brand-deep) 16%, var(--line));
+    background-image: radial-gradient(
+      circle at 50% 0%,
+      color-mix(in srgb, var(--tint-5) 28%, transparent) 0,
+      transparent 20rem
+    );
+  }
+  [data-theme='dark'] [data-surface='client'] .settings-section {
+    border-color: color-mix(in srgb, var(--brand) 16%, var(--line));
+    background-image: radial-gradient(
+      circle at 50% 0%,
+      color-mix(in srgb, var(--tint-5) 18%, transparent) 0,
+      transparent 20rem
+    );
   }
 }
 

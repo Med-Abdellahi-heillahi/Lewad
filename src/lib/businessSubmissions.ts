@@ -15,8 +15,28 @@ export type BusinessSubmissionInput = {
   categoryId?: string | null
   location?: string | null
   nearestPlace?: string | null
+  requestedBranchCount?: number
   latitude: number
   longitude: number
+}
+
+export const BUSINESS_SUBMISSION_BRANCH_COUNT_MIN = 1
+export const BUSINESS_SUBMISSION_BRANCH_COUNT_MAX = 20
+
+/** Empty is the documented default; every non-empty value must be a whole number in range. */
+export function normalizeRequestedBranchCount(value: string | number | null | undefined): number | null {
+  if (value === null || value === undefined) return BUSINESS_SUBMISSION_BRANCH_COUNT_MIN
+
+  const text = typeof value === 'string' ? value.trim() : String(value)
+  if (!text) return BUSINESS_SUBMISSION_BRANCH_COUNT_MIN
+  if (!/^\d+$/.test(text)) return null
+
+  const count = Number(text)
+  return Number.isInteger(count)
+    && count >= BUSINESS_SUBMISSION_BRANCH_COUNT_MIN
+    && count <= BUSINESS_SUBMISSION_BRANCH_COUNT_MAX
+    ? count
+    : null
 }
 
 export type BusinessSubmissionFailure = 'not-connected' | 'access-denied' | 'invalid-input' | 'rate-limited' | 'unavailable'
@@ -24,13 +44,6 @@ export type BusinessSubmissionFailure = 'not-connected' | 'access-denied' | 'inv
 export type BusinessSubmissionResult<T> = {
   data: T
   error: BusinessSubmissionFailure | null
-}
-
-export type CreatedBusinessSubmission = {
-  id: string
-  amountMro: number
-  periodMonths: number | null
-  status: 'pending_review'
 }
 
 export type CreateBusinessSubmissionResult = {
@@ -61,6 +74,8 @@ export type BusinessSubmissionSummary = {
   status: BusinessSubmissionStatus
   amountMro: number
   periodMonths: number | null
+  requestedBranchCount: number
+  actualBranchCount: number
   resolvedEstablishmentId: string | null
   approvedAt: string | null
   rejectedAt: string | null
@@ -138,6 +153,19 @@ function nullableNumberValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined
 }
 
+function requestedBranchCountValue(value: unknown) {
+  return typeof value === 'number'
+    && Number.isInteger(value)
+    && value >= BUSINESS_SUBMISSION_BRANCH_COUNT_MIN
+    && value <= BUSINESS_SUBMISSION_BRANCH_COUNT_MAX
+    ? value
+    : null
+}
+
+function nonNegativeIntegerValue(value: unknown) {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null
+}
+
 function submissionStatus(value: unknown): BusinessSubmissionStatus | null {
   return typeof value === 'string' && submissionStatuses.includes(value as BusinessSubmissionStatus)
     ? value as BusinessSubmissionStatus
@@ -167,6 +195,12 @@ function readSummary(value: unknown): BusinessSubmissionSummary | null {
   const status = submissionStatus(value.status)
   const amountMro = numberValue(value.amount_mro)
   const periodMonths = numberValue(value.period_months)
+  const requestedBranchCount = value.requested_branch_count === undefined
+    ? BUSINESS_SUBMISSION_BRANCH_COUNT_MIN
+    : requestedBranchCountValue(value.requested_branch_count)
+  const actualBranchCount = value.actual_branch_count === undefined
+    ? 0
+    : nonNegativeIntegerValue(value.actual_branch_count)
   const resolvedEstablishmentId = nullableStringValue(value.resolved_establishment_id)
   const approvedAt = nullableStringValue(value.approved_at)
   const rejectedAt = nullableStringValue(value.rejected_at)
@@ -176,6 +210,7 @@ function readSummary(value: unknown): BusinessSubmissionSummary | null {
   if (
     !id || !createdBy || !ownerFirstName || !ownerLastName || !ownerPhone || !businessNameFr || !businessNameAr || !businessPhone
     || whatsapp === undefined || categoryId === undefined || categoryName === undefined || !status || amountMro === null
+    || requestedBranchCount === null || actualBranchCount === null
     || resolvedEstablishmentId === undefined || approvedAt === undefined || rejectedAt === undefined || !createdAt || !updatedAt
   ) {
     return null
@@ -196,6 +231,8 @@ function readSummary(value: unknown): BusinessSubmissionSummary | null {
     status,
     amountMro,
     periodMonths,
+    requestedBranchCount,
+    actualBranchCount,
     resolvedEstablishmentId,
     approvedAt,
     rejectedAt,
@@ -328,6 +365,18 @@ function createStatusFor(response: JsonRecord): CreateBusinessSubmissionResult['
  * pending status, and the anti-spam decision.
  */
 export async function createBusinessSubmission(input: BusinessSubmissionInput): Promise<CreateBusinessSubmissionResult> {
+  const requestedBranchCount = normalizeRequestedBranchCount(input.requestedBranchCount)
+  if (requestedBranchCount === null) {
+    return {
+      ok: false,
+      status: 'invalid_input',
+      message: 'Requested branch count must be a whole number between 1 and 20.',
+      submissionId: null,
+      amountMro: null,
+      periodMonths: null,
+    }
+  }
+
   const { data, error } = await supabase.rpc('create_business_submission', {
     p_owner_first_name: input.ownerFirstName,
     p_owner_last_name: input.ownerLastName,
@@ -342,6 +391,7 @@ export async function createBusinessSubmission(input: BusinessSubmissionInput): 
     p_category_id: input.categoryId ?? null,
     p_location: input.location ?? null,
     p_nearest_place: input.nearestPlace ?? null,
+    p_requested_branch_count: requestedBranchCount,
   })
 
   if (error) {

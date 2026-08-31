@@ -1,5 +1,11 @@
 import type { CreditLedgerType, Db1Profile } from './db1'
 import type { MissingServiceRequestStatus } from './db3b'
+import {
+  toAdminExternalPlaceImportRpcParams,
+  validateAdminExternalPlaceImportDetails,
+  validateAdminExternalPlaceImportTypes,
+  type AdminExternalPlaceImportInput,
+} from './adminExternalPlaceImport'
 import { paginatedResult, resolvePagination, type PaginatedResult, type PaginationParams } from './pagination'
 import { isPlaceTypeKey, type PlaceTypeKey } from './placeTypes'
 import { supabase } from './supabaseClient'
@@ -121,6 +127,11 @@ export type AdminExternalPlaceReviewResponse = {
   discovery_id?: string
   establishment_id?: string
   branch_id?: string
+  place_types?: PlaceTypeKey[]
+  reviewed_place_types?: PlaceTypeKey[]
+  details_applied?: boolean
+  establishment_type?: 'private' | 'public' | 'administrative'
+  proposed_establishment_type?: 'private' | 'public' | 'administrative'
 }
 
 export type AdminCategory = {
@@ -217,12 +228,23 @@ const searchLogFields = `
 
 const externalPlaceDiscoveryFields = `
   id, created_by, searched_query, provider, provider_place_id, display_name,
-  latitude, longitude, country, wilaya, source_status, imported_establishment_id, created_at, last_seen_at,
+  latitude, longitude, country, wilaya, source_status, imported_establishment_id, reviewed_place_types, created_at, last_seen_at,
   imported_establishment:establishments!external_place_discoveries_imported_establishment_id_fkey (place_types)
 `
 
 function errorMessage(error: { message: string } | null) {
   return error?.message ?? null
+}
+
+function placeTypeKeys(value: unknown): PlaceTypeKey[] {
+  return Array.isArray(value) ? value.filter(isPlaceTypeKey) : []
+}
+
+function externalPlaceDiscoveryReadError(error: { code?: string; message: string }) {
+  const missingReviewedTypes = error.code === 'PGRST204'
+    || error.code === '42703'
+    || error.message.includes('reviewed_place_types')
+  return missingReviewedTypes ? 'backend_update_required' : 'unavailable'
 }
 
 function emptyPage<T>(pagination: PaginationParams = {}) {
@@ -903,23 +925,32 @@ export async function getAdminExternalPlaceDiscoveries(
     .from('external_place_discoveries')
     .select(externalPlaceDiscoveryFields, { count: 'exact' })
     .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
     .range(from, to)
 
-  if (error) return { data: emptyPage({ page, pageSize }), error: errorMessage(error) }
+  if (error) {
+    return {
+      data: emptyPage({ page, pageSize }),
+      error: externalPlaceDiscoveryReadError(error),
+    }
+  }
 
   type DiscoveryRow = Omit<AdminExternalPlaceDiscovery, 'user' | 'place_types'> & {
+    reviewed_place_types: unknown
     imported_establishment: { place_types: unknown } | { place_types: unknown }[] | null
   }
   const rows = ((data as DiscoveryRow[] | null) ?? [])
-    .map(({ imported_establishment, ...row }) => {
+    .map(({ imported_establishment, reviewed_place_types, ...row }) => {
       const imported = Array.isArray(imported_establishment)
         ? imported_establishment[0] ?? null
         : imported_establishment
+      const reviewedTypes = placeTypeKeys(reviewed_place_types)
+      const importedTypes = placeTypeKeys(imported?.place_types)
       return {
       ...row,
-      place_types: Array.isArray(imported?.place_types)
-        ? imported.place_types.filter(isPlaceTypeKey)
-        : [],
+      place_types: reviewedTypes.length > 0
+        ? reviewedTypes
+        : importedTypes,
       user_id: row.created_by,
       }
     })
@@ -942,22 +973,18 @@ export async function getAdminExternalPlaceDiscoveries(
  */
 async function reviewExternalPlaceDiscovery(
   rpc: 'admin_import_external_place_discovery_with_types' | 'admin_reject_external_place_discovery',
-  discoveryId: string,
-  selectedTypes: PlaceTypeKey[] = [],
+  params: Record<string, unknown>,
 ): Promise<AdminResult<AdminExternalPlaceReviewResponse>> {
-  const params = rpc === 'admin_import_external_place_discovery_with_types'
-    ? { p_discovery_id: discoveryId, p_selected_types: selectedTypes }
-    : { p_discovery_id: discoveryId }
   const { data, error, status } = await supabase.rpc(rpc, params)
   const response = data && typeof data === 'object'
     ? data as AdminExternalPlaceReviewResponse
-    : { ok: false, status: 'unavailable' }
+    : { ok: false, status: error?.code === 'PGRST202' ? 'backend_update_required' : 'unavailable' }
 
   if (error && import.meta.env.DEV) {
     // The admin UI keeps failures generic, but local development needs the
     // PostgREST status and safe database error fields to diagnose an RPC
     // deployment/runtime mismatch. These fields never contain session tokens.
-    console.error('Admin external-place import RPC failed', JSON.stringify({
+    console.error('Admin external-place review RPC failed', JSON.stringify({
       rpc,
       httpStatus: status,
       errorCode: error.code,
@@ -977,16 +1004,26 @@ async function reviewExternalPlaceDiscovery(
 }
 
 export function adminImportExternalPlaceDiscovery(
-  discoveryId: string,
-  selectedTypes: PlaceTypeKey[],
+  input: AdminExternalPlaceImportInput,
 ): Promise<AdminResult<AdminExternalPlaceReviewResponse>> {
-  return reviewExternalPlaceDiscovery('admin_import_external_place_discovery_with_types', discoveryId, selectedTypes)
+  const validationError = validateAdminExternalPlaceImportTypes(input.selectedTypes)
+  if (validationError) {
+    return Promise.resolve({ data: { ok: false, status: validationError }, error: validationError })
+  }
+  const detailsValidationError = validateAdminExternalPlaceImportDetails(input.selectedTypes, input.details)
+  if (detailsValidationError) {
+    return Promise.resolve({ data: { ok: false, status: detailsValidationError }, error: detailsValidationError })
+  }
+  return reviewExternalPlaceDiscovery(
+    'admin_import_external_place_discovery_with_types',
+    toAdminExternalPlaceImportRpcParams(input),
+  )
 }
 
 export function adminRejectExternalPlaceDiscovery(
   discoveryId: string,
 ): Promise<AdminResult<AdminExternalPlaceReviewResponse>> {
-  return reviewExternalPlaceDiscovery('admin_reject_external_place_discovery', discoveryId)
+  return reviewExternalPlaceDiscovery('admin_reject_external_place_discovery', { p_discovery_id: discoveryId })
 }
 
 export async function getAdminServices(

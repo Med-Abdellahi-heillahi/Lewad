@@ -29,26 +29,30 @@ export function AppTabBar({ active }: { active?: AppNavId }) {
   return (
     <nav
       aria-label={copy.primaryNav}
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-page/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
+      className="client-tab-bar fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
     >
       {!hasAdminAccess && (
-        <Suspense fallback={null}>
-          <EstablishmentsButton />
-        </Suspense>
+        <div className="pointer-events-none absolute inset-x-0 bottom-full px-4 pb-3">
+          <Suspense fallback={null}>
+            <EstablishmentsButton />
+          </Suspense>
+        </div>
       )}
-      <ul className="mx-auto flex list-none items-stretch justify-around gap-1 px-2">
+      <ul className="mx-auto flex max-w-lg list-none items-stretch justify-around gap-1 px-3 pt-1">
         {tabs.map((tab) => (
           <li key={tab.id} className="flex-1">
             <a
               href={tab.href}
               aria-current={tab.id === active ? 'page' : undefined}
-              className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[11px] font-semibold transition-colors ${
+              className={`group flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[11px] font-semibold transition-colors ${
                 tab.id === active ? 'text-brand-deep dark:text-brand' : 'text-muted hover:text-ink'
               }`}
             >
               <span
-                className={`grid h-7 w-11 place-items-center rounded-full transition-colors ${
-                  tab.id === active ? 'bg-brand-soft' : ''
+                className={`grid h-7 w-11 place-items-center rounded-full border transition-colors ${
+                  tab.id === active
+                    ? 'border-brand/30 bg-brand-soft'
+                    : 'border-transparent group-hover:bg-surface-2'
                 }`}
               >
                 <Icon name={tab.icon} size={19} />

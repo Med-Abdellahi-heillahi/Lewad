@@ -166,6 +166,7 @@ export function AdminModal({
   title,
   subtitle,
   closeLabel,
+  closeDisabled = false,
   onClose,
   size = 'md',
   children,
@@ -173,20 +174,53 @@ export function AdminModal({
   title: string
   subtitle?: string
   closeLabel: string
+  closeDisabled?: boolean
   onClose: () => void
   size?: 'md' | 'lg'
   children: ReactNode
 }) {
   const titleId = useId()
   const closeButton = useRef<HTMLButtonElement>(null)
+  const dialogPanel = useRef<HTMLElement>(null)
   const previousFocus = useRef<HTMLElement | null>(null)
+  const onCloseRef = useRef(onClose)
+  const closeDisabledRef = useRef(closeDisabled)
+
+  useEffect(() => {
+    onCloseRef.current = onClose
+    closeDisabledRef.current = closeDisabled
+  }, [closeDisabled, onClose])
 
   useEffect(() => {
     previousFocus.current = document.activeElement as HTMLElement | null
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') {
+        if (!closeDisabledRef.current) onCloseRef.current()
+        return
+      }
+      if (event.key !== 'Tab') return
+
+      const focusable = Array.from(dialogPanel.current?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ) ?? []).filter((element) => element.getClientRects().length > 0)
+      if (focusable.length === 0) {
+        event.preventDefault()
+        dialogPanel.current?.focus()
+        return
+      }
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      const activeElement = document.activeElement
+      if (event.shiftKey && (activeElement === first || !dialogPanel.current?.contains(activeElement))) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && (activeElement === last || !dialogPanel.current?.contains(activeElement))) {
+        event.preventDefault()
+        first.focus()
+      }
     }
     document.addEventListener('keydown', onKeyDown)
     const focusTimer = window.setTimeout(() => closeButton.current?.focus(), 20)
@@ -195,9 +229,20 @@ export function AdminModal({
       document.removeEventListener('keydown', onKeyDown)
       window.clearTimeout(focusTimer)
       document.body.style.overflow = previousOverflow
-      previousFocus.current?.focus?.()
+      if (previousFocus.current?.isConnected) {
+        previousFocus.current.focus()
+      } else {
+        const main = document.querySelector<HTMLElement>('main')
+        if (main) {
+          const previousTabIndex = main.getAttribute('tabindex')
+          main.setAttribute('tabindex', '-1')
+          main.focus()
+          if (previousTabIndex === null) main.removeAttribute('tabindex')
+          else main.setAttribute('tabindex', previousTabIndex)
+        }
+      }
     }
-  }, [onClose])
+  }, [])
 
   return (
     <div
@@ -206,10 +251,13 @@ export function AdminModal({
       aria-labelledby={titleId}
       className="fixed inset-0 z-60 grid place-items-end bg-ink/40 p-0 backdrop-blur-[2px] sm:place-items-center sm:p-4"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose()
+        if (event.target === event.currentTarget && !closeDisabled) onClose()
       }}
     >
       <section
+        ref={dialogPanel}
+        tabIndex={-1}
+        aria-busy={closeDisabled || undefined}
         className={`max-h-[calc(100dvh-1rem)] w-full ${size === 'lg' ? 'max-w-2xl' : 'max-w-xl'} overflow-y-auto rounded-t-3xl border border-line bg-surface p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl sm:p-5`}
       >
         <div className="flex items-start justify-between gap-3">
@@ -217,7 +265,7 @@ export function AdminModal({
             <h2 id={titleId} className="text-lg font-bold tracking-tight text-ink">{title}</h2>
             {subtitle && <p className="mt-1 text-xs leading-5 text-muted">{subtitle}</p>}
           </div>
-          <button ref={closeButton} type="button" className={iconBtn} aria-label={closeLabel} title={closeLabel} onClick={onClose}>
+          <button ref={closeButton} type="button" className={`${iconBtn} disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface`} aria-label={closeLabel} title={closeLabel} disabled={closeDisabled} onClick={onClose}>
             <X size={19} aria-hidden />
           </button>
         </div>

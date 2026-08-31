@@ -3,7 +3,7 @@ import type { PlaceTypeKey } from '../../lib/placeTypes'
 import type { AdminAlertId } from '../../lib/admin'
 
 export type AdminTabId = 'dashboard' | 'requests' | 'discoveries' | 'users' | 'credits' | 'search-logs' | 'services' | 'submissions' | 'system'
-export type SuperAdminTabId = 'overview' | 'admins' | 'users' | 'audit' | 'settings'
+export type SuperAdminTabId = 'overview' | 'admins' | 'users' | 'services' | 'audit' | 'settings'
 
 type AlertText = { title: string; text: string }
 
@@ -229,6 +229,8 @@ type AdminBusinessSubmissionsCopy = {
   ownerName: string
   ownerPhone: string
   businessPhone: string
+  declaredBranchCount: string
+  branchCountWarning: string
   status: string
   amount: string
   period: string
@@ -300,10 +302,42 @@ type AdminDiscoveriesCopy = {
   invalidDiscovery: string
   alreadyHandled: string
   actionFailed: string
+  backendUpdateRequired: string
   chooseTypeTitle: string
   chooseTypeError: string
+  conflictingTypesError: string
+  invalidPhone: string
+  invalidWhatsapp: string
+  chooseTypeHelp: string
   typeOptions: Record<PlaceTypeKey, string>
   types: string
+  stepsLabel: string
+  stepTypes: string
+  stepDetails: string
+  stepConfirm: string
+  stepProgress: string
+  optionalDetailsTitle: string
+  optionalDetailsText: string
+  confirmDetailsTitle: string
+  confirmDetailsText: string
+  noExtraDetails: string
+  optional: string
+  continue: string
+  back: string
+  notesPublicHint: string
+  linkedExistingSuccess: string
+  importedName: string
+  fields: {
+    correctedName: string
+    type: string
+    verificationPlace: string
+    phone: string
+    whatsapp: string
+    label: string
+    parentMinistry: string
+    parentAdministration: string
+    notes: string
+  }
 }
 
 type AdminEstablishmentFormCopy = {
@@ -795,9 +829,17 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       confirm: 'Approuver', confirmImport: 'Confirmer l’ajout', cancel: 'Annuler', close: 'Fermer', importing: 'Importation…', rejecting: 'Refus…',
       approvedSuccess: 'Demande validée avec succès.', rejectedSuccess: 'Demande refusée avec succès.',
       invalidDiscovery: 'Cette découverte ne contient pas un nom ou une localisation exploitable. Complétez ces informations avant de l’importer.',
-      alreadyHandled: 'Cette demande a déjà été traitée.', actionFailed: 'Impossible de traiter cette demande pour le moment.',
-      chooseTypeTitle: 'Choisissez le type de ce lieu', chooseTypeError: 'Choisissez au moins un type.', types: 'Types',
+      alreadyHandled: 'Cette demande a déjà été traitée.', actionFailed: 'Impossible de traiter cette demande pour le moment.', backendUpdateRequired: 'La mise à jour serveur de l’importation doit être appliquée avant d’utiliser ce formulaire.',
+      chooseTypeTitle: 'Choisissez le type de ce lieu', chooseTypeError: 'Choisissez au moins un type.', conflictingTypesError: 'Les types privés et publics ou administratifs ne peuvent pas être combinés.', invalidPhone: 'Saisissez un numéro mauritanien valide à 8 chiffres.', invalidWhatsapp: 'Saisissez un numéro WhatsApp mauritanien valide à 8 chiffres.', chooseTypeHelp: 'Vous pouvez sélectionner plusieurs types de même nature. Ces choix déterminent les informations proposées à l’étape suivante.', types: 'Types',
       typeOptions: { establishment: 'Établissement', company: 'Société', region: 'Région', moughataa: 'Moughataa', wilaya: 'Wilaya', sports_hall: 'Salle de sport', restaurant: 'Restaurant', hall: 'Salle', administration: 'Administration', private: 'Privé', public: 'Public' },
+      stepsLabel: 'Étapes de l’importation', stepTypes: 'Type', stepDetails: 'Informations', stepConfirm: 'Confirmation', stepProgress: 'Étape {current} sur 3',
+      optionalDetailsTitle: 'Informations complémentaires', optionalDetailsText: 'Tous les champs de cette étape sont facultatifs. Ils s’adaptent aux types sélectionnés.',
+      confirmDetailsTitle: 'Confirmer l’importation', confirmDetailsText: 'Vérifiez les informations qui seront utilisées pour créer la fiche Lewad.',
+      noExtraDetails: 'Aucune information facultative ne sera ajoutée.', optional: 'facultatif', continue: 'Continuer', back: 'Retour',
+      notesPublicHint: 'Ces notes seront enregistrées comme description publique de la fiche.',
+      linkedExistingSuccess: 'Un établissement existant a été lié. Les informations facultatives n’ont pas remplacé sa fiche.',
+      importedName: 'Nom importé',
+      fields: { correctedName: 'Nom corrigé', type: 'Type', verificationPlace: 'Lieu de vérification', phone: 'Téléphone', whatsapp: 'WhatsApp', label: 'Libellé', parentMinistry: 'Ministère de tutelle', parentAdministration: 'Administration de tutelle', notes: 'Notes' },
     },
     businessSubmissions: {
       title: 'Soumissions établissements', subtitle: 'Demandes de dépôt d\'établissements soumises par les professionnels.',
@@ -805,6 +847,8 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       pendingCount: '{count} en attente',
       businessName: 'Établissement', ownerName: 'Propriétaire', ownerPhone: 'Tél. propriétaire',
       businessPhone: 'Tél. établissement', status: 'Statut', amount: 'Montant', period: 'Durée', date: 'Date', actions: 'Actions',
+      declaredBranchCount: 'Nombre d’agences déclaré',
+      branchCountWarning: 'Le client a déclaré plusieurs agences. Ajoutez ou vérifiez les agences avant publication complète.',
       viewDetails: 'Voir les détails', approve: 'Approuver', reject: 'Rejeter',
       detailsTitle: 'Détail de la soumission',
       ownerSection: 'Propriétaire', businessSection: 'Établissement', contactSection: 'Coordonnées',
@@ -892,7 +936,7 @@ export const adminCopy: Record<Locale, AdminCopy> = {
     pagination: { previous: 'Précédent', next: 'Suivant', page: 'Page', of: 'sur', items: 'éléments' },
     superSpace: {
       title: 'Espace Super Admin', intro: 'Pilotage global, sécurité et gestion des accès de la plateforme.', navigation: 'Navigation Super Admin', accessOnly: 'Accès réservé au super admin',
-      tabs: { overview: 'Vue globale', admins: 'Gestion des admins', users: 'Utilisateurs', audit: 'Audit', settings: 'Paramètres système' },
+      tabs: { overview: 'Vue globale', admins: 'Gestion des admins', users: 'Utilisateurs', services: 'Services et établissements', audit: 'Audit', settings: 'Paramètres système' },
       goToAdmin: 'Retour Admin', backToApp: 'Retour App', badge: 'Super Admin', subtitle: 'Pilotage plateforme',
       overview: { title: 'Vue globale de la plateforme', text: 'Indicateurs issus de votre portée d’administration existante.', totalUsers: 'Total utilisateurs', admins: 'Admins', superAdmins: 'Super admins', activeUsers: 'Utilisateurs actifs', suspendedUsers: 'Utilisateurs suspendus', totalSearches: 'Total recherches', pendingRequests: 'Demandes en attente', pendingRecharges: 'Recharges en attente', approvedServices: 'Services approuvés', unavailable: 'Indisponible' },
       platformAnalytics: { title: 'Analytique plateforme', text: 'Lecture globale des opérations Lewad.' },
@@ -1062,9 +1106,17 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       confirm: 'قبول', confirmImport: 'تأكيد الإضافة', cancel: 'إلغاء', close: 'إغلاق', importing: 'جارٍ الاستيراد…', rejecting: 'جارٍ الرفض…',
       approvedSuccess: 'تم قبول الطلب بنجاح.', rejectedSuccess: 'تم رفض الطلب بنجاح.',
       invalidDiscovery: 'لا يحتوي هذا الاكتشاف على اسم أو موقع صالح. أكمل هذه المعلومات قبل الاستيراد.',
-      alreadyHandled: 'تمت معالجة هذا الطلب بالفعل.', actionFailed: 'تعذر معالجة هذا الطلب حاليًا.',
-      chooseTypeTitle: 'اختر نوع هذا المكان', chooseTypeError: 'اختر نوعًا واحدًا على الأقل.', types: 'الأنواع',
+      alreadyHandled: 'تمت معالجة هذا الطلب بالفعل.', actionFailed: 'تعذر معالجة هذا الطلب حاليًا.', backendUpdateRequired: 'يجب تطبيق تحديث خادم الاستيراد قبل استخدام هذا النموذج.',
+      chooseTypeTitle: 'اختر نوع هذا المكان', chooseTypeError: 'اختر نوعًا واحدًا على الأقل.', conflictingTypesError: 'لا يمكن الجمع بين الأنواع الخاصة والعامة أو الإدارية.', invalidPhone: 'أدخل رقم هاتف موريتانيًا صالحًا من 8 أرقام.', invalidWhatsapp: 'أدخل رقم واتساب موريتانيًا صالحًا من 8 أرقام.', chooseTypeHelp: 'يمكنك اختيار عدة أنواع من الطبيعة نفسها. تحدد هذه الاختيارات المعلومات المقترحة في الخطوة التالية.', types: 'الأنواع',
       typeOptions: { establishment: 'مؤسسة', company: 'شركة', region: 'منطقة', moughataa: 'مقاطعة', wilaya: 'ولاية', sports_hall: 'قاعة رياضة', restaurant: 'مطعم', hall: 'قاعة', administration: 'إدارة', private: 'خاص', public: 'عام' },
+      stepsLabel: 'خطوات الاستيراد', stepTypes: 'النوع', stepDetails: 'المعلومات', stepConfirm: 'التأكيد', stepProgress: 'الخطوة {current} من 3',
+      optionalDetailsTitle: 'معلومات إضافية', optionalDetailsText: 'جميع حقول هذه الخطوة اختيارية، وتتكيّف مع الأنواع المحددة.',
+      confirmDetailsTitle: 'تأكيد الاستيراد', confirmDetailsText: 'راجع المعلومات التي ستُستخدم لإنشاء بطاقة Lewad.',
+      noExtraDetails: 'لن تُضاف معلومات اختيارية.', optional: 'اختياري', continue: 'متابعة', back: 'رجوع',
+      notesPublicHint: 'ستُحفظ هذه الملاحظات كوصف عام للبطاقة.',
+      linkedExistingSuccess: 'تم ربط مؤسسة موجودة. لم تستبدل المعلومات الاختيارية بياناتها.',
+      importedName: 'الاسم المستخدم',
+      fields: { correctedName: 'الاسم المصحح', type: 'النوع', verificationPlace: 'مكان التحقق', phone: 'الهاتف', whatsapp: 'واتساب', label: 'التسمية', parentMinistry: 'الوزارة التابعة لها', parentAdministration: 'الإدارة التابعة لها', notes: 'ملاحظات' },
     },
     businessSubmissions: {
       title: 'طلبات المؤسسات', subtitle: 'طلبات إضافة مؤسسات مقدّمة من أصحاب الأعمال.',
@@ -1072,6 +1124,8 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       pendingCount: '{count} في الانتظار',
       businessName: 'المؤسسة', ownerName: 'المالك', ownerPhone: 'هاتف المالك',
       businessPhone: 'هاتف المؤسسة', status: 'الحالة', amount: 'المبلغ', period: 'المدة', date: 'التاريخ', actions: 'الإجراءات',
+      declaredBranchCount: 'عدد الفروع المصرّح به',
+      branchCountWarning: 'صرّح العميل بوجود عدة فروع. أضف أو تحقق من الفروع قبل النشر الكامل.',
       viewDetails: 'عرض التفاصيل', approve: 'الموافقة', reject: 'الرفض',
       detailsTitle: 'تفاصيل الطلب',
       ownerSection: 'المالك', businessSection: 'المؤسسة', contactSection: 'معلومات الاتصال',
@@ -1146,7 +1200,7 @@ export const adminCopy: Record<Locale, AdminCopy> = {
     pagination: { previous: 'السابق', next: 'التالي', page: 'الصفحة', of: 'من', items: 'عنصر' },
     superSpace: {
       title: 'مساحة المدير الأعلى', intro: 'إدارة شاملة للمنصة والأمان وصلاحيات الوصول.', navigation: 'تنقل المدير الأعلى', accessOnly: 'الوصول مخصص للمدير الأعلى فقط',
-      tabs: { overview: 'نظرة عامة', admins: 'إدارة المدراء', users: 'المستخدمون', audit: 'سجل التدقيق', settings: 'إعدادات النظام' },
+      tabs: { overview: 'نظرة عامة', admins: 'إدارة المدراء', users: 'المستخدمون', services: 'الخدمات والمؤسسات', audit: 'سجل التدقيق', settings: 'إعدادات النظام' },
       goToAdmin: 'العودة إلى الإدارة', backToApp: 'العودة إلى التطبيق', badge: 'مشرف عام', subtitle: 'إدارة المنصة',
       overview: { title: 'نظرة عامة على المنصة', text: 'مؤشرات من نطاق الإدارة المتاح لحسابك.', totalUsers: 'إجمالي المستخدمين', admins: 'المدراء', superAdmins: 'المدراء الأعلى', activeUsers: 'المستخدمون النشطون', suspendedUsers: 'المستخدمون الموقوفون', totalSearches: 'إجمالي عمليات البحث', pendingRequests: 'طلبات معلقة', pendingRecharges: 'عمليات شحن معلقة', approvedServices: 'خدمات معتمدة', unavailable: 'غير متاح' },
       platformAnalytics: { title: 'تحليلات المنصة', text: 'عرض شامل لعمليات Lewad.' },
@@ -1329,9 +1383,17 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       confirm: 'Approve', confirmImport: 'Confirm import', cancel: 'Cancel', close: 'Close', importing: 'Importing…', rejecting: 'Rejecting…',
       approvedSuccess: 'Request approved successfully.', rejectedSuccess: 'Request rejected successfully.',
       invalidDiscovery: 'This discovery is missing a usable name or map location. Complete those details before importing it.',
-      alreadyHandled: 'This request has already been handled.', actionFailed: 'Unable to process this request right now.',
-      chooseTypeTitle: 'Choose the type of this place', chooseTypeError: 'Choose at least one type.', types: 'Types',
+      alreadyHandled: 'This request has already been handled.', actionFailed: 'Unable to process this request right now.', backendUpdateRequired: 'The server-side import update must be applied before this form can be used.',
+      chooseTypeTitle: 'Choose the type of this place', chooseTypeError: 'Choose at least one type.', conflictingTypesError: 'Private and public or administrative types cannot be combined.', invalidPhone: 'Enter a valid eight-digit Mauritanian phone number.', invalidWhatsapp: 'Enter a valid eight-digit Mauritanian WhatsApp number.', chooseTypeHelp: 'You can select several types of the same nature. These choices determine the information offered in the next step.', types: 'Types',
       typeOptions: { establishment: 'Establishment', company: 'Company', region: 'Region', moughataa: 'Moughataa', wilaya: 'Wilaya', sports_hall: 'Sports hall', restaurant: 'Restaurant', hall: 'Hall', administration: 'Administration', private: 'Private', public: 'Public' },
+      stepsLabel: 'Import steps', stepTypes: 'Type', stepDetails: 'Information', stepConfirm: 'Confirmation', stepProgress: 'Step {current} of 3',
+      optionalDetailsTitle: 'Additional information', optionalDetailsText: 'Every field in this step is optional and adapts to the selected types.',
+      confirmDetailsTitle: 'Confirm import', confirmDetailsText: 'Review the information that will be used to create the Lewad listing.',
+      noExtraDetails: 'No optional information will be added.', optional: 'optional', continue: 'Continue', back: 'Back',
+      notesPublicHint: 'These notes will be saved as the listing’s public description.',
+      linkedExistingSuccess: 'An existing establishment was linked. The optional information did not replace its listing.',
+      importedName: 'Imported name',
+      fields: { correctedName: 'Corrected name', type: 'Type', verificationPlace: 'Verification place', phone: 'Phone', whatsapp: 'WhatsApp', label: 'Label', parentMinistry: 'Parent ministry', parentAdministration: 'Parent administration', notes: 'Notes' },
     },
     businessSubmissions: {
       title: 'Business submissions', subtitle: 'Business listing requests submitted by owners.',
@@ -1339,6 +1401,8 @@ export const adminCopy: Record<Locale, AdminCopy> = {
       pendingCount: '{count} pending',
       businessName: 'Business', ownerName: 'Owner', ownerPhone: 'Owner phone',
       businessPhone: 'Business phone', status: 'Status', amount: 'Amount', period: 'Duration', date: 'Date', actions: 'Actions',
+      declaredBranchCount: 'Declared branches',
+      branchCountWarning: 'The client declared multiple branches. Add or verify branches before full publication.',
       viewDetails: 'View details', approve: 'Approve', reject: 'Reject',
       detailsTitle: 'Submission details',
       ownerSection: 'Owner', businessSection: 'Business', contactSection: 'Contact details',
@@ -1413,7 +1477,7 @@ export const adminCopy: Record<Locale, AdminCopy> = {
     pagination: { previous: 'Previous', next: 'Next', page: 'Page', of: 'of', items: 'items' },
     superSpace: {
       title: 'Super Admin Space', intro: 'Platform control, security and access management.', navigation: 'Super Admin navigation', accessOnly: 'Super admin access only',
-      tabs: { overview: 'Overview', admins: 'Admin Management', users: 'Users', audit: 'Audit', settings: 'System Settings' },
+      tabs: { overview: 'Overview', admins: 'Admin Management', users: 'Users', services: 'Services and establishments', audit: 'Audit', settings: 'System Settings' },
       goToAdmin: 'Back to Admin', backToApp: 'Back to App', badge: 'Super Admin', subtitle: 'Platform control',
       overview: { title: 'Platform overview', text: 'Counters from your existing administration scope.', totalUsers: 'Total users', admins: 'Admins', superAdmins: 'Super admins', activeUsers: 'Active users', suspendedUsers: 'Suspended users', totalSearches: 'Total searches', pendingRequests: 'Pending requests', pendingRecharges: 'Pending recharges', approvedServices: 'Approved services', unavailable: 'Unavailable' },
       platformAnalytics: { title: 'Platform analytics', text: 'Global view of Lewad operations.' },

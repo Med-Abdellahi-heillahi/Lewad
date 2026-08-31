@@ -5,10 +5,12 @@ import { FlagIcon } from '../FlagIcon'
 import { card } from '../../lib/ui'
 import { requestPasswordReset, updateUserPassword } from '../../lib/auth'
 import { isValidLewadSignUpPassword } from '../../lib/validation'
+import { useTheme } from '../../lib/theme'
+import { useTextSize } from '../../lib/textSize'
 
 function SettingsSection({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
-    <section className={`${card} p-5 sm:p-6`}>
+    <section className={`${card} settings-section p-5 sm:p-6`}>
       <div className="mb-5">
         <h2 className="text-lg font-bold tracking-tight text-ink">{title}</h2>
         {description && <p className="mt-1 text-sm text-muted">{description}</p>}
@@ -44,8 +46,8 @@ function OptionButton({ selected, onClick, children }: { selected: boolean; onCl
 
 export function AppearanceSettings({ className = '' }: { className?: string }) {
   const { locale, setLocale } = useI18n()
-  const [theme, setTheme] = useState<'light' | 'dark'>('light')
-  const [textSize, setTextSize] = useState<'sm' | 'base' | 'lg' | 'xl'>('base')
+  const { theme, setTheme } = useTheme()
+  const { textSize, setTextSize } = useTextSize()
 
   const textSizes = [
     { id: 'sm', label: locale === 'ar' ? 'صغير' : locale === 'en' ? 'Small' : 'Petit' },

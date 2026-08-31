@@ -1,11 +1,12 @@
 import type { AdminUser } from './admin'
 import { adminUpdateUserStatus } from './admin'
 import { DEFAULT_PAGE_SIZE, paginatedResult, resolvePagination, type PaginatedResult, type PaginationParams } from './pagination'
+import { isPlaceTypeKey, type PlaceTypeKey } from './placeTypes'
 import { supabase } from './supabaseClient'
 
 export type SuperAdminFailure = 'not-connected' | 'access-denied' | 'unavailable'
 
-type SuperAdminResult<T> = {
+export type SuperAdminResult<T> = {
   data: T
   error: SuperAdminFailure | null
 }
@@ -57,8 +58,115 @@ export type SuperAdminAdminsQuery = PaginationParams & {
   search?: string
 }
 
+export type SuperAdminEstablishmentStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'suspended'
+
+export type SuperAdminEstablishmentType = 'private' | 'public' | 'administrative'
+
+export type SuperAdminEstablishmentSource = 'admin_created' | 'client_submission' | 'map_discovery' | 'unknown'
+
+export type SuperAdminEstablishment = {
+  id: string
+  name: string
+  nameAr: string | null
+  categoryId: string | null
+  categoryName: string | null
+  categorySlug: string | null
+  establishmentType: SuperAdminEstablishmentType
+  placeTypes: PlaceTypeKey[]
+  status: SuperAdminEstablishmentStatus
+  isVerified: boolean
+  phone: string | null
+  whatsapp: string | null
+  location: string | null
+  wilaya: string | null
+  branchCount: number
+  createdAt: string
+  source: SuperAdminEstablishmentSource
+}
+
+export type SuperAdminEstablishmentBranch = {
+  id: string
+  name: string
+  phone: string | null
+  whatsapp: string | null
+  address: string | null
+  wilaya: string | null
+  neighborhood: string | null
+  latitude: number | null
+  longitude: number | null
+  isMain: boolean
+  status: 'active' | 'hidden' | 'closed'
+  createdAt: string
+}
+
+export type SuperAdminEstablishmentDetails = SuperAdminEstablishment & {
+  description: string | null
+  website: string | null
+  imageUrl: string | null
+  openingDate: string | null
+  closingDate: string | null
+  updatedAt: string
+  branches: SuperAdminEstablishmentBranch[]
+}
+
+export type SuperAdminEstablishmentsQuery = PaginationParams & {
+  search?: string
+  status?: SuperAdminEstablishmentStatus
+  establishmentType?: SuperAdminEstablishmentType
+  placeType?: PlaceTypeKey
+  verified?: boolean
+  source?: SuperAdminEstablishmentSource
+  categoryId?: string
+}
+
+export type SuperAdminEstablishmentCategoryOption = {
+  id: string
+  name: string
+  slug: string
+  status: 'active' | 'hidden'
+}
+
+export type SuperAdminEstablishmentOptions = {
+  categories: SuperAdminEstablishmentCategoryOption[]
+  establishmentTypes: SuperAdminEstablishmentType[]
+  placeTypes: PlaceTypeKey[]
+}
+
+export type SuperAdminEstablishmentInput = {
+  name: string
+  nameAr?: string | null
+  categoryId?: string | null
+  establishmentType: SuperAdminEstablishmentType
+  placeTypes: PlaceTypeKey[]
+  description?: string | null
+  phone?: string | null
+  whatsapp?: string | null
+  website?: string | null
+  imageUrl?: string | null
+  isVerified: boolean
+  openingDate?: string | null
+  closingDate?: string | null
+  branchName?: string | null
+  location?: string | null
+  wilaya?: string | null
+  neighborhood?: string | null
+  latitude?: number | null
+  longitude?: number | null
+}
+
+export type SuperAdminEstablishmentMutation = {
+  ok: true
+  status: 'created' | 'updated' | 'archived' | 'reactivated'
+  establishmentId: string
+  branchId?: string
+}
+
 const roles = ['user', 'admin', 'super_admin'] as const
 const statuses = ['active', 'suspended', 'deleted'] as const
+const establishmentStatuses: SuperAdminEstablishmentStatus[] = ['draft', 'pending', 'approved', 'rejected', 'suspended']
+const establishmentTypes: SuperAdminEstablishmentType[] = ['private', 'public', 'administrative']
+const establishmentSources: SuperAdminEstablishmentSource[] = ['admin_created', 'client_submission', 'map_discovery', 'unknown']
+const branchStatuses: SuperAdminEstablishmentBranch['status'][] = ['active', 'hidden', 'closed']
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -76,12 +184,49 @@ function numberValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
+function nullableNumberValue(value: unknown) {
+  return value === null ? null : numberValue(value) ?? undefined
+}
+
+function booleanValue(value: unknown) {
+  return typeof value === 'boolean' ? value : null
+}
+
 function adminRole(value: unknown): AdminUser['role'] | null {
   return typeof value === 'string' && roles.includes(value as AdminUser['role']) ? value as AdminUser['role'] : null
 }
 
 function adminStatus(value: unknown): AdminUser['status'] | null {
   return typeof value === 'string' && statuses.includes(value as AdminUser['status']) ? value as AdminUser['status'] : null
+}
+
+function establishmentStatus(value: unknown): SuperAdminEstablishmentStatus | null {
+  return typeof value === 'string' && establishmentStatuses.includes(value as SuperAdminEstablishmentStatus)
+    ? value as SuperAdminEstablishmentStatus
+    : null
+}
+
+function establishmentType(value: unknown): SuperAdminEstablishmentType | null {
+  return typeof value === 'string' && establishmentTypes.includes(value as SuperAdminEstablishmentType)
+    ? value as SuperAdminEstablishmentType
+    : null
+}
+
+function establishmentSource(value: unknown): SuperAdminEstablishmentSource | null {
+  return typeof value === 'string' && establishmentSources.includes(value as SuperAdminEstablishmentSource)
+    ? value as SuperAdminEstablishmentSource
+    : null
+}
+
+function branchStatus(value: unknown): SuperAdminEstablishmentBranch['status'] | null {
+  return typeof value === 'string' && branchStatuses.includes(value as SuperAdminEstablishmentBranch['status'])
+    ? value as SuperAdminEstablishmentBranch['status']
+    : null
+}
+
+function readPlaceTypes(value: unknown): PlaceTypeKey[] | null {
+  if (!Array.isArray(value) || value.some((type) => !isPlaceTypeKey(type))) return null
+  return value as PlaceTypeKey[]
 }
 
 function emptyPage<T>(pagination: PaginationParams = {}) {
@@ -161,6 +306,153 @@ function readPage<T>(value: unknown, readItem: (item: unknown) => T | null): Pag
 
   if (!page || !pageSize || totalCount === null || items.some((item): item is null => item === null)) return null
   return paginatedResult(items as T[], totalCount, { page, pageSize })
+}
+
+function readEstablishment(value: unknown): SuperAdminEstablishment | null {
+  if (!isRecord(value)) return null
+
+  const id = stringValue(value.id)
+  const name = stringValue(value.name)
+  const nameAr = nullableStringValue(value.name_ar)
+  const categoryId = nullableStringValue(value.category_id)
+  const categoryName = nullableStringValue(value.category_name)
+  const categorySlug = nullableStringValue(value.category_slug)
+  const itemEstablishmentType = establishmentType(value.establishment_type)
+  const placeTypes = readPlaceTypes(value.place_types)
+  const status = establishmentStatus(value.status)
+  const isVerified = booleanValue(value.is_verified)
+  const phone = nullableStringValue(value.phone)
+  const whatsapp = nullableStringValue(value.whatsapp)
+  const location = nullableStringValue(value.location)
+  const wilaya = nullableStringValue(value.wilaya)
+  const branchCount = numberValue(value.branch_count)
+  const createdAt = stringValue(value.created_at)
+  const source = establishmentSource(value.source)
+
+  if (
+    !id || !name || nameAr === undefined || categoryId === undefined || categoryName === undefined || categorySlug === undefined
+    || !itemEstablishmentType || !placeTypes || !status || isVerified === null || phone === undefined || whatsapp === undefined
+    || location === undefined || wilaya === undefined || branchCount === null || !createdAt || !source
+  ) return null
+
+  return {
+    id,
+    name,
+    nameAr,
+    categoryId,
+    categoryName,
+    categorySlug,
+    establishmentType: itemEstablishmentType,
+    placeTypes,
+    status,
+    isVerified,
+    phone,
+    whatsapp,
+    location,
+    wilaya,
+    branchCount,
+    createdAt,
+    source,
+  }
+}
+
+function readEstablishmentBranch(value: unknown): SuperAdminEstablishmentBranch | null {
+  if (!isRecord(value)) return null
+
+  const id = stringValue(value.id)
+  const name = stringValue(value.name)
+  const phone = nullableStringValue(value.phone)
+  const whatsapp = nullableStringValue(value.whatsapp)
+  const address = nullableStringValue(value.address)
+  const wilaya = nullableStringValue(value.wilaya)
+  const neighborhood = nullableStringValue(value.neighborhood)
+  const latitude = nullableNumberValue(value.latitude)
+  const longitude = nullableNumberValue(value.longitude)
+  const isMain = booleanValue(value.is_main)
+  const status = branchStatus(value.status)
+  const createdAt = stringValue(value.created_at)
+
+  if (
+    !id || !name || phone === undefined || whatsapp === undefined || address === undefined || wilaya === undefined
+    || neighborhood === undefined || latitude === undefined || longitude === undefined || isMain === null || !status || !createdAt
+  ) return null
+
+  return { id, name, phone, whatsapp, address, wilaya, neighborhood, latitude, longitude, isMain, status, createdAt }
+}
+
+function readEstablishmentDetails(value: unknown): SuperAdminEstablishmentDetails | null {
+  const establishment = readEstablishment(value)
+  if (!establishment || !isRecord(value) || !Array.isArray(value.branches)) return null
+
+  const description = nullableStringValue(value.description)
+  const website = nullableStringValue(value.website)
+  const imageUrl = nullableStringValue(value.image_url)
+  const openingDate = nullableStringValue(value.opening_date)
+  const closingDate = nullableStringValue(value.closing_date)
+  const updatedAt = stringValue(value.updated_at)
+  const branches = value.branches.map(readEstablishmentBranch)
+
+  if (
+    description === undefined || website === undefined || imageUrl === undefined || openingDate === undefined
+    || closingDate === undefined || !updatedAt || branches.some((branch) => branch === null)
+  ) return null
+
+  return {
+    ...establishment,
+    description,
+    website,
+    imageUrl,
+    openingDate,
+    closingDate,
+    updatedAt,
+    branches: branches as SuperAdminEstablishmentBranch[],
+  }
+}
+
+function readCategoryOption(value: unknown): SuperAdminEstablishmentCategoryOption | null {
+  if (!isRecord(value)) return null
+
+  const id = stringValue(value.id)
+  const name = stringValue(value.name)
+  const slug = stringValue(value.slug)
+  const status = value.status === 'active' || value.status === 'hidden' ? value.status : null
+  return id && name && slug && status ? { id, name, slug, status } : null
+}
+
+function readEstablishmentOptions(value: unknown): SuperAdminEstablishmentOptions | null {
+  if (
+    !isRecord(value) || !Array.isArray(value.categories)
+    || !Array.isArray(value.establishment_types) || !Array.isArray(value.place_types)
+  ) return null
+
+  const categories = value.categories.map(readCategoryOption)
+  const parsedEstablishmentTypes = value.establishment_types.map(establishmentType)
+  const placeTypes = readPlaceTypes(value.place_types)
+
+  if (
+    categories.some((category) => category === null)
+    || parsedEstablishmentTypes.some((type) => type === null)
+    || !placeTypes
+  ) return null
+
+  return {
+    categories: categories as SuperAdminEstablishmentCategoryOption[],
+    establishmentTypes: parsedEstablishmentTypes as SuperAdminEstablishmentType[],
+    placeTypes,
+  }
+}
+
+function readEstablishmentMutation(value: unknown): SuperAdminEstablishmentMutation | null {
+  if (!isRecord(value) || value.ok !== true) return null
+
+  const status = typeof value.status === 'string' && ['created', 'updated', 'archived', 'reactivated'].includes(value.status)
+    ? value.status as SuperAdminEstablishmentMutation['status']
+    : null
+  const establishmentId = stringValue(value.establishment_id)
+  const branchId = value.branch_id === undefined || value.branch_id === null ? undefined : stringValue(value.branch_id) ?? null
+
+  if (!status || !establishmentId || branchId === null) return null
+  return { ok: true, status, establishmentId, ...(branchId ? { branchId } : {}) }
 }
 
 function failureFor(error: unknown, responseIsValid: boolean): SuperAdminFailure | null {
@@ -310,4 +602,117 @@ export async function getSuperAdminAuditEvents(pagination: PaginationParams = {}
 /** The existing audited status RPC keeps the final permission decision in PostgreSQL. */
 export async function updateSuperAdminAdminStatus(adminId: string, status: 'active' | 'suspended') {
   return adminUpdateUserStatus({ userId: adminId, status })
+}
+
+function establishmentWritePayload(input: SuperAdminEstablishmentInput) {
+  return {
+    p_name: input.name,
+    p_name_ar: input.nameAr ?? null,
+    p_category_id: input.categoryId ?? null,
+    p_establishment_type: input.establishmentType,
+    p_place_types: input.placeTypes,
+    p_description: input.description ?? null,
+    p_phone: input.phone ?? null,
+    p_whatsapp: input.whatsapp ?? null,
+    p_website: input.website ?? null,
+    p_image_url: input.imageUrl ?? null,
+    p_is_verified: input.isVerified,
+    p_opening_date: input.openingDate ?? null,
+    p_closing_date: input.closingDate ?? null,
+    p_branch_name: input.branchName ?? null,
+    p_location: input.location ?? null,
+    p_wilaya: input.wilaya ?? null,
+    p_neighborhood: input.neighborhood ?? null,
+    p_latitude: input.latitude ?? null,
+    p_longitude: input.longitude ?? null,
+  }
+}
+
+/** The catalogue RPC includes hidden categories because this is a management surface. */
+export async function getSuperAdminEstablishmentOptions(): Promise<SuperAdminResult<SuperAdminEstablishmentOptions | null>> {
+  const { data, error } = await supabase.rpc('super_admin_get_establishment_options')
+  const parsed = readEstablishmentOptions(data)
+  return { data: parsed, error: failureFor(error, parsed !== null) }
+}
+
+/** Paginated, explicitly projected reads keep raw administrative rows out of the browser. */
+export async function getSuperAdminEstablishments({
+  search,
+  status,
+  establishmentType: type,
+  placeType,
+  verified,
+  source,
+  categoryId,
+  ...pagination
+}: SuperAdminEstablishmentsQuery = {}): Promise<SuperAdminResult<PaginatedResult<SuperAdminEstablishment>>> {
+  const resolved = resolvePagination({ ...pagination, pageSize: pagination.pageSize ?? DEFAULT_PAGE_SIZE })
+  const pageSize = resolved.pageSize === 20 ? 20 : DEFAULT_PAGE_SIZE
+  const { data, error } = await supabase.rpc('super_admin_list_establishments', {
+    p_search: search?.trim().slice(0, 120) || null,
+    p_status: status ?? null,
+    p_establishment_type: type ?? null,
+    p_place_type: placeType ?? null,
+    p_verified: verified ?? null,
+    p_source: source ?? null,
+    p_category_id: categoryId?.trim() || null,
+    p_page: resolved.page,
+    p_page_size: pageSize,
+  })
+
+  const parsed = readPage(data, readEstablishment)
+  return {
+    data: parsed ?? emptyPage({ page: resolved.page, pageSize }),
+    error: failureFor(error, parsed !== null),
+  }
+}
+
+export async function getSuperAdminEstablishmentDetails(
+  establishmentId: string,
+): Promise<SuperAdminResult<SuperAdminEstablishmentDetails | null>> {
+  const { data, error } = await supabase.rpc('super_admin_get_establishment_details', {
+    p_establishment_id: establishmentId,
+  })
+  const parsed = readEstablishmentDetails(data)
+  return { data: parsed, error: failureFor(error, parsed !== null) }
+}
+
+export async function createSuperAdminEstablishment(
+  input: SuperAdminEstablishmentInput,
+): Promise<SuperAdminResult<SuperAdminEstablishmentMutation | null>> {
+  const { data, error } = await supabase.rpc('super_admin_create_establishment', establishmentWritePayload(input))
+  const parsed = readEstablishmentMutation(data)
+  return { data: parsed, error: failureFor(error, parsed !== null) }
+}
+
+export async function updateSuperAdminEstablishment(
+  establishmentId: string,
+  input: SuperAdminEstablishmentInput,
+): Promise<SuperAdminResult<SuperAdminEstablishmentMutation | null>> {
+  const { data, error } = await supabase.rpc('super_admin_update_establishment', {
+    p_establishment_id: establishmentId,
+    ...establishmentWritePayload(input),
+  })
+  const parsed = readEstablishmentMutation(data)
+  return { data: parsed, error: failureFor(error, parsed !== null) }
+}
+
+export async function archiveSuperAdminEstablishment(
+  establishmentId: string,
+): Promise<SuperAdminResult<SuperAdminEstablishmentMutation | null>> {
+  const { data, error } = await supabase.rpc('super_admin_archive_establishment', {
+    p_establishment_id: establishmentId,
+  })
+  const parsed = readEstablishmentMutation(data)
+  return { data: parsed, error: failureFor(error, parsed !== null) }
+}
+
+export async function reactivateSuperAdminEstablishment(
+  establishmentId: string,
+): Promise<SuperAdminResult<SuperAdminEstablishmentMutation | null>> {
+  const { data, error } = await supabase.rpc('super_admin_reactivate_establishment', {
+    p_establishment_id: establishmentId,
+  })
+  const parsed = readEstablishmentMutation(data)
+  return { data: parsed, error: failureFor(error, parsed !== null) }
 }

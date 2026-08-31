@@ -79,9 +79,9 @@ export const demoResult = {
  */
 export const searchDemoEstablishments: readonly Db2Establishment[] = [
   {
-    id: 'demo-bankily', name: 'Bankily', slug: 'bankily',
+    id: 'demo-bankily', name: 'Bankily', name_ar: null, slug: 'bankily',
     description: null, phone: null, whatsapp: null, website: null,
-    status: 'approved', is_verified: false,
+    status: 'approved', is_verified: false, place_types: [],
     category: { id: 'demo-finance', name: 'Services financiers', slug: 'financial-services', icon: null },
     branches: [
       {
@@ -93,43 +93,43 @@ export const searchDemoEstablishments: readonly Db2Establishment[] = [
     branchesError: false,
   },
   {
-    id: 'demo-sedad', name: 'Sedad', slug: 'sedad', description: null, phone: null, whatsapp: null, website: null,
-    status: 'approved', is_verified: false,
+    id: 'demo-sedad', name: 'Sedad', name_ar: null, slug: 'sedad', description: null, phone: null, whatsapp: null, website: null,
+    status: 'approved', is_verified: false, place_types: [],
     category: { id: 'demo-finance', name: 'Services financiers', slug: 'financial-services', icon: null }, branches: [], branchesError: false,
   },
   {
-    id: 'demo-masrivi', name: 'Masrivi', slug: 'masrivi', description: null, phone: null, whatsapp: null, website: null,
-    status: 'approved', is_verified: false,
+    id: 'demo-masrivi', name: 'Masrivi', name_ar: null, slug: 'masrivi', description: null, phone: null, whatsapp: null, website: null,
+    status: 'approved', is_verified: false, place_types: [],
     category: { id: 'demo-finance', name: 'Services financiers', slug: 'financial-services', icon: null }, branches: [], branchesError: false,
   },
   {
-    id: 'demo-sehdini', name: 'SehDini', slug: 'sehdini', description: null, phone: null, whatsapp: null, website: null,
-    status: 'approved', is_verified: false,
+    id: 'demo-sehdini', name: 'SehDini', name_ar: null, slug: 'sehdini', description: null, phone: null, whatsapp: null, website: null,
+    status: 'approved', is_verified: false, place_types: [],
     category: { id: 'demo-health', name: 'Santé', slug: 'health', icon: null }, branches: [], branchesError: false,
   },
   {
-    id: 'demo-carapp', name: 'CarApp', slug: 'carapp', description: null, phone: null, whatsapp: null, website: null,
-    status: 'approved', is_verified: false,
+    id: 'demo-carapp', name: 'CarApp', name_ar: null, slug: 'carapp', description: null, phone: null, whatsapp: null, website: null,
+    status: 'approved', is_verified: false, place_types: [],
     category: { id: 'demo-mobility', name: 'Mobilité', slug: 'mobility', icon: null }, branches: [], branchesError: false,
   },
   {
-    id: 'demo-islah', name: 'Islah', slug: 'islah', description: null, phone: null, whatsapp: null, website: null,
-    status: 'approved', is_verified: false,
+    id: 'demo-islah', name: 'Islah', name_ar: null, slug: 'islah', description: null, phone: null, whatsapp: null, website: null,
+    status: 'approved', is_verified: false, place_types: [],
     category: { id: 'demo-services', name: 'Services', slug: 'services', icon: null }, branches: [], branchesError: false,
   },
   {
-    id: 'demo-gym', name: 'Gym', slug: 'gym', description: null, phone: null, whatsapp: null, website: null,
-    status: 'approved', is_verified: false,
+    id: 'demo-gym', name: 'Gym', name_ar: null, slug: 'gym', description: null, phone: null, whatsapp: null, website: null,
+    status: 'approved', is_verified: false, place_types: [],
     category: { id: 'demo-sport', name: 'Sport', slug: 'sport', icon: null }, branches: [], branchesError: false,
   },
   {
-    id: 'demo-pharmacie-centrale', name: 'Pharmacie Centrale', slug: 'pharmacie-centrale', description: null, phone: null, whatsapp: null, website: null,
-    status: 'approved', is_verified: false,
+    id: 'demo-pharmacie-centrale', name: 'Pharmacie Centrale', name_ar: null, slug: 'pharmacie-centrale', description: null, phone: null, whatsapp: null, website: null,
+    status: 'approved', is_verified: false, place_types: [],
     category: { id: 'demo-health', name: 'Santé', slug: 'health', icon: null }, branches: [], branchesError: false,
   },
   {
-    id: 'demo-restaurant-salam', name: 'Restaurant Salam', slug: 'restaurant-salam', description: null, phone: null, whatsapp: null, website: null,
-    status: 'approved', is_verified: false,
+    id: 'demo-restaurant-salam', name: 'Restaurant Salam', name_ar: null, slug: 'restaurant-salam', description: null, phone: null, whatsapp: null, website: null,
+    status: 'approved', is_verified: false, place_types: [],
     category: { id: 'demo-food', name: 'Restaurants', slug: 'restaurants', icon: null }, branches: [], branchesError: false,
   },
 ]

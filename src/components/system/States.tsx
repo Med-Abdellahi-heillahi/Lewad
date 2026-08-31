@@ -38,7 +38,7 @@ export function InlineAlert({
   return (
     <div
       role={tone === 'error' ? 'alert' : 'status'}
-      className={`flex flex-col gap-3 rounded-xl border px-4 py-3.5 text-sm leading-6 sm:flex-row sm:items-center sm:justify-between ${toneStyles[tone]} ${className}`}
+      className={`client-inline-alert flex flex-col gap-3 rounded-xl border px-4 py-3.5 text-sm leading-6 card-elevated sm:flex-row sm:items-center sm:justify-between ${toneStyles[tone]} ${className}`}
     >
       <div className="flex items-start gap-2.5">
         <span className="mt-0.5 shrink-0">
@@ -72,9 +72,9 @@ export function EmptyState({
   className?: string
 }) {
   return (
-    <div className={`grid place-items-center rounded-2xl border border-dashed border-line px-6 py-10 text-center ${className}`}>
+    <div className={`client-empty-state client-state-surface grid place-items-center rounded-2xl border border-dashed border-line px-6 py-10 text-center card-elevated ${className}`}>
       <div className="max-w-sm">
-        <span className="mx-auto grid size-11 place-items-center rounded-xl bg-surface-2 text-muted">
+        <span className="client-state-icon mx-auto grid size-11 place-items-center rounded-xl bg-surface-2 text-muted">
           <Icon name={icon} size={21} />
         </span>
         <h3 className="mt-4 text-base font-bold text-ink">{title}</h3>
@@ -88,7 +88,7 @@ export function EmptyState({
 /** Squelette de carte pendant un chargement Supabase. */
 export function LoadingCard({ lines = 3, label }: { lines?: number; label: string }) {
   return (
-    <div className={`${card} p-5 sm:p-6`} role="status" aria-busy="true">
+    <div className={`${card} client-state-surface p-5 sm:p-6`} role="status" aria-busy="true">
       <Skeleton className="h-4 w-32" />
       <div className="mt-5 grid gap-3">
         {Array.from({ length: lines }, (_, index) => (

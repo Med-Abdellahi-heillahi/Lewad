@@ -41,3 +41,20 @@ export function paginatedResult<T>(data: T[], totalCount: number | null, params:
     totalPages: Math.ceil(safeTotalCount / pageSize),
   }
 }
+
+/** Frontend-only paging for already loaded, bounded collections. */
+export function paginateItems<T>(items: readonly T[], params: PaginationParams = {}): PaginatedResult<T> {
+  const { page: requestedPage, pageSize } = resolvePagination(params)
+  const totalCount = items.length
+  const totalPages = Math.ceil(totalCount / pageSize)
+  const page = Math.min(requestedPage, Math.max(1, totalPages))
+  const from = (page - 1) * pageSize
+
+  return {
+    data: items.slice(from, from + pageSize),
+    page,
+    pageSize,
+    totalCount,
+    totalPages,
+  }
+}

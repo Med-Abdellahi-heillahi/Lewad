@@ -1,6 +1,7 @@
 ﻿import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ChangeEvent,
@@ -42,6 +43,7 @@ import {
   profileDisplayName,
 } from "../lib/format";
 import { defaultDestinationForRole, isAdminRole } from "../lib/routeAuth";
+import { paginateItems } from "../lib/pagination";
 import {
   createRechargeRequest,
   rechargeOffers,
@@ -240,6 +242,7 @@ const copy = {
     establishmentsRefresh: "Actualiser",
     establishmentsLoading: "Chargement de vos établissements…",
     establishmentsError: "Vos établissements sont momentanément indisponibles.",
+    establishmentsItems: "établissements",
     establishmentStats: "Statistiques",
     searches: "Recherches",
     branches: "Agences",
@@ -247,6 +250,7 @@ const copy = {
     pending: "En attente",
     rejected: "Refusé",
     subscription: "Abonnement",
+    monthsUnit: "mois",
     statsUnavailable:
       "Les statistiques apparaîtront après les premières recherches.",
 
@@ -269,7 +273,7 @@ const copy = {
     branchesLabel: "Agences",
     verified: "Vérifié",
     notVerified: "Non vérifié",
-    perPeriod: "/ 3 mois",
+    perPeriod: "/ {months} mois",
     settings: "Paramètres",
     settingsSubtitle:
       "Réglez l’apparence de Lewad et retrouvez les options de votre compte.",
@@ -443,6 +447,7 @@ const copy = {
     establishmentsRefresh: "تحديث",
     establishmentsLoading: "جارٍ تحميل مؤسساتك…",
     establishmentsError: "مؤسساتك غير متاحة مؤقتًا.",
+    establishmentsItems: "مؤسسات",
     establishmentStats: "الإحصائيات",
     searches: "عمليات البحث",
     branches: "الفروع",
@@ -450,6 +455,7 @@ const copy = {
     pending: "قيد الانتظار",
     rejected: "مرفوض",
     subscription: "الاشتراك",
+    monthsUnit: "أشهر",
     statsUnavailable: "ستظهر الإحصائيات بعد أولى عمليات البحث.",
 
     viewStats: "عرض الإحصائيات",
@@ -471,7 +477,7 @@ const copy = {
     branchesLabel: "الفروع",
     verified: "موثّق",
     notVerified: "غير موثّق",
-    perPeriod: "/ 3 أشهر",
+    perPeriod: "/ {months} أشهر",
     settings: "الإعدادات",
     settingsSubtitle: "اضبط مظهر Lewad واطّلع على خيارات حسابك.",
     appearance: "المظهر واللغة",
@@ -646,6 +652,7 @@ const copy = {
     establishmentsRefresh: "Refresh",
     establishmentsLoading: "Loading your establishments…",
     establishmentsError: "Your establishments are temporarily unavailable.",
+    establishmentsItems: "establishments",
     establishmentStats: "Stats",
     searches: "Searches",
     branches: "Branches",
@@ -653,6 +660,7 @@ const copy = {
     pending: "Pending",
     rejected: "Rejected",
     subscription: "Subscription",
+    monthsUnit: "months",
     statsUnavailable: "Stats will appear after the first searches.",
 
     viewStats: "View stats",
@@ -674,7 +682,7 @@ const copy = {
     branchesLabel: "Branches",
     verified: "Verified",
     notVerified: "Not verified",
-    perPeriod: "/ 3 months",
+    perPeriod: "/ {months} months",
     settings: "Settings",
     settingsSubtitle: "Adjust how Lewad looks and find your account options.",
     appearance: "Appearance and language",
@@ -756,11 +764,15 @@ function PageHeader({
   backButton?: boolean;
 }) {
   return (
-    <div>
+    <header className="page-glow relative overflow-hidden rounded-3xl border border-line bg-surface/85 p-5 card-elevated backdrop-blur-sm sm:p-6">
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -end-12 -top-16 size-40 rounded-full bg-tint-3/55 blur-2xl"
+      />
       {backButton && <BackButton />}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-[26px] leading-tight font-bold tracking-tight sm:text-3xl lg:text-[34px]">
+          <h1 className="text-[26px] leading-tight font-bold tracking-tight text-ink sm:text-3xl lg:text-[34px]">
             {title}
           </h1>
           {text && (
@@ -771,7 +783,7 @@ function PageHeader({
         </div>
         {action && <div className="shrink-0">{action}</div>}
       </div>
-    </div>
+    </header>
   );
 }
 
@@ -955,15 +967,27 @@ function ProfilePage({ text }: { text: Copy }) {
   );
 }
 
+const CLIENT_ESTABLISHMENTS_PAGE_SIZE = 6;
+
 function ClientEstablishmentsSection({ text }: { text: Copy }) {
   const { locale } = useI18n();
   const [items, setItems] = useState<ClientEstablishment[]>([]);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const paginatedItems = useMemo(
+    () =>
+      paginateItems(items, {
+        page,
+        pageSize: CLIENT_ESTABLISHMENTS_PAGE_SIZE,
+      }),
+    [items, page],
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(false);
+    setPage(1);
     try {
       setItems((await getMyEstablishmentsWithStats()).items);
     } catch {
@@ -980,7 +1004,7 @@ function ClientEstablishmentsSection({ text }: { text: Copy }) {
   return (
     <section
       id="establishments"
-      className="mt-7"
+      className="mt-8 rounded-3xl border border-line bg-tint-5/20 p-4 card-elevated sm:p-6"
       aria-labelledby="my-establishments"
     >
       <SectionTitle
@@ -1022,16 +1046,28 @@ function ClientEstablishmentsSection({ text }: { text: Copy }) {
           <EmptyState icon="store" title={text.establishmentsEmpty} />
         </div>
       ) : (
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
-          {items.map((item) => (
-            <EstablishmentCard
-              key={item.id}
-              item={item}
-              text={text}
-              locale={locale}
+        <>
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            {paginatedItems.data.map((item) => (
+              <EstablishmentCard
+                key={item.id}
+                item={item}
+                text={text}
+                locale={locale}
+              />
+            ))}
+          </div>
+          {paginatedItems.totalPages > 1 && (
+            <PaginationControls
+              page={paginatedItems.page}
+              totalPages={paginatedItems.totalPages}
+              totalCount={paginatedItems.totalCount}
+              labels={{ ...text.pagination, items: text.establishmentsItems }}
+              disabled={loading}
+              onPageChange={setPage}
             />
-          ))}
-        </div>
+          )}
+        </>
       )}
     </section>
   );
@@ -1047,6 +1083,10 @@ function establishmentStatus(
   return text.status;
 }
 
+function formatMonthCount(months: number, locale: Locale, text: Copy) {
+  return `${formatNumber(months, locale)} ${text.monthsUnit}`;
+}
+
 function EstablishmentCard({
   item,
   text,
@@ -1058,8 +1098,9 @@ function EstablishmentCard({
 }) {
   const [statsOpen, setStatsOpen] = useState(false);
   return (
-    <article className={`${card} min-w-0 p-5`}>
-      <div className="flex min-w-0 items-start justify-between gap-3">
+    <article className={`${card} relative min-w-0 overflow-hidden p-5`}>
+      <div className="absolute inset-y-0 start-0 w-1 bg-gradient-to-b from-brand-deep to-answer opacity-50" />
+      <div className="relative flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate text-base font-bold text-ink" dir="auto">
             {locale === "ar" && item.nameAr ? item.nameAr : item.name}
@@ -1068,7 +1109,7 @@ function EstablishmentCard({
             <p className="mt-1 truncate text-sm text-muted">{item.category}</p>
           )}
         </div>
-        <span className="shrink-0 rounded-full bg-surface-2 px-2.5 py-1 text-xs font-semibold text-ink-soft">
+        <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${item.status === 'approved' ? 'bg-answer-bg text-answer' : item.status === 'rejected' ? 'bg-ask-bg text-ask' : 'bg-surface-2 text-ink-soft'}`}>
           {establishmentStatus(item.status, text)}
         </span>
       </div>
@@ -1084,7 +1125,7 @@ function EstablishmentCard({
           <p className="mt-1 font-semibold text-ink">
             {item.subscriptionPeriodMonths === null
               ? "—"
-              : `${formatNumber(item.subscriptionPeriodMonths, locale)} ${locale === "ar" ? "أشهر" : locale === "fr" ? "mois" : "months"}`}
+              : formatMonthCount(item.subscriptionPeriodMonths, locale, text)}
           </p>
         </div>
       </div>
@@ -1102,7 +1143,7 @@ function EstablishmentCard({
       )}
       <button
         type="button"
-        className={`${btnGhost} mt-4 w-full justify-center`}
+        className={`${btnPrimary} mt-4 w-full justify-center`}
         onClick={() => setStatsOpen(true)}
       >
         <Icon name="eye" size={16} />
@@ -1135,14 +1176,17 @@ function getMissingEstablishmentFields(
   return missing;
 }
 
+const DAYS_PER_SUBSCRIPTION_MONTH = 30;
+const MILLISECONDS_PER_DAY = 86_400_000;
+
 function renewalDaysLeft(item: ClientEstablishment): number | null {
   const start = item.approvedAt ?? item.createdAt;
   const months = item.subscriptionPeriodMonths;
   if (!start || !months) return null;
   const startMs = new Date(start).getTime();
   if (!Number.isFinite(startMs)) return null;
-  const endMs = startMs + months * 30 * 24 * 60 * 60 * 1000;
-  return Math.ceil((endMs - Date.now()) / (24 * 60 * 60 * 1000));
+  const endMs = startMs + months * DAYS_PER_SUBSCRIPTION_MONTH * MILLISECONDS_PER_DAY;
+  return Math.ceil((endMs - Date.now()) / MILLISECONDS_PER_DAY);
 }
 
 function ClientEstablishmentStatsPanel({
@@ -1156,27 +1200,72 @@ function ClientEstablishmentStatsPanel({
   locale: Locale;
   onClose: () => void;
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const missingFields = getMissingEstablishmentFields(item, text);
   const profileComplete = missingFields.length === 0;
   const daysLeft = renewalDaysLeft(item);
   const expired = daysLeft !== null && daysLeft <= 0;
 
+  useEffect(() => {
+    const restoreFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const focusTimer = window.setTimeout(() => closeButtonRef.current?.focus(), 20);
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      restoreFocus?.focus?.();
+    };
+  }, [onClose]);
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-0 sm:items-center sm:p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="estats-title"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/45 p-0 backdrop-blur-[3px] sm:items-center sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-surface px-5 py-4">
+      <div
+        ref={dialogRef}
+        className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-line bg-surface shadow-2xl sm:rounded-3xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="estats-title"
+      >
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-tint-5/45 px-5 py-4 backdrop-blur-md">
           <h3 id="estats-title" className="text-base font-bold text-ink">
             {text.statsTitle}
           </h3>
           <button
+            ref={closeButtonRef}
             type="button"
             className={iconBtn}
             onClick={onClose}
@@ -1188,7 +1277,7 @@ function ClientEstablishmentStatsPanel({
 
         <div className="grid gap-px bg-line">
           {/* A. Visibility / Searches */}
-          <section className="bg-surface px-5 py-4">
+          <section className="bg-tint-1/25 px-5 py-4">
             <h4 className="text-xs font-semibold text-muted">
               {text.searches}
             </h4>
@@ -1204,7 +1293,7 @@ function ClientEstablishmentStatsPanel({
           </section>
 
           {/* B. Payment / Renewal */}
-          <section className="bg-surface px-5 py-4">
+          <section className="bg-tint-3/25 px-5 py-4">
             <h4 className="text-xs font-semibold text-muted">
               {text.timeRemaining}
             </h4>
@@ -1229,13 +1318,16 @@ function ClientEstablishmentStatsPanel({
               item.subscriptionPeriodMonths !== null && (
                 <p className="mt-1 text-xs text-muted">
                   {formatCurrency(item.subscriptionAmountMro, locale)}{" "}
-                  {text.perPeriod}
+                  {text.perPeriod.replace(
+                    "{months}",
+                    formatNumber(item.subscriptionPeriodMonths, locale),
+                  )}
                 </p>
               )}
           </section>
 
           {/* C. Profile completeness */}
-          <section className="bg-surface px-5 py-4">
+          <section className="bg-tint-5/25 px-5 py-4">
             <h4 className="text-xs font-semibold text-muted">
               {text.infoToComplete}
             </h4>
@@ -1286,7 +1378,7 @@ function ClientEstablishmentStatsPanel({
                 <dd className="mt-1 font-semibold text-ink">
                   {item.subscriptionPeriodMonths === null
                     ? "\u2014"
-                    : `${formatNumber(item.subscriptionPeriodMonths, locale)} ${locale === "ar" ? "\u0623\u0634\u0647\u0631" : locale === "fr" ? "mois" : "months"}`}
+                    : formatMonthCount(item.subscriptionPeriodMonths, locale, text)}
                 </dd>
               </div>
             </dl>
@@ -1313,10 +1405,11 @@ function IdentityCard({
 
   return (
     <section
-      className={`${card} overflow-hidden lg:sticky lg:top-24`}
+      className={`${card} relative overflow-hidden lg:sticky lg:top-24`}
       aria-labelledby="profile-identity"
     >
-      <div className="flex items-center gap-4 border-b border-line bg-page-alt p-5 sm:p-6">
+      <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-brand-deep via-brand to-answer opacity-60" />
+      <div className="relative flex items-center gap-4 border-b border-line bg-page-alt p-5 sm:p-6">
         <span className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-brand text-2xl font-bold text-brand-ink sm:size-20">
           {profile.avatar_url ? (
             <img
@@ -1532,7 +1625,7 @@ export function ProfileForm({
       className={`${card} overflow-hidden`}
       aria-labelledby="profile-form-title"
     >
-      <div className="border-b border-line p-5 sm:p-6">
+      <div className="border-b border-line bg-page-alt/50 p-5 sm:p-6">
         <SectionTitle
           title={text.personalInfo}
           text={text.profileDatabaseNote}
@@ -1722,11 +1815,6 @@ function CreditsPage({ text }: { text: Copy }) {
   const isWalletLoading = loading && balance === null;
   const hasUnlimitedSearches = isAdminRole(profile?.role);
 
-  useEffect(() => {
-    if (walletError && import.meta.env.DEV)
-      console.debug("[Credits] wallet load failed");
-  }, [walletError]);
-
   return (
     <>
       <PageHeader title={text.credits} text={text.creditsSubtitle} backButton />
@@ -1734,10 +1822,12 @@ function CreditsPage({ text }: { text: Copy }) {
       {/* Desktop : le solde reste épinglé pendant qu'on parcourt l'historique. */}
       <div className="mt-7 grid items-start gap-5 lg:grid-cols-[minmax(0,23rem)_minmax(0,1fr)] lg:gap-6">
         <section
-          className={`${card} p-6 sm:p-7 lg:sticky lg:top-24`}
+          className="relative overflow-hidden rounded-3xl border border-panel-line bg-panel p-6 text-panel-ink card-elevated sm:p-7 lg:sticky lg:top-24"
           aria-labelledby="wallet-balance"
         >
-          <h2 id="wallet-balance" className="text-sm font-semibold text-muted">
+          <div className="absolute -end-16 -top-20 size-48 rounded-full bg-brand/15 blur-3xl" />
+          <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-brand via-tint-3 to-brand opacity-90" />
+          <h2 id="wallet-balance" className="relative text-sm font-semibold text-panel-muted">
             {text.walletBalance}
           </h2>
 
@@ -1748,26 +1838,26 @@ function CreditsPage({ text }: { text: Copy }) {
             </p>
           ) : balance !== null ? (
             <p className="mt-2 flex flex-wrap items-baseline gap-2">
-              <span className="tabular text-[42px] leading-none font-bold tracking-tight text-ink sm:text-5xl">
+              <span className="tabular text-[42px] leading-none font-bold tracking-tight text-panel-ink sm:text-5xl">
                 {formatNumber(balance, locale)}
               </span>
-              <span className="text-lg font-semibold text-muted">
+              <span className="text-lg font-semibold text-panel-muted">
                 {text.pointsUnit}
               </span>
             </p>
           ) : (
-            <p className="mt-3 text-lg font-semibold text-muted">
+            <p className="mt-3 text-lg font-semibold text-panel-muted">
               {text.pointsUnavailable}
             </p>
           )}
 
-          <p className="mt-4 text-sm leading-6 text-muted">
+          <p className="relative mt-4 text-sm leading-6 text-panel-muted">
             {text.creditsText}
           </p>
 
           <a
             href="/history"
-            className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand-deep hover:underline dark:text-brand"
+            className="relative mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand underline-offset-4 hover:underline"
           >
             <Icon name="clock" size={16} />
             {text.whereMyPoints}
@@ -1930,7 +2020,7 @@ function LedgerRow({
   const isCredit = amount > 0;
 
   return (
-    <article className="flex items-start gap-3 rounded-xl border border-line bg-surface px-3.5 py-3 sm:items-center sm:px-4">
+    <article className="flex items-start gap-3 rounded-xl border border-line bg-surface px-3.5 py-3 card-elevated sm:items-center sm:px-4">
       {/* Le sens du mouvement se lit à la flèche autant qu'à la couleur : rien
           d'essentiel n'est porté par la seule teinte. */}
       <span
@@ -1975,6 +2065,8 @@ type RechargeOffer = {
   description: string;
   icon: IconName;
   featured: boolean;
+  surfaceClass: string;
+  iconClass: string;
 };
 
 type RechargeNotice = {
@@ -2049,6 +2141,18 @@ function RechargePage({ text }: { text: Copy }) {
           ? text.offerRegular
           : text.offerAdvanced,
     icon: offer.code === "advanced_100" ? "wallet" : "sparkle",
+    surfaceClass:
+      offer.code === "starter_10"
+        ? "bg-tint-1/55"
+        : offer.code === "regular_30"
+          ? "bg-tint-3/55"
+          : "bg-tint-5/55",
+    iconClass:
+      offer.code === "starter_10"
+        ? "bg-tint-1 text-tint-ink-1"
+        : offer.code === "regular_30"
+          ? "bg-tint-3 text-tint-ink-3"
+          : "bg-tint-5 text-tint-ink-5",
   }));
 
   const requester: RechargeRequester = {
@@ -2113,13 +2217,14 @@ function RechargePage({ text }: { text: Copy }) {
       )}
 
       <div
-        className="mt-8 flex flex-wrap gap-2"
+        className="mt-7 grid grid-cols-3 gap-1 rounded-2xl border border-line bg-surface/80 p-1.5 card-elevated"
         aria-label={text.rechargeSteps}
       >
         {[text.stepOne, text.stepTwo, text.stepThree].map((label, index) => (
           <span
             key={label}
-            className={`rounded-full px-3 py-1.5 text-xs font-bold ${step === index + 1 ? "bg-brand text-brand-ink" : "bg-surface-2 text-muted"}`}
+            aria-current={step === index + 1 ? "step" : undefined}
+            className={`inline-flex min-h-10 items-center justify-center rounded-xl px-2 text-center text-xs font-bold transition-colors ${step === index + 1 ? "bg-brand text-brand-ink shadow-sm" : index + 1 < step ? "bg-answer-bg text-answer" : "text-muted"}`}
           >
             {label}
           </span>
@@ -2136,12 +2241,15 @@ function RechargePage({ text }: { text: Copy }) {
             {offers.map((offer) => (
               <article
                 key={offer.points}
-                className={`relative flex flex-col rounded-2xl border bg-surface p-5 sm:p-6 ${
+                className={`relative flex flex-col overflow-hidden rounded-3xl border p-5 card-elevated sm:p-6 ${offer.surfaceClass} ${
                   offer.featured
-                    ? "border-brand-deep shadow-sm dark:border-brand"
+                    ? "border-brand-deep shadow-md dark:border-brand card-elevated"
                     : "border-line"
                 }`}
               >
+                {offer.featured && (
+                  <div className="absolute inset-x-0 top-0 h-1 rounded-t-2xl bg-gradient-to-r from-brand-deep via-brand to-answer opacity-70" />
+                )}
                 {offer.featured && (
                   <span
                     className={`${pill} absolute -top-2.5 start-5 bg-brand text-brand-ink`}
@@ -2149,7 +2257,7 @@ function RechargePage({ text }: { text: Copy }) {
                     {text.popular}
                   </span>
                 )}
-                <span className="grid size-10 place-items-center rounded-xl bg-brand-soft text-brand-deep">
+                <span className={`grid size-11 place-items-center rounded-2xl ${offer.iconClass}`}>
                   <Icon name={offer.icon} size={20} />
                 </span>
                 <p className="mt-5 flex items-baseline gap-2 text-3xl font-bold tracking-tight">
@@ -2191,7 +2299,7 @@ function RechargePage({ text }: { text: Copy }) {
       )}
 
       {step === 2 && selectedOffer && (
-        <section className={`${card} mt-6 p-5 sm:p-6`}>
+        <section className={`${card} mt-6 overflow-hidden bg-tint-1/25 p-5 sm:p-6`}>
           <h2 className="text-lg font-bold">{text.paymentInformation}</h2>
           <p className="mt-3 rounded-xl border border-line bg-page-alt px-4 py-3 text-sm font-semibold text-ink">
             {text.paymentNumber.replace(
@@ -2265,7 +2373,7 @@ function RechargePage({ text }: { text: Copy }) {
       )}
 
       {step === 3 && selectedOffer && (
-        <section className={`${card} mt-6 p-5 sm:p-6`}>
+        <section className={`${card} mt-6 overflow-hidden bg-tint-3/25 p-5 sm:p-6`}>
           <h2 className="text-lg font-bold">{text.reviewPayment}</h2>
           <p className="mt-3 text-sm leading-6 text-muted">
             {text.paymentNumber.replace(
@@ -2346,6 +2454,7 @@ function RechargeWhatsAppModal({
 }) {
   const { locale } = useI18n();
   const closeButton = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
   const restoreFocus = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -2354,7 +2463,27 @@ function RechargeWhatsAppModal({
     const { overflow } = document.body.style;
     document.body.style.overflow = "hidden";
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKeyDown);
     const focusTimer = window.setTimeout(
@@ -2395,7 +2524,8 @@ function RechargeWhatsAppModal({
     >
       {/* Mobile : feuille ancrée en bas, à portée du pouce. Desktop : boîte centrée. */}
       <section
-        className="w-full max-w-md rounded-t-3xl border border-line bg-surface p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl sm:p-7 sm:pb-7"
+        ref={dialogRef}
+        className="max-h-[90dvh] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border border-line bg-surface p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl sm:rounded-3xl sm:p-7 sm:pb-7"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
@@ -2536,9 +2666,18 @@ function SettingsCard({
   href?: string;
   linkLabel?: string;
 }) {
+  const tone =
+    icon === "message"
+      ? "bg-tint-5/35"
+      : "bg-tint-1/35";
+  const iconTone =
+    icon === "message"
+      ? "bg-tint-5 text-tint-ink-5"
+      : "bg-tint-1 text-tint-ink-1";
+
   return (
-    <article className={`${card} flex gap-4 p-5 sm:p-6`}>
-      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-surface-2 text-muted">
+    <article className={`${card} ${tone} flex gap-4 p-5 sm:p-6`}>
+      <span className={`grid size-11 shrink-0 place-items-center rounded-xl ${iconTone}`}>
         <Icon name={icon} size={20} />
       </span>
       <div className="min-w-0">
@@ -2572,24 +2711,32 @@ export function ContactPage() {
     label: string;
     value: string;
     href: string;
+    tone: string;
+    iconTone: string;
   }[] = [
     {
       icon: "phone",
       label: text.phone,
       value: contactDetails.phoneDisplay,
       href: contactDetails.phoneHref,
+      tone: "bg-tint-1/45",
+      iconTone: "bg-tint-1 text-tint-ink-1",
     },
     {
       icon: "message",
       label: "WhatsApp",
       value: contactDetails.whatsappDisplay,
       href: contactDetails.whatsappHref,
+      tone: "border-answer/25 bg-tint-5/60",
+      iconTone: "bg-tint-5 text-tint-ink-5",
     },
     {
       icon: "globe",
       label: text.email,
       value: contactDetails.email,
       href: contactDetails.emailHref,
+      tone: "bg-tint-3/45",
+      iconTone: "bg-tint-3 text-tint-ink-3",
     },
   ];
 
@@ -2609,27 +2756,30 @@ export function ContactPage() {
               backButton
             />
 
-            <div className={`${card} mt-7 overflow-hidden`}>
-              <h2 className="border-b border-line px-5 py-4 text-sm font-bold">
+            <div className="mt-7">
+              <h2 className="text-sm font-bold text-ink">
                 {text.contactDetails}
               </h2>
-              <ul className="grid list-none gap-px bg-line">
+              <ul className="mt-3 grid list-none gap-3">
                 {channels.map((channel) => (
                   <li key={channel.label}>
                     <a
                       href={channel.href}
-                      className="group flex min-h-14 items-center gap-3 bg-surface px-5 py-3 transition-colors hover:bg-surface-2"
+                      className={`group flex min-h-20 items-center gap-3 rounded-2xl border border-line px-4 py-3 card-elevated transition-transform duration-200 motion-safe:hover:-translate-y-0.5 ${channel.tone}`}
                     >
-                      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface-2 text-muted transition-colors group-hover:text-ink">
+                      <span className={`grid size-11 shrink-0 place-items-center rounded-xl ${channel.iconTone}`}>
                         <Icon name={channel.icon} size={17} />
                       </span>
-                      <span className="min-w-0">
+                      <span className="min-w-0 flex-1">
                         <span className="block text-xs font-semibold text-muted">
                           {channel.label}
                         </span>
                         <span className="ltr-isolate block truncate text-sm font-semibold text-ink">
                           {channel.value}
                         </span>
+                      </span>
+                      <span className="shrink-0 text-muted transition-transform duration-200 group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5">
+                        <Icon name="arrow" size={16} />
                       </span>
                     </a>
                   </li>

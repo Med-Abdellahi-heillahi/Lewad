@@ -199,7 +199,7 @@ export function AppBar({ active, homeHref = "/app", admin }: AppBarProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-line bg-page/85 backdrop-blur-md">
+      <header className="card-elevated sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur-xl">
         <div
           className={`${appWrap} flex h-16 items-center gap-2 sm:h-[72px] sm:gap-3`}
         >
@@ -216,7 +216,7 @@ export function AppBar({ active, homeHref = "/app", admin }: AppBarProps) {
             aria-label={copy.primaryNav}
             className="hidden min-w-0 flex-1 justify-center lg:flex"
           >
-            <ul className="flex list-none items-center gap-0.5">
+            <ul className="flex list-none items-center gap-0.5 rounded-xl border border-line bg-page/55 p-1">
               {memberLinks.map((link) => (
                 <li
                   key={link.id}
@@ -227,8 +227,8 @@ export function AppBar({ active, homeHref = "/app", admin }: AppBarProps) {
                     aria-current={link.id === active ? "page" : undefined}
                     className={`inline-flex min-h-10 items-center rounded-lg px-3 text-sm whitespace-nowrap transition-colors ${
                       link.id === active
-                        ? "bg-surface-2 font-semibold text-ink"
-                        : "font-medium text-muted hover:bg-surface-2 hover:text-ink"
+                        ? "bg-brand-soft font-semibold text-brand-deep dark:text-brand"
+                        : "font-medium text-muted hover:bg-surface hover:text-ink"
                     }`}
                   >
                     {link.label}
@@ -243,7 +243,7 @@ export function AppBar({ active, homeHref = "/app", admin }: AppBarProps) {
           {isAuthenticated && (
             <span
               aria-label={balanceAria}
-              className="ms-3 shrink-0 whitespace-nowrap text-sm font-semibold text-muted tabular"
+              className="ms-3 shrink-0 whitespace-nowrap text-sm font-semibold text-ink-soft tabular"
             >
               {balanceNumber} {copy.pointsUnit}
             </span>
@@ -253,7 +253,7 @@ export function AppBar({ active, homeHref = "/app", admin }: AppBarProps) {
             {isAuthenticated && (
               <a
                 href="/add-business"
-                className={`${iconBtn} hidden sm:inline-flex`}
+                className={`${iconBtn} hidden text-brand-deep hover:border-brand/50 hover:bg-brand-soft sm:inline-flex dark:text-brand`}
                 aria-label={copy.addEstablishment}
                 title={copy.addEstablishment}
               >
@@ -303,7 +303,7 @@ export function AppBar({ active, homeHref = "/app", admin }: AppBarProps) {
 
       <Drawer open={drawerOpen} onClose={closeDrawer} title={copy.primaryNav}>
         {isAuthenticated ? (
-          <div className="rounded-2xl border border-line bg-page-alt p-4">
+          <div className="card-elevated rounded-2xl border border-brand/25 bg-brand-soft/45 p-4">
             <div className="flex items-center gap-3">
               <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand text-base font-bold text-brand-ink">
                 {initialOf(displayName)}
@@ -327,7 +327,7 @@ export function AppBar({ active, homeHref = "/app", admin }: AppBarProps) {
             <a
               href="/credits"
               onClick={closeDrawer}
-              className="mt-3 flex min-h-11 items-center justify-between gap-3 rounded-xl border border-line bg-surface px-3 text-sm"
+              className="mt-3 flex min-h-11 items-center justify-between gap-3 rounded-xl border border-line bg-surface/85 px-3 text-sm transition-colors hover:border-brand/45"
             >
               <span className="font-semibold text-muted">{copy.balance}</span>
               <span className="tabular font-bold text-ink">

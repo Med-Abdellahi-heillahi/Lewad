@@ -22,10 +22,12 @@ export function EstablishmentsButton() {
   return (
     <a
       href="/profile#establishments"
-      className="flex items-center justify-center gap-2 bg-brand-soft/60 px-3 py-2 text-xs font-semibold text-brand-deep transition-colors hover:bg-brand-soft"
+      className="pointer-events-auto mx-auto flex min-h-11 w-max max-w-full items-center justify-center gap-2 rounded-full border border-brand/35 bg-surface/95 px-4 text-xs font-semibold text-brand-deep backdrop-blur-xl transition-colors card-elevated hover:border-brand/60 hover:bg-brand-soft dark:text-brand"
     >
-      <Icon name="store" size={16} />
-      {copy.myEstablishments}
+      <span className="grid size-7 shrink-0 place-items-center rounded-full bg-brand-soft">
+        <Icon name="store" size={15} />
+      </span>
+      <span className="min-w-0 truncate">{copy.myEstablishments}</span>
     </a>
   )
 }

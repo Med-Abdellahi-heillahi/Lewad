@@ -29,12 +29,8 @@ const importTypesMigrationPath = new URL(
   "../supabase/migrations/20260826000014_external_place_import_types.sql",
   import.meta.url,
 );
-const uniqueImportRpcMigrationPath = new URL(
-  "../supabase/migrations/20260826000015_rename_external_place_import_rpc.sql",
-  import.meta.url,
-);
-const uniqueImportRpcFixMigrationPath = new URL(
-  "../supabase/migrations/20260826000016_fix_external_place_import_rpc_coalesce.sql",
+const adminImportExtraFieldsMigrationPath = new URL(
+  "../supabase/migrations/20260831000018_admin_import_extra_fields.sql",
   import.meta.url,
 );
 const accountHookPath = new URL("../src/hooks/useDb1Account.ts", import.meta.url);
@@ -46,6 +42,14 @@ const englishCopyPath = new URL("../src/i18n/en.ts", import.meta.url);
 const adminUiPath = new URL("../src/components/AdminPage.tsx", import.meta.url);
 const adminDataPath = new URL("../src/lib/admin.ts", import.meta.url);
 const adminCopyPath = new URL("../src/components/admin/adminCopy.ts", import.meta.url);
+const adminImportModalPath = new URL(
+  "../src/components/admin/AdminExternalPlaceImportModal.tsx",
+  import.meta.url,
+);
+const adminImportHelperPath = new URL(
+  "../src/lib/adminExternalPlaceImport.ts",
+  import.meta.url,
+);
 
 function source(path: URL) {
   return readFileSync(path, "utf8").replaceAll("\r\n", "\n");
@@ -276,6 +280,7 @@ describe("external place fallback contracts", () => {
     const searchUi = source(searchUiPath);
     const adminUi = source(adminUiPath);
     const adminData = source(adminDataPath);
+    const adminImportModal = source(adminImportModalPath);
     const adminReviewMigration = source(adminReviewMigrationPath);
 
     expect(searchUi).toContain("searchCopy.mapResultSaveWarning");
@@ -293,7 +298,20 @@ describe("external place fallback contracts", () => {
     expect(adminData).not.toContain("SERVICE_ROLE");
     expect(adminUi).toContain("copy.importAction");
     expect(adminUi).toContain("copy.rejectAction");
-    expect(adminUi).toContain("onReview={reviewDiscovery}");
+    expect(adminUi).toContain("onImport={importDiscovery}");
+    expect(adminUi).toContain("onReject={rejectDiscovery}");
+    expect(adminUi).toContain("onClick={() => openReview('import', discovery)}");
+    expect(adminUi).toContain(
+      "{dialog?.action === 'import' && <AdminExternalPlaceImportModal",
+    );
+    expect(adminUi).toContain("await onImport(dialog.discovery, { selectedTypes, details })");
+    expect(adminUi).toContain(
+      "adminImportExternalPlaceDiscovery({ discoveryId: discovery.id, ...input })",
+    );
+    expect(adminImportModal).toContain("const result = await onSubmit(draft)");
+    expect(adminImportModal).toContain(
+      "if (completedStatus !== null) onComplete(completedStatus)",
+    );
     expect(adminReviewMigration).toContain("admin_import_external_place_discovery_as_establishment");
     expect(adminReviewMigration).toContain("admin_reject_external_place_discovery");
     expect(adminReviewMigration).toContain("if not public.is_admin() then");
@@ -317,10 +335,17 @@ describe("external place fallback contracts", () => {
   it("requires one or more stable place types before an administrator can import a discovery", () => {
     const adminUi = source(adminUiPath);
     const adminData = source(adminDataPath);
+    const adminImportModal = source(adminImportModalPath);
+    const adminImportHelper = source(adminImportHelperPath);
     const placeTypes = source(placeTypesPath);
     const importTypesMigration = source(importTypesMigrationPath);
-    const uniqueImportRpcMigration = source(uniqueImportRpcMigrationPath);
-    const uniqueImportRpcFixMigration = source(uniqueImportRpcFixMigrationPath);
+    const adminImportExtraFieldsMigration = source(adminImportExtraFieldsMigrationPath);
+    const typeStepStart = adminImportModal.indexOf("{step === 1 && (");
+    const typeStepEnd = adminImportModal.indexOf("{step === 2 && (", typeStepStart);
+    const typeStep = adminImportModal.slice(typeStepStart, typeStepEnd);
+    const continueFlowStart = adminImportModal.indexOf("const continueFlow = () => {");
+    const continueFlowEnd = adminImportModal.indexOf("\n  const goBack", continueFlowStart);
+    const continueFlow = adminImportModal.slice(continueFlowStart, continueFlowEnd);
 
     for (const key of [
       'establishment', 'company', 'region', 'moughataa', 'wilaya',
@@ -328,23 +353,44 @@ describe("external place fallback contracts", () => {
     ]) {
       expect(placeTypes).toContain(`'${key}'`);
       expect(importTypesMigration).toContain(`'${key}'`);
+      expect(adminImportExtraFieldsMigration).toContain(`'${key}'`);
     }
 
-    expect(adminUi).toContain('copy.chooseTypeTitle');
-    expect(adminUi).toContain('PLACE_TYPE_KEYS.map');
-    expect(adminUi).toContain('type="checkbox"');
-    expect(adminUi).toContain('current.includes(type)');
-    expect(adminUi).toContain(': [...current, type]');
-    expect(adminUi).toContain("selectedTypes.length === 0");
-    expect(adminUi).toContain('setTypeError(true)');
-    expect(adminUi).toContain('copy.chooseTypeError');
-    expect(adminUi).toContain('copy.confirmImport');
-    expect(adminUi).toContain('adminImportExternalPlaceDiscovery(discovery.id, selectedTypes)');
+    expect(adminUi).toContain('<AdminExternalPlaceImportModal');
+    expect(adminUi).toContain('adminImportExternalPlaceDiscovery({ discoveryId: discovery.id, ...input })');
+    expect(typeStepStart).toBeGreaterThan(-1);
+    expect(typeStepEnd).toBeGreaterThan(typeStepStart);
+    expect(typeStep).toContain('<fieldset');
+    expect(typeStep).toContain('{copy.chooseTypeTitle}</legend>');
+    expect(typeStep).toContain('PLACE_TYPE_KEYS.map');
+    expect(typeStep).toContain('type="checkbox"');
+    expect(typeStep).toContain('draft.selectedTypes.includes(type)');
+    expect(typeStep).toContain('toggleAdminExternalPlaceType(current.selectedTypes, type)');
+    expect(typeStep).toContain('copy.chooseTypeError');
+    expect(typeStep).toContain('copy.conflictingTypesError');
+    expect(continueFlowStart).toBeGreaterThan(-1);
+    expect(continueFlowEnd).toBeGreaterThan(continueFlowStart);
+    expect(continueFlow).toContain('validateAdminExternalPlaceImportTypes(draft.selectedTypes)');
+    expect(continueFlow).toContain('setTypeError(invalid)');
+    expect(continueFlow.indexOf('if (invalid) return')).toBeGreaterThan(
+      continueFlow.indexOf('validateAdminExternalPlaceImportTypes(draft.selectedTypes)'),
+    );
+    expect(continueFlow.indexOf('setStep(2)')).toBeGreaterThan(
+      continueFlow.indexOf('if (invalid) return'),
+    );
+    expect(adminImportModal).toContain('copy.confirmImport');
+    expect(adminImportModal).toContain('const result = await onSubmit(draft)');
+    expect(adminImportHelper).toContain("if (selectedTypes.length === 0) return 'types_required' as const");
+    expect(adminImportHelper).toContain("hasPrivateType && hasPublicType ? 'conflicting_natures' as const : null");
+    expect(adminImportHelper).toContain('p_discovery_id: input.discoveryId');
+    expect(adminImportHelper).toContain('p_selected_types: input.selectedTypes');
+    expect(adminImportHelper).toContain('p_details: details');
+    expect(adminImportHelper).toContain("correctedName: 'corrected_name'");
+    expect(adminImportHelper).toContain("notes: 'notes'");
     expect(adminData).toContain("'admin_import_external_place_discovery_with_types'");
     expect(adminData).not.toContain("'admin_import_external_place_discovery_as_establishment'");
-    expect(adminData).toContain('? { p_discovery_id: discoveryId, p_selected_types: selectedTypes }');
-    expect(adminData).toContain('p_selected_types: selectedTypes');
-    expect(adminData).toContain("console.error('Admin external-place import RPC failed'");
+    expect(adminData).toContain('toAdminExternalPlaceImportRpcParams(input)');
+    expect(adminData).toContain("console.error('Admin external-place review RPC failed'");
     expect(adminData).toContain('httpStatus: status');
     expect(adminData).toContain('errorCode: error.code');
     expect(adminData).toContain('import.meta.env.DEV');
@@ -352,19 +398,22 @@ describe("external place fallback contracts", () => {
 
     expect(importTypesMigration).toContain("add column if not exists place_types text[] not null default '{}'::text[];");
     expect(importTypesMigration).toContain('establishments_place_types_allowed_check');
-    expect(uniqueImportRpcMigration).toContain("create or replace function public.admin_import_external_place_discovery_with_types(\n  p_discovery_id uuid,\n  p_selected_types text[]\n)");
-    expect(uniqueImportRpcMigration).toContain("'status', 'invalid_types'");
-    expect(uniqueImportRpcMigration).toContain("pg_catalog.cardinality(v_selected_types) = 0");
-    expect(uniqueImportRpcMigration).toContain('v_selected_types <@ array[');
-    expect(uniqueImportRpcMigration).toContain('set place_types = (');
-    expect(uniqueImportRpcMigration).toContain('admin_import_external_place_discovery_as_establishment(p_discovery_id)');
-    expect(uniqueImportRpcMigration).toContain('grant execute on function public.admin_import_external_place_discovery_with_types(uuid, text[]) to authenticated;');
-    expect(uniqueImportRpcMigration).toContain("select pg_notify('pgrst', 'reload schema');");
-    expect(uniqueImportRpcFixMigration).toContain("create or replace function public.admin_import_external_place_discovery_with_types(\n  p_discovery_id uuid,\n  p_selected_types text[]\n)");
-    expect(uniqueImportRpcFixMigration).toContain("pg_catalog.unnest(coalesce(p_selected_types, '{}'::text[]))");
-    expect(uniqueImportRpcFixMigration).not.toContain('pg_catalog.coalesce(');
-    expect(uniqueImportRpcFixMigration).toContain('grant execute on function public.admin_import_external_place_discovery_with_types(uuid, text[]) to authenticated;');
-    expect(uniqueImportRpcFixMigration).toContain("select pg_notify('pgrst', 'reload schema');");
+    expect(adminImportExtraFieldsMigration).toContain("add column if not exists reviewed_place_types text[] not null default '{}'::text[];");
+    expect(adminImportExtraFieldsMigration).toContain("create or replace function public.admin_import_external_place_discovery_with_types(\n  p_discovery_id uuid,\n  p_selected_types text[],\n  p_details jsonb default '{}'::jsonb\n)");
+    expect(adminImportExtraFieldsMigration).toContain('security definer');
+    expect(adminImportExtraFieldsMigration).toContain("set search_path = ''");
+    expect(adminImportExtraFieldsMigration).toContain('if not public.is_admin() then');
+    expect(adminImportExtraFieldsMigration).toContain("'status', 'invalid_details'");
+    expect(adminImportExtraFieldsMigration).toContain("'status', 'invalid_types'");
+    expect(adminImportExtraFieldsMigration).toContain("pg_catalog.cardinality(v_selected_types) = 0");
+    expect(adminImportExtraFieldsMigration).toContain('v_selected_types <@ array[');
+    expect(adminImportExtraFieldsMigration).toContain("pg_catalog.unnest(coalesce(p_selected_types, '{}'::text[]))");
+    expect(adminImportExtraFieldsMigration).not.toContain('pg_catalog.coalesce(');
+    expect(adminImportExtraFieldsMigration).toContain('admin_import_external_place_discovery_as_establishment(p_discovery_id)');
+    expect(adminImportExtraFieldsMigration).toContain('revoke all on function public.admin_import_external_place_discovery_with_types(uuid, text[], jsonb) from public, anon;');
+    expect(adminImportExtraFieldsMigration).toContain('grant execute on function public.admin_import_external_place_discovery_with_types(uuid, text[], jsonb) to authenticated;');
+    expect(adminImportExtraFieldsMigration).toContain('revoke all on function public.admin_import_external_place_discovery_as_establishment(uuid) from public, anon, authenticated;');
+    expect(adminImportExtraFieldsMigration).toContain("select pg_notify('pgrst', 'reload schema');");
     expect(importTypesMigration).toContain('revoke all on function public.admin_import_external_place_discovery_as_establishment(uuid) from public, anon, authenticated;');
     expect(importTypesMigration).toContain('grant execute on function public.admin_import_external_place_discovery_as_establishment(uuid, text[]) to authenticated;');
   });

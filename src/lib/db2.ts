@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient'
+import { readPlaceTypeKeys, type PlaceTypeKey } from './placeTypes'
 
 export type Db2Category = {
   id: string
@@ -25,6 +26,7 @@ export type Db2Branch = {
 type Db2EstablishmentBase = {
   id: string
   name: string
+  name_ar: string | null
   slug: string
   description: string | null
   phone: string | null
@@ -32,10 +34,13 @@ type Db2EstablishmentBase = {
   website: string | null
   status: 'draft' | 'pending' | 'approved' | 'rejected' | 'suspended'
   is_verified: boolean
+  place_types: PlaceTypeKey[]
   category: Db2Category | null
 }
 
-type Db2EstablishmentRecord = Omit<Db2EstablishmentBase, 'category'> & {
+type Db2EstablishmentRecord = Omit<Db2EstablishmentBase, 'category' | 'name_ar' | 'place_types'> & {
+  name_ar: unknown
+  place_types: unknown
   category: Db2Category | Db2Category[] | null
 }
 
@@ -52,7 +57,7 @@ type Db2Result<T> = {
 const categoryFields = 'id, name, slug, icon'
 const branchFields = 'id, establishment_id, name, phone, whatsapp, address, city, neighborhood, latitude, longitude, is_main, status'
 const establishmentFields = `
-  id, name, slug, description, phone, whatsapp, website, status, is_verified,
+  id, name, name_ar, slug, description, phone, whatsapp, website, status, is_verified, place_types,
   category:categories (${categoryFields})
 `
 
@@ -92,6 +97,8 @@ async function withBranches(establishments: Db2EstablishmentBase[]): Promise<Db2
 function normalizeEstablishment(record: Db2EstablishmentRecord): Db2EstablishmentBase {
   return {
     ...record,
+    name_ar: typeof record.name_ar === 'string' ? record.name_ar : null,
+    place_types: readPlaceTypeKeys(record.place_types),
     category: Array.isArray(record.category) ? record.category[0] ?? null : record.category,
   }
 }

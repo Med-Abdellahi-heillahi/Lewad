@@ -7,10 +7,21 @@ import {
   lazy,
   Suspense,
 } from "react";
-import { type Locale, useI18n } from "../i18n";
+import { type Dictionary, type Locale, useI18n } from "../i18n";
 import { type Db2Branch, type Db2Establishment } from "../lib/db2";
-import { searchServicesWithCredit } from "../lib/db3a";
+import {
+  hydrateApprovedClientSearchPlaceTypes,
+  searchServicesWithCredit,
+} from "../lib/db3a";
 import { createMissingServiceRequest } from "../lib/db3b";
+import {
+  type ClientSearchResultPage,
+  formatClientSearchChoiceLocation,
+  getAutoSelectedClientSearchResult,
+  getClientSearchResultPage,
+  rankClientSearchResults,
+  shouldOfferClientSearchMapOption,
+} from "../lib/clientSearchResults";
 import {
   type ExternalPlace,
   searchExternalPlace,
@@ -40,6 +51,7 @@ import { useAccount } from "../hooks/useAccount";
 import { Icon, type IconName } from "./Icon";
 import { AppShell } from "./shell/AppShell";
 import { directionsUrl, hasCoordinates, mapUrl } from "./maps/mapUtils";
+import { PaginationControls } from "./ui/PaginationControls";
 const ServiceMapSheet = lazy(() =>
   import("./maps/ServiceMapSheet").then((m) => ({
     default: m.ServiceMapSheet,
@@ -63,6 +75,7 @@ type ExternalFallbackState =
   | "searching"
   | "noResult"
   | "error";
+type ExternalFallbackOrigin = "not_found" | "explicit_choice";
 type LocationPermissionState = "idle" | "requesting" | "allowed" | "denied" | "unavailable";
 
 function debugLocationFallback(event: string, details: Record<string, unknown> = {}) {
@@ -74,21 +87,6 @@ function debugLocationFallback(event: string, details: Record<string, unknown> =
 const appCopy = {
   fr: {
     title: "Recherche",
-    language: "Choisir la langue",
-    menu: "Ouvrir le menu",
-    closeMenu: "Fermer le menu",
-    items: {
-      profile: "Profil",
-      credits: "Crédits",
-      contact: "Contact",
-      settings: "Paramètres",
-      search: "Recherche",
-      recharge: "Recharger",
-    },
-    auth: "Connexion",
-    signOut: "Se déconnecter",
-    account: "Mon compte",
-    greeting: "Bonjour",
     pointsUnit: "points",
     pointsUnavailable: "Points indisponibles",
     welcome: "Que cherchez-vous aujourd’hui ?",
@@ -105,18 +103,16 @@ const appCopy = {
     minimum: "Saisissez au moins 2 caractères pour lancer la recherche.",
     loading: "Recherche en cours…",
     dataFromLewad: "Données Lewad",
-    verified: "Vérifié",
     categoryUnavailable: "Catégorie non renseignée",
     phone: "Téléphone",
     website: "Site web",
     location: "Localisation",
     nearby: "Agences",
+    chooseBranch: "Choisissez une agence",
     agenciesFound: "agences trouvées",
-    nearest: "La plus proche",
     mainBranch: "Agence principale",
     call: "Appeler",
     whatsapp: "WhatsApp",
-    directions: "Voir les agences",
     ok: "Nouvelle recherche",
     notAvailable: "Non renseigné",
     noBranches: "Aucune agence active disponible.",
@@ -132,13 +128,8 @@ const appCopy = {
       "Vous n’avez pas assez de points pour effectuer cette recherche.",
     recharge: "Recharger mes points",
     debitNotice: "1 point a été utilisé pour cette recherche.",
-    unlimitedMode: "Mode admin : recherches illimitées",
     unlimitedNotice: "Recherche illimitée — aucun point débité.",
-    balance: "Solde",
     currentBalance: "Solde actuel",
-    costPerSearch: "1 point = 1 recherche.",
-    emptyWallet:
-      "Vous n’avez plus de points. Rechargez votre compte pour continuer vos recherches.",
     viewCredits: "Voir mes crédits",
     searchedQuery: "« {query} »",
     requesting: "Envoi de la demande…",
@@ -149,9 +140,6 @@ const appCopy = {
     requestDuplicateTitle: "Demande déjà en attente",
     requestDuplicateText: "Une demande pour ce service est déjà en attente.",
     reset: "Nouvelle recherche",
-    version: "Version 1.0.0",
-    by: "By Wasla",
-    mapLabel: "Carte illustrative des agences",
     nearbyPlace: "Lieu proche",
     viewOnMap: "Voir sur la carte",
     directionsLink: "Itinéraire",
@@ -164,21 +152,6 @@ const appCopy = {
   },
   ar: {
     title: "البحث",
-    language: "اختيار اللغة",
-    menu: "فتح القائمة",
-    closeMenu: "إغلاق القائمة",
-    items: {
-      profile: "الملف الشخصي",
-      credits: "النقاط",
-      contact: "التواصل",
-      settings: "الإعدادات",
-      search: "بحث",
-      recharge: "شحن",
-    },
-    auth: "تسجيل الدخول",
-    signOut: "تسجيل الخروج",
-    account: "حسابي",
-    greeting: "مرحبًا",
     pointsUnit: "نقاط",
     pointsUnavailable: "النقاط غير متاحة",
     welcome: "ماذا تبحث عنه اليوم؟",
@@ -194,18 +167,16 @@ const appCopy = {
     minimum: "أدخل حرفين على الأقل لبدء البحث.",
     loading: "جارٍ البحث…",
     dataFromLewad: "بيانات Lewad",
-    verified: "موثّق",
     categoryUnavailable: "فئة غير محددة",
     phone: "الهاتف",
     website: "الموقع الإلكتروني",
     location: "الموقع",
     nearby: "الوكالات",
+    chooseBranch: "اختر فرعًا",
     agenciesFound: "وكالات موجودة",
-    nearest: "الأقرب",
     mainBranch: "الوكالة الرئيسية",
     call: "اتصال",
     whatsapp: "واتساب",
-    directions: "عرض الوكالات",
     ok: "بحث جديد",
     notAvailable: "غير متاح",
     noBranches: "لا توجد وكالة نشطة حاليًا.",
@@ -219,12 +190,8 @@ const appCopy = {
     insufficientText: "ليس لديك نقاط كافية لإجراء هذا البحث.",
     recharge: "شحن نقاطي",
     debitNotice: "تم استخدام نقطة واحدة لهذا البحث.",
-    unlimitedMode: "وضع الإدارة: بحث غير محدود",
     unlimitedNotice: "بحث غير محدود — لم يتم خصم أي نقطة.",
-    balance: "الرصيد",
     currentBalance: "الرصيد الحالي",
-    costPerSearch: "نقطة واحدة = عملية بحث واحدة.",
-    emptyWallet: "لم تعد لديك نقاط. أعد شحن حسابك لمتابعة البحث.",
     viewCredits: "عرض نقاطي",
     searchedQuery: "«‏ {query} ‏»",
     requesting: "جارٍ إرسال الطلب…",
@@ -235,9 +202,6 @@ const appCopy = {
     requestDuplicateTitle: "الطلب قيد الانتظار بالفعل",
     requestDuplicateText: "يوجد طلب قيد الانتظار لهذه الخدمة بالفعل.",
     reset: "بحث جديد",
-    version: "الإصدار 1.0.0",
-    by: "By Wasla",
-    mapLabel: "خريطة توضيحية للوكالات",
     nearbyPlace: "المكان القريب",
     viewOnMap: "عرض على الخريطة",
     directionsLink: "الاتجاهات",
@@ -250,21 +214,6 @@ const appCopy = {
   },
   en: {
     title: "Search",
-    language: "Choose language",
-    menu: "Open menu",
-    closeMenu: "Close menu",
-    items: {
-      profile: "Profile",
-      credits: "Credits",
-      contact: "Contact",
-      settings: "Settings",
-      search: "Search",
-      recharge: "Recharge",
-    },
-    auth: "Sign in",
-    signOut: "Sign out",
-    account: "My account",
-    greeting: "Hello",
     pointsUnit: "points",
     pointsUnavailable: "Points unavailable",
     welcome: "What are you looking for today?",
@@ -281,18 +230,16 @@ const appCopy = {
     minimum: "Enter at least 2 characters to search.",
     loading: "Searching…",
     dataFromLewad: "Lewad data",
-    verified: "Verified",
     categoryUnavailable: "Category unavailable",
     phone: "Phone",
     website: "Website",
     location: "Location",
     nearby: "Agencies",
+    chooseBranch: "Choose a branch",
     agenciesFound: "agencies found",
-    nearest: "Nearest",
     mainBranch: "Main agency",
     call: "Call",
     whatsapp: "WhatsApp",
-    directions: "View agencies",
     ok: "New search",
     notAvailable: "Not available",
     noBranches: "No active agency is available.",
@@ -306,13 +253,8 @@ const appCopy = {
     insufficientText: "You do not have enough points to run this search.",
     recharge: "Recharge my points",
     debitNotice: "1 point was used for this search.",
-    unlimitedMode: "Admin mode: unlimited searches",
     unlimitedNotice: "Unlimited search — no point was debited.",
-    balance: "Balance",
     currentBalance: "Current balance",
-    costPerSearch: "1 point = 1 search.",
-    emptyWallet:
-      "You have no points left. Recharge your account to continue searching.",
     viewCredits: "View my credits",
     searchedQuery: "“{query}”",
     requesting: "Sending request…",
@@ -323,9 +265,6 @@ const appCopy = {
     requestDuplicateTitle: "Request already pending",
     requestDuplicateText: "A request for this service is already pending.",
     reset: "New search",
-    version: "Version 1.0.0",
-    by: "By Wasla",
-    mapLabel: "Illustrative agency map",
     nearbyPlace: "Nearby place",
     viewOnMap: "View on map",
     directionsLink: "Directions",
@@ -339,12 +278,8 @@ const appCopy = {
 } as const;
 
 type AppCopy = (typeof appCopy)[Locale];
+type AppSearchCopy = Dictionary["appSearch"];
 
-const pinPositions = [
-  "start-[11%] top-[70%]",
-  "start-[43%] top-[48%]",
-  "end-[12%] top-[18%]",
-] as const;
 const pinColors = [
   "bg-brand text-brand-ink",
   "bg-[var(--pin-2)] text-white",
@@ -354,6 +289,13 @@ const pinColors = [
 function formatLocation(branch: Db2Branch | undefined, fallback: string) {
   if (!branch) return fallback;
   return branch.neighborhood ?? branch.address ?? branch.city ?? fallback;
+}
+
+function getPrimaryBranch(establishment: Db2Establishment) {
+  return (
+    establishment.branches.find((branch) => branch.is_main) ??
+    establishment.branches[0]
+  );
 }
 
 function phoneHref(phone: string) {
@@ -370,151 +312,6 @@ function whatsappHref(phone: string) {
 
 function websiteHref(website: string) {
   return /^https?:\/\//i.test(website) ? website : `https://${website}`;
-}
-
-function MockMap({ copy, branches }: { copy: AppCopy; branches: Db2Branch[] }) {
-  const mappableBranches = branches
-    .filter((branch) => branch.latitude !== null && branch.longitude !== null)
-    .slice(0, 3);
-  const nearestBranch =
-    branches.find((branch) => branch.is_main) ?? branches[0];
-
-  return (
-    <div
-      className="relative min-h-72 overflow-hidden rounded-2xl border border-line bg-[var(--map-bg)]"
-      role="img"
-      aria-label={copy.mapLabel}
-    >
-      <div className="absolute inset-0 opacity-45 [background-image:linear-gradient(30deg,transparent_45%,var(--map-line)_46%,var(--map-line)_49%,transparent_50%),linear-gradient(120deg,transparent_42%,var(--map-road)_43%,var(--map-road)_47%,transparent_48%),radial-gradient(var(--map-line)_1px,transparent_1px)] [background-size:170px_110px,210px_170px,13px_13px]" />
-      <svg
-        className="absolute inset-0 size-full"
-        viewBox="0 0 440 310"
-        fill="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M61 242C122 213 125 155 196 173c59 15 92-76 182-112"
-          stroke="var(--map-line)"
-          strokeWidth="5"
-          strokeDasharray="9 8"
-        />
-        <path
-          d="M61 242C122 213 125 155 196 173c59 15 92-76 182-112"
-          stroke="var(--map-road)"
-          strokeWidth="2"
-        />
-      </svg>
-      {mappableBranches.map((branch, index) => (
-        <span
-          key={branch.id}
-          title={branch.name}
-          className={`absolute grid size-9 place-items-center rounded-full border-4 border-surface ${pinPositions[index]} ${pinColors[index]}`}
-        >
-          <Icon name="pin" size={17} />
-        </span>
-      ))}
-      <span className="absolute start-4 top-4 rounded-full bg-surface/90 px-3 py-1.5 text-xs font-bold text-ink shadow-sm">
-        {branches.length} {copy.agenciesFound}
-      </span>
-      {nearestBranch && (
-        <span className="absolute bottom-4 end-4 max-w-[72%] truncate rounded-full border border-line bg-surface/90 px-3 py-1.5 text-xs font-bold text-ink shadow-sm">
-          {copy.nearest} · {nearestBranch.name}
-        </span>
-      )}
-    </div>
-  );
-}
-
-/**
- * Panneau de solde. C'est le contrat de la recherche : ce qu'il reste, ce
- * qu'une recherche coûte, et comment recharger. Sur mobile il se glisse sous
- * le champ ; à partir de `lg` il occupe la colonne de droite.
- */
-function WalletPanel({
-  copy,
-  balance,
-  loading,
-  unlimited,
-}: {
-  copy: AppCopy;
-  balance: number | null;
-  loading: boolean;
-  unlimited: boolean;
-}) {
-  const { locale } = useI18n();
-  const empty = balance === 0;
-
-  return (
-    <aside className={`${card} p-5`} aria-label={copy.balance}>
-      <p className="text-xs font-semibold text-muted">{copy.balance}</p>
-
-      {loading && balance === null ? (
-        <span
-          aria-hidden="true"
-          className="mt-2 block h-9 w-28 rounded-lg bg-surface-2 motion-safe:animate-pulse"
-        />
-      ) : balance === null ? (
-        <p className="mt-2 text-base font-semibold text-muted">
-          {copy.pointsUnavailable}
-        </p>
-      ) : (
-        <p className="mt-1 flex flex-wrap items-baseline gap-2">
-          <span className="tabular text-3xl leading-none font-bold tracking-tight text-ink">
-            {formatNumber(balance, locale)}
-          </span>
-          <span className="text-sm font-semibold text-muted">
-            {copy.pointsUnit}
-          </span>
-        </p>
-      )}
-
-      {unlimited ? (
-        <p
-          className="mt-3 flex items-start gap-2 rounded-xl border border-answer/25 bg-answer-bg px-3 py-2.5 text-sm font-semibold leading-6 text-answer"
-          role="status"
-        >
-          <span className="mt-0.5 shrink-0">
-            <Icon name="sparkle" size={16} />
-          </span>
-          {copy.unlimitedMode}
-        </p>
-      ) : (
-        <p className="mt-3 flex items-start gap-2 text-sm leading-6 text-muted">
-          <span className="mt-0.5 shrink-0 text-muted">
-            <Icon name="info" size={16} />
-          </span>
-          {copy.costPerSearch}
-        </p>
-      )}
-
-      {empty && !unlimited && (
-        <p
-          className="mt-3 flex items-start gap-2 rounded-xl border border-ask/25 bg-ask-bg px-3 py-2.5 text-sm font-medium text-ask"
-          role="status"
-        >
-          <span className="mt-0.5 shrink-0">
-            <Icon name="alert" size={16} />
-          </span>
-          {copy.emptyWallet}
-        </p>
-      )}
-
-      <div className="mt-4 grid gap-2">
-        <a
-          href="/recharge"
-          className={`${empty && !unlimited ? btnPrimary : btnGhost} w-full`}
-        >
-          {copy.recharge}
-        </a>
-        <a
-          href="/credits"
-          className="inline-flex min-h-11 items-center justify-center text-sm font-semibold text-muted transition-colors hover:text-ink"
-        >
-          {copy.viewCredits}
-        </a>
-      </div>
-    </aside>
-  );
 }
 
 /** Points épuisés : l'écran explique la situation et donne la seule sortie utile. */
@@ -578,6 +375,13 @@ export function PublicSearchDemo() {
   const [state, setState] = useState<SearchState>("initial");
   const [validation, setValidation] = useState<ValidationMessage>(null);
   const [results, setResults] = useState<Db2Establishment[]>([]);
+  const [selectedResult, setSelectedResult] =
+    useState<Db2Establishment | null>(null);
+  const [resultChoiceRequired, setResultChoiceRequired] = useState(false);
+  const [resultPage, setResultPage] = useState(1);
+  const [resultQuery, setResultQuery] = useState<string | null>(null);
+  const [resultMapChoiceAvailable, setResultMapChoiceAvailable] =
+    useState(false);
   const [didYouMean, setDidYouMean] = useState<ServiceSuggestion | null>(null);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [searchFailed, setSearchFailed] = useState(false);
@@ -590,6 +394,11 @@ export function PublicSearchDemo() {
   const [requestState, setRequestState] = useState<RequestState>("idle");
   const [externalFallbackState, setExternalFallbackState] =
     useState<ExternalFallbackState>("idle");
+  const [externalFallbackOrigin, setExternalFallbackOrigin] =
+    useState<ExternalFallbackOrigin>("not_found");
+  const [externalFallbackQuery, setExternalFallbackQuery] = useState<
+    string | null
+  >(null);
   const storedSearchLocation = useMemo(() => readSearchLocationContext(), []);
   const [locationPermissionState, setLocationPermissionState] =
     useState<LocationPermissionState>(
@@ -618,6 +427,9 @@ export function PublicSearchDemo() {
   const suggestionListRef = useRef<HTMLDivElement>(null);
   const searchIdRef = useRef(0);
   const externalSearchIdRef = useRef(0);
+  const locationRequestIdRef = useRef(0);
+  const externalLocationFlowIdRef = useRef(0);
+  const missingServiceRequestIdRef = useRef(0);
 
   const [suggestions, setSuggestions] = useState<ServiceSuggestion[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
@@ -625,6 +437,10 @@ export function PublicSearchDemo() {
   const hasSuggestionQuery = suggestionQuery.length >= SUGGESTION_MIN_LENGTH;
   const balance = wallet?.balance ?? null;
   const hasUnlimitedSearches = isAdminRole(profile?.role);
+  const resultPagination = useMemo(
+    () => getClientSearchResultPage(results, resultPage),
+    [resultPage, results],
+  );
   const focusSearch = () => inputRef.current?.focus();
   const suggestionOptions = () =>
     Array.from(
@@ -653,6 +469,29 @@ export function PublicSearchDemo() {
     locationPromptVisible,
     selectedWilaya,
   ]);
+
+  useEffect(() => {
+    if (selectedResult && resultChoiceRequired) {
+      document.getElementById("client-search-back-to-results")?.focus();
+    }
+  }, [resultChoiceRequired, selectedResult]);
+
+  useEffect(() => {
+    if (externalFallbackOrigin !== "explicit_choice") return;
+
+    const headingId =
+      state === "externalFound"
+        ? "client-search-map-result-heading"
+        : state === "unavailable"
+          ? "client-search-map-fallback-heading"
+          : null;
+    if (!headingId) return;
+
+    const timer = window.setTimeout(() => {
+      document.getElementById(headingId)?.focus();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [externalFallbackOrigin, externalFallbackState, state]);
 
   /*
    * Navigation clavier dans la liste : flèches pour parcourir, Échap pour
@@ -721,6 +560,11 @@ export function PublicSearchDemo() {
 
   const clearSearchState = () => {
     setResults([]);
+    setSelectedResult(null);
+    setResultChoiceRequired(false);
+    setResultPage(1);
+    setResultQuery(null);
+    setResultMapChoiceAvailable(false);
     setDidYouMean(null);
     setSearchFailed(false);
     setDebited(false);
@@ -729,7 +573,11 @@ export function PublicSearchDemo() {
     setLastSearchLogId(null);
     setRequestState("idle");
     externalSearchIdRef.current += 1;
+    externalLocationFlowIdRef.current += 1;
+    missingServiceRequestIdRef.current += 1;
     setExternalFallbackState("idle");
+    setExternalFallbackOrigin("not_found");
+    setExternalFallbackQuery(null);
     setSearchInMauritania(true);
     setExternalPlace(null);
     setExternalSearchError(null);
@@ -766,6 +614,7 @@ export function PublicSearchDemo() {
     try {
       result = await searchServicesWithCredit(requestedQuery);
     } catch {
+      if (searchId !== searchIdRef.current) return;
       debugLocationFallback("internal search failed", { query: requestedQuery });
       setSearchFailed(true);
       setState("unavailable");
@@ -810,14 +659,40 @@ export function PublicSearchDemo() {
       return;
     }
 
-    setResults(result.results);
     setDebited(result.debitedPoints === 1);
     setUnlimitedSearch(result.unlimited);
 
     if (result.status === "success" && result.results.length) {
+      const hydratedResults = await hydrateApprovedClientSearchPlaceTypes(
+        result.results,
+      );
+      if (searchId !== searchIdRef.current) return;
+      const rankedResults = rankClientSearchResults(
+        hydratedResults,
+        requestedQuery,
+      );
+      const autoSelectedResult = getAutoSelectedClientSearchResult(
+        rankedResults,
+        result.resultsCount,
+        requestedQuery,
+      );
+      setResults(rankedResults);
+      setSelectedResult(autoSelectedResult);
+      setResultChoiceRequired(autoSelectedResult === null);
+      setResultPage(1);
+      setResultQuery(requestedQuery);
+      setResultMapChoiceAvailable(
+        shouldOfferClientSearchMapOption(
+          rankedResults,
+          result.resultsCount,
+          requestedQuery,
+        ),
+      );
       setState("found");
       return;
     }
+
+    setResults([]);
 
     if (result.status !== "not_found") {
       setSearchFailed(true);
@@ -826,6 +701,8 @@ export function PublicSearchDemo() {
     }
 
     setLastNotFoundQuery(requestedQuery);
+    setExternalFallbackOrigin("not_found");
+    setExternalFallbackQuery(requestedQuery);
     setLastSearchLogId(result.searchLogId);
     setState("unavailable");
     setExternalFallbackState("askingLocation");
@@ -837,7 +714,7 @@ export function PublicSearchDemo() {
         country: "Mauritania",
         hasLocation: Boolean(currentLocation),
       });
-      void runExternalSearch(currentLocation, requestedQuery);
+      void runExternalSearch(currentLocation, requestedQuery, true);
     }
 
     // La correction orthographique ne doit jamais proposer un nom qui n'existe
@@ -851,16 +728,17 @@ export function PublicSearchDemo() {
 
   const runExternalSearch = async (
     location: SearchCoordinates | null = currentLocation,
-    fallbackQuery = lastNotFoundQuery,
+    fallbackQuery = externalFallbackQuery,
+    searchAllowed = searchInMauritania,
   ) => {
     if (
       !fallbackQuery ||
-      !searchInMauritania ||
+      !searchAllowed ||
       externalFallbackState === "searching"
     ) {
       debugLocationFallback("fallback skipped", {
         hasQuery: Boolean(fallbackQuery),
-        searchInMauritania,
+        searchInMauritania: searchAllowed,
         alreadySearching: externalFallbackState === "searching",
       });
       return;
@@ -883,6 +761,7 @@ export function PublicSearchDemo() {
         location,
       });
     } catch {
+      if (externalSearchId !== externalSearchIdRef.current) return;
       debugLocationFallback("geocode error", { query: fallbackQuery });
       setExternalSearchError("error");
       setExternalFallbackState("error");
@@ -922,6 +801,7 @@ export function PublicSearchDemo() {
     onAllowed?: (coordinates: SearchCoordinates) => void,
     onUnavailable?: () => void,
   ) => {
+    const locationRequestId = ++locationRequestIdRef.current;
     if (!navigator.geolocation) {
       setLocationPermissionState("unavailable");
       setLocationPromptVisible(false);
@@ -932,6 +812,7 @@ export function PublicSearchDemo() {
     setLocationPermissionState("requesting");
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        if (locationRequestId !== locationRequestIdRef.current) return;
         const coordinates = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
@@ -943,6 +824,7 @@ export function PublicSearchDemo() {
         onAllowed?.(coordinates);
       },
       (error) => {
+        if (locationRequestId !== locationRequestIdRef.current) return;
         setLocationPermissionState(error.code === 1 ? "denied" : "unavailable");
         setLocationPromptVisible(false);
         onUnavailable?.();
@@ -957,14 +839,27 @@ export function PublicSearchDemo() {
   };
 
   const requestLocationForExternalSearch = () => {
+    const fallbackQuery = externalFallbackQuery;
+    if (!fallbackQuery) return;
+
+    const flowId = ++externalLocationFlowIdRef.current;
     debugLocationFallback("allow location clicked", { source: "fallback" });
+    setSearchInMauritania(true);
     requestCurrentLocation(
-      (coordinates) => void runExternalSearch(coordinates),
-      () => setExternalFallbackState("choosingWilaya"),
+      (coordinates) => {
+        if (flowId !== externalLocationFlowIdRef.current) return;
+        void runExternalSearch(coordinates, fallbackQuery, true);
+      },
+      () => {
+        if (flowId !== externalLocationFlowIdRef.current) return;
+        setExternalFallbackState("choosingWilaya");
+      },
     );
   };
 
   const useWilayaFallback = () => {
+    externalLocationFlowIdRef.current += 1;
+    missingServiceRequestIdRef.current += 1;
     debugLocationFallback("choose wilaya clicked", { source: "fallback" });
     setLocationPromptVisible(false);
     setExternalFallbackState("choosingWilaya");
@@ -994,13 +889,16 @@ export function PublicSearchDemo() {
   const handleRequestMissingService = async () => {
     if (!lastNotFoundQuery || requestState === "loading") return;
 
+    const requestedQuery = lastNotFoundQuery;
+    const requestId = ++missingServiceRequestIdRef.current;
     setDidYouMean(null);
     setRequestState("loading");
     const result = await createMissingServiceRequest({
-      query: lastNotFoundQuery,
+      query: requestedQuery,
       message: null,
       searchLogId: lastSearchLogId,
     });
+    if (requestId !== missingServiceRequestIdRef.current) return;
 
     if (result.status === "created" || result.status === "duplicate") {
       setRequestState(result.status);
@@ -1019,6 +917,26 @@ export function PublicSearchDemo() {
     clearSearchState();
     setState("initial");
     window.setTimeout(focusSearch, 0);
+  };
+
+  const editSearchQuery = (value: string) => {
+    if (state === "loading") return;
+
+    searchIdRef.current += 1;
+    externalSearchIdRef.current += 1;
+    externalLocationFlowIdRef.current += 1;
+    missingServiceRequestIdRef.current += 1;
+    setExternalFallbackState("idle");
+    setExternalFallbackOrigin("not_found");
+    setExternalFallbackQuery(null);
+    setExternalPlace(null);
+    setExternalSearchError(null);
+    setRequestState("idle");
+    setQuery(value);
+    setValidation(null);
+    setDidYouMean(null);
+    setState("initial");
+    setSuggestionsOpen(true);
   };
 
   /** Remplit le champ sans rien débiter : l'utilisateur lance la recherche lui-même. */
@@ -1044,6 +962,9 @@ export function PublicSearchDemo() {
   const searchedQueryLabel = lastNotFoundQuery
     ? copy.searchedQuery.replace("{query}", lastNotFoundQuery)
     : "";
+  const externalFallbackQueryLabel = externalFallbackQuery
+    ? copy.searchedQuery.replace("{query}", externalFallbackQuery)
+    : "";
   const selectedWilayaLabel = selectedWilaya
     ? searchCopy.wilayas[selectedWilaya]
     : null;
@@ -1059,31 +980,85 @@ export function PublicSearchDemo() {
     setSearchLocationPickerOpen(true);
   };
 
+  const selectSearchResult = (establishment: Db2Establishment) => {
+    setSelectedResult(establishment);
+  };
+
+  const searchResultQueryOnMap = () => {
+    if (!resultQuery) return;
+
+    externalSearchIdRef.current += 1;
+    externalLocationFlowIdRef.current += 1;
+    setExternalFallbackOrigin("explicit_choice");
+    setExternalFallbackQuery(resultQuery);
+    setExternalFallbackState("askingLocation");
+    setSearchInMauritania(true);
+    setExternalPlace(null);
+    setExternalSearchError(null);
+    setState("unavailable");
+
+    if (currentLocation || selectedWilaya) {
+      void runExternalSearch(currentLocation, resultQuery, true);
+    }
+  };
+
+  const returnToInternalResults = () => {
+    externalSearchIdRef.current += 1;
+    externalLocationFlowIdRef.current += 1;
+    setExternalFallbackState("idle");
+    setExternalFallbackOrigin("not_found");
+    setExternalFallbackQuery(null);
+    setSearchInMauritania(true);
+    setExternalPlace(null);
+    setExternalSearchError(null);
+    setState("found");
+    window.setTimeout(() => {
+      document.getElementById("client-search-map-choice")?.focus();
+    }, 0);
+  };
+
+  const returnToSearchResults = () => {
+    const selectedResultId = selectedResult?.id;
+    setSelectedResult(null);
+    window.setTimeout(() => {
+      if (selectedResultId) {
+        document
+          .getElementById(`client-search-result-choice-${selectedResultId}`)
+          ?.focus();
+      }
+    }, 0);
+  };
+
+  const changeResultPage = (page: number) => {
+    setResultPage(page);
+    window.setTimeout(() => {
+      document.getElementById("client-search-results-heading")?.focus();
+    }, 0);
+  };
+
   return (
     <AppShell active="search" documentTitle={copy.title} skipLabel={copy.input}>
       <main id="app-main" className={`${appWrap} ${appPad}`}>
-        {/* Desktop : la recherche garde la colonne large, le solde tient une
-            colonne dédiée qui reste visible pendant qu'on lit un résultat.
-            Mobile : une seule colonne, le solde juste sous le champ. */}
-        <div className="mx-auto max-w-3xl lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start lg:gap-8">
-          <header className="min-w-0 lg:col-start-1">
-            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 text-[11px] font-bold tracking-[0.08em] text-muted uppercase rtl:tracking-normal rtl:normal-case">
-              <span className="size-1.5 rounded-full bg-brand-deep dark:bg-brand" />
+        <div className="relative isolate mx-auto max-w-4xl before:pointer-events-none before:absolute before:inset-x-[-1rem] before:-top-8 before:-z-10 before:h-72 before:rounded-[2.5rem] before:bg-gradient-to-br before:from-tint-5/55 before:via-tint-1/30 before:to-tint-3/25 before:blur-2xl sm:before:inset-x-[-2rem]">
+          <header className="relative min-w-0 overflow-hidden rounded-t-3xl border border-b-0 border-line bg-gradient-to-br from-surface via-surface to-tint-5/45 px-5 pt-6 pb-3 sm:px-7 sm:pt-8 sm:pb-4">
+            <span aria-hidden="true" className="pointer-events-none absolute -top-16 end-[-3rem] size-44 rounded-full bg-tint-3/45 blur-3xl" />
+            <span className="relative inline-flex items-center gap-2 rounded-full border border-tint-ink-5/15 bg-tint-5/65 px-3 py-1.5 text-[11px] font-bold tracking-[0.08em] text-tint-ink-5 uppercase rtl:tracking-normal rtl:normal-case">
+              <span className="size-1.5 rounded-full bg-tint-ink-5" />
               Lewad V1
             </span>
             <h1
               id="app-demo-title"
-              className="mt-4 text-[30px] leading-[1.12] font-bold tracking-[-0.04em] text-ink sm:mt-5 sm:text-4xl"
+              className="relative mt-4 text-[30px] leading-[1.12] font-bold tracking-[-0.04em] text-ink sm:mt-5 sm:text-4xl"
             >
               {copy.welcome}
             </h1>
-            <p className="mt-3 max-w-xl text-[15px] leading-7 text-muted sm:mt-4 sm:text-lg">
+            <p className="relative mt-3 max-w-xl text-[15px] leading-7 text-muted sm:mt-4 sm:text-lg">
               {copy.description}
             </p>
           </header>
 
           <form
-            className="mt-7 min-w-0 sm:mt-8 lg:col-start-1"
+            className="relative z-20 min-w-0 rounded-b-3xl border border-t-0 border-line bg-surface/95 px-5 pt-2 pb-5 card-elevated sm:px-7 sm:pb-7"
             onSubmit={(event) => {
               event.preventDefault();
               void runSearch();
@@ -1107,17 +1082,11 @@ export function PublicSearchDemo() {
                   ref={inputRef}
                   id="service-search"
                   value={query}
+                  disabled={state === "loading"}
                   onFocus={() => setSuggestionsOpen(true)}
-                  onChange={(event) => {
-                    setQuery(event.target.value);
-                    setValidation(null);
-                    setDidYouMean(null);
-                    setExternalFallbackState("idle");
-                    setState("initial");
-                    setSuggestionsOpen(true);
-                  }}
+                  onChange={(event) => editSearchQuery(event.target.value)}
                   placeholder={copy.placeholder}
-                  className="h-13 w-full rounded-xl border border-line bg-surface py-3 pe-4 ps-11 text-base text-ink shadow-sm outline-none transition-colors placeholder:text-muted focus:border-brand-deep focus:ring-2 focus:ring-brand-deep/15"
+                  className="h-14 w-full rounded-2xl border border-line bg-page py-3 pe-4 ps-11 text-base text-ink shadow-sm outline-none transition-colors placeholder:text-muted hover:border-line-strong focus:border-brand-deep focus:ring-2 focus:ring-brand-deep/15 disabled:cursor-wait disabled:opacity-70"
                   autoComplete="off"
                   enterKeyHint="search"
                   aria-autocomplete="list"
@@ -1146,9 +1115,9 @@ export function PublicSearchDemo() {
                     role="listbox"
                     aria-label={searchCopy.suggestions}
                     aria-busy={suggestionsLoading}
-                    className="absolute z-30 mt-2 max-h-72 w-full overflow-y-auto overscroll-contain rounded-xl border border-line bg-surface p-1 shadow-lg"
+                    className="absolute z-30 mt-2 max-h-72 w-full overflow-y-auto overscroll-contain rounded-2xl border border-line bg-surface p-1.5 card-elevated"
                   >
-                    <p className="px-3 py-2 text-xs font-bold tracking-[0.08em] text-muted uppercase rtl:tracking-normal rtl:normal-case">
+                    <p className="rounded-xl bg-tint-1/35 px-3 py-2 text-xs font-bold tracking-[0.08em] text-tint-ink-1 uppercase rtl:tracking-normal rtl:normal-case">
                       {searchCopy.suggestions}
                     </p>
                     {suggestions.length ? (
@@ -1172,7 +1141,7 @@ export function PublicSearchDemo() {
                             type="button"
                             role="option"
                             aria-selected={false}
-                            className="flex min-h-11 w-full items-start gap-3 rounded-lg px-3 py-2 text-start transition-colors hover:bg-brand-soft focus:bg-brand-soft focus:outline-none"
+                            className="flex min-h-12 w-full items-start gap-3 rounded-xl px-3 py-2.5 text-start transition-colors hover:bg-tint-5/45 focus:bg-tint-5/45 focus:outline-none"
                             onMouseDown={(event) => event.preventDefault()}
                             onClick={() => applySuggestion(suggestion)}
                             onKeyDown={(event) => moveSuggestionFocus(event)}
@@ -1180,7 +1149,7 @@ export function PublicSearchDemo() {
                             <Icon
                               name="store"
                               size={17}
-                              className="mt-0.5 shrink-0 text-brand-deep dark:text-brand"
+                              className="mt-0.5 shrink-0 text-tint-ink-5"
                             />
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-sm font-semibold text-ink">
@@ -1208,7 +1177,7 @@ export function PublicSearchDemo() {
                 )}
               </div>
               <button
-                className={`${btnPrimary} h-13 sm:min-w-36`}
+                className={`${btnPrimary} h-14 rounded-2xl sm:min-w-36`}
                 type="submit"
                 disabled={state === "loading"}
               >
@@ -1232,14 +1201,16 @@ export function PublicSearchDemo() {
               </p>
             )}
 
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-surface-2 px-3.5 py-3 text-sm text-muted">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-tint-ink-1/15 bg-tint-1/45 px-3.5 py-3 text-sm text-ink-soft">
               <p className="flex min-w-0 items-center gap-2 leading-6">
-                <Icon name="pin" size={16} className="shrink-0 text-brand-deep" />
+                <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-surface text-tint-ink-1 shadow-sm">
+                  <Icon name="pin" size={16} />
+                </span>
                 <span>{searchContextMessage}</span>
               </p>
               <button
                 type="button"
-                className="min-h-11 shrink-0 rounded-lg px-2.5 text-sm font-semibold text-brand-deep underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-brand-deep/30"
+                className="min-h-11 shrink-0 rounded-xl px-2.5 text-sm font-semibold text-tint-ink-1 underline-offset-4 hover:bg-surface/70 hover:underline focus:outline-none focus:ring-2 focus:ring-tint-ink-1/25"
                 onClick={openSearchLocationPicker}
               >
                 {searchCopy.changeWilaya}
@@ -1247,7 +1218,7 @@ export function PublicSearchDemo() {
             </div>
 
             {searchLocationPickerOpen && (
-              <div className="mt-3 rounded-xl border border-line bg-surface p-3.5 shadow-sm sm:max-w-md">
+              <div className="mt-3 rounded-2xl border border-tint-ink-1/15 bg-gradient-to-br from-surface to-tint-1/25 p-3.5 card-elevated sm:max-w-md">
                 <label
                   className="block text-sm font-semibold text-ink"
                   htmlFor="search-context-wilaya"
@@ -1258,7 +1229,7 @@ export function PublicSearchDemo() {
                   id="search-context-wilaya"
                   value={selectedWilaya}
                   onChange={(event) => handleWilayaChange(event.target.value)}
-                  className="mt-2 min-h-11 w-full rounded-xl border border-line bg-surface px-3 text-base text-ink outline-none focus:border-brand-deep focus:ring-2 focus:ring-brand-deep/15"
+                  className="mt-2 min-h-12 w-full rounded-xl border border-line bg-surface px-3 text-base text-ink outline-none focus:border-tint-ink-1 focus:ring-2 focus:ring-tint-ink-1/15"
                 >
                   <option value="">{searchCopy.allMauritania}</option>
                   {MAURITANIA_WILAYAS.map((wilaya) => (
@@ -1273,11 +1244,11 @@ export function PublicSearchDemo() {
             {!hasUnlimitedSearches &&
               locationPromptVisible && (
                 <section
-                  className={`${card} mt-4 border-brand-deep/20 bg-brand-soft/45 p-4 sm:p-5`}
+                  className={`${card} mt-4 border-tint-ink-5/20 bg-tint-5/45 p-4 sm:p-5`}
                   role="status"
                 >
                   <div className="flex items-start gap-3">
-                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-surface text-brand-deep shadow-sm">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-surface text-tint-ink-5 shadow-sm">
                       <Icon name="pin" size={19} />
                     </span>
                     <p className="pt-1 text-sm leading-6 text-ink">
@@ -1319,7 +1290,7 @@ export function PublicSearchDemo() {
               )}
           </form>
 
-          <div className="-mx-4 mt-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 lg:col-start-1">
+          <div className="-mx-4 mt-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
             <span className="shrink-0 text-xs font-semibold text-muted">
               {copy.examples}
             </span>
@@ -1331,7 +1302,7 @@ export function PublicSearchDemo() {
                   setQuery(chip);
                   void runSearch(chip);
                 }}
-                className="min-h-11 shrink-0 rounded-full border border-line bg-surface px-4 text-sm text-ink transition-colors hover:border-brand-deep hover:bg-brand-soft"
+                className="min-h-11 shrink-0 rounded-full border border-line bg-surface/90 px-4 text-sm text-ink transition-colors hover:border-tint-ink-3/30 hover:bg-tint-3/40"
               >
                 {chip}
               </button>
@@ -1339,15 +1310,15 @@ export function PublicSearchDemo() {
           </div>
 
           <div
-            className="mt-6 min-w-0 sm:mt-8 lg:col-start-1"
-            aria-live="polite"
+            className="mt-6 min-w-0 sm:mt-8"
+            aria-live={selectedResult && resultChoiceRequired ? "off" : "polite"}
           >
             {state === "initial" && (
               <section
-                className={`${card} grid min-h-48 place-items-center border-dashed px-6 py-10 text-center`}
+                className={`${card} grid min-h-48 place-items-center border-dashed bg-gradient-to-br from-surface via-surface to-tint-5/30 px-6 py-10 text-center`}
               >
                 <div>
-                  <span className="mx-auto grid size-11 place-items-center rounded-xl bg-brand-soft text-brand-deep">
+                  <span className="mx-auto grid size-11 place-items-center rounded-xl bg-tint-5 text-tint-ink-5">
                     <Icon name="search" size={21} />
                   </span>
                   <h2 className="mt-4 text-xl font-bold">
@@ -1409,21 +1380,46 @@ export function PublicSearchDemo() {
                     </p>
                   )
                 )}
-                <div className="grid gap-6">
-                  {results.map((establishment) => (
+                {selectedResult ? (
+                  <div className="grid gap-4">
+                    {resultChoiceRequired && (
+                      <button
+                        id="client-search-back-to-results"
+                        type="button"
+                        className={`${btnGhost} w-full justify-self-start sm:w-auto`}
+                        onClick={returnToSearchResults}
+                        aria-label={`${searchCopy.backToResults}: ${selectedResult.name}`}
+                      >
+                        <span className="rtl:rotate-180">
+                          <Icon name="arrow" size={17} className="rotate-180" />
+                        </span>
+                        {searchCopy.backToResults}
+                      </button>
+                    )}
                     <EstablishmentResult
-                      key={establishment.id}
-                      establishment={establishment}
+                      establishment={selectedResult}
                       copy={copy}
                       onReset={reset}
                     />
-                  ))}
-                </div>
+                  </div>
+                ) : (
+                  <SearchResultChoices
+                    copy={copy}
+                    searchCopy={searchCopy}
+                    query={resultQuery ?? ""}
+                    pagination={resultPagination}
+                    onPageChange={changeResultPage}
+                    onSelect={selectSearchResult}
+                    onSearchMap={searchResultQueryOnMap}
+                    showMapSearch={resultMapChoiceAvailable}
+                  />
+                )}
               </div>
             )}
 
             {state === "externalFound" && externalPlace && (
-              <section className={`${card} overflow-hidden`}>
+              <section className={`${card} relative overflow-hidden bg-gradient-to-br from-surface via-surface to-tint-1/35`}>
+                <div aria-hidden="true" className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-tint-ink-1 via-brand to-answer opacity-60" />
                 {debited && (
                   <p
                     className="m-5 flex items-center gap-2 rounded-xl border border-answer/25 bg-answer-bg px-3.5 py-3 text-sm font-medium text-answer sm:m-7"
@@ -1436,11 +1432,16 @@ export function PublicSearchDemo() {
                 <div className="p-6 sm:p-8">
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="min-w-0">
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3 py-1.5 text-xs font-bold text-brand-deep dark:text-brand">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-tint-1 px-3 py-1.5 text-xs font-bold text-tint-ink-1">
                         <Icon name="map" size={14} />
                         {searchCopy.foundOnMap}
                       </span>
-                      <h2 dir="auto" className="mt-4 text-2xl font-bold tracking-tight text-ink">
+                      <h2
+                        id="client-search-map-result-heading"
+                        dir="auto"
+                        tabIndex={-1}
+                        className="mt-4 text-2xl font-bold tracking-tight text-ink"
+                      >
                         {externalPlace.displayName}
                       </h2>
                       <p dir="auto" className="mt-2 max-w-2xl text-sm leading-6 text-muted">
@@ -1473,6 +1474,18 @@ export function PublicSearchDemo() {
                       <Icon name="route" size={18} />
                       {searchCopy.openDirections}
                     </a>
+                    {externalFallbackOrigin === "explicit_choice" && (
+                      <button
+                        type="button"
+                        className={`${btnGhost} w-full sm:w-auto`}
+                        onClick={returnToInternalResults}
+                      >
+                        <span className="rtl:rotate-180">
+                          <Icon name="arrow" size={17} className="rotate-180" />
+                        </span>
+                        {searchCopy.backToLewadResults}
+                      </button>
+                    )}
                     <button
                       type="button"
                       className={`${btnGhost} w-full sm:w-auto`}
@@ -1486,8 +1499,21 @@ export function PublicSearchDemo() {
             )}
 
             {state === "unavailable" && (
-              <section className={`${card} p-6 sm:p-8`}>
-                <span className="grid size-11 place-items-center rounded-xl bg-brand-soft text-brand-deep">
+              <section className={`${card} relative overflow-hidden bg-gradient-to-br from-surface via-surface to-tint-3/20 p-6 sm:p-8`}>
+                <div aria-hidden="true" className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-tint-ink-3 via-brand to-tint-ink-5 opacity-45" />
+                {externalFallbackOrigin === "explicit_choice" && (
+                  <button
+                    type="button"
+                    className={`${btnGhost} w-full sm:w-auto`}
+                    onClick={returnToInternalResults}
+                  >
+                    <span className="rtl:rotate-180">
+                      <Icon name="arrow" size={17} className="rotate-180" />
+                    </span>
+                    {searchCopy.backToLewadResults}
+                  </button>
+                )}
+                <span className={`${externalFallbackOrigin === "explicit_choice" ? "mt-5 " : ""}grid size-11 place-items-center rounded-xl bg-tint-3 text-tint-ink-3`}>
                   <Icon name="search" size={21} />
                 </span>
 
@@ -1503,17 +1529,23 @@ export function PublicSearchDemo() {
 
                 {externalFallbackState === "askingLocation" ? (
                   <>
-                    <h2 className="mt-5 text-xl font-bold tracking-tight sm:text-2xl">
-                      {copy.unavailableTitle}
+                    <h2
+                      id="client-search-map-fallback-heading"
+                      tabIndex={-1}
+                      className="mt-5 text-xl font-bold tracking-tight sm:text-2xl"
+                    >
+                      {externalFallbackOrigin === "explicit_choice"
+                        ? searchCopy.searchOnMap
+                        : copy.unavailableTitle}
                     </h2>
-                    {lastNotFoundQuery && (
+                    {externalFallbackQuery && (
                       <p
                         dir="auto"
                         className="mt-3 inline-flex max-w-full items-center gap-2 rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-sm"
                       >
                         <Icon name="search" size={15} className="shrink-0 text-muted" />
                         <span className="truncate font-semibold text-ink">
-                          {searchedQueryLabel}
+                          {externalFallbackQueryLabel}
                         </span>
                       </p>
                     )}
@@ -1547,7 +1579,11 @@ export function PublicSearchDemo() {
                   </>
                 ) : externalFallbackState === "choosingWilaya" ? (
                   <>
-                    <h2 className="mt-5 text-xl font-bold tracking-tight sm:text-2xl">
+                    <h2
+                      id="client-search-map-fallback-heading"
+                      tabIndex={-1}
+                      className="mt-5 text-xl font-bold tracking-tight sm:text-2xl"
+                    >
                       {searchCopy.chooseWilaya}
                     </h2>
                     {locationPermissionState === "denied" && (
@@ -1608,7 +1644,13 @@ export function PublicSearchDemo() {
                     </div>
                   </>
                 ) : externalFallbackState === "searching" ? (
-                  <div className="py-4" role="status" aria-busy="true">
+                  <div
+                    id="client-search-map-fallback-heading"
+                    className="py-4"
+                    role="status"
+                    aria-busy="true"
+                    tabIndex={-1}
+                  >
                     <span className="block h-5 w-40 rounded bg-surface-2 motion-safe:animate-pulse" />
                     <p className="mt-4 text-sm font-medium text-muted">
                       {searchCopy.searchingMaps}
@@ -1616,12 +1658,18 @@ export function PublicSearchDemo() {
                   </div>
                 ) : externalFallbackState === "noResult" ? (
                   <>
-                    <h2 className="mt-5 text-xl font-bold tracking-tight sm:text-2xl">
+                    <h2
+                      id="client-search-map-fallback-heading"
+                      tabIndex={-1}
+                      className="mt-5 text-xl font-bold tracking-tight sm:text-2xl"
+                    >
                       {searchCopy.noMapResultFound}
                     </h2>
                     <p className="mt-3 max-w-xl text-[15px] leading-7 text-muted sm:text-base">
                       {searchInMauritania
-                        ? copy.unavailableText
+                        ? externalFallbackOrigin === "explicit_choice"
+                          ? searchCopy.explicitMapNoResult
+                          : copy.unavailableText
                         : searchCopy.mauritaniaOnly}
                     </p>
                     {requestState === "error" && (
@@ -1661,7 +1709,11 @@ export function PublicSearchDemo() {
                   </>
                 ) : externalFallbackState === "error" ? (
                   <>
-                    <h2 className="mt-5 text-xl font-bold tracking-tight sm:text-2xl">
+                    <h2
+                      id="client-search-map-fallback-heading"
+                      tabIndex={-1}
+                      className="mt-5 text-xl font-bold tracking-tight sm:text-2xl"
+                    >
                       {copy.searchErrorTitle}
                     </h2>
                     <p className="mt-3 max-w-xl text-[15px] leading-7 text-muted sm:text-base">
@@ -1818,46 +1870,248 @@ export function PublicSearchDemo() {
   );
 }
 
-function SimpleEstablishmentResult({
+function SearchQueryLabel({ template, query }: { template: string; query: string }) {
+  const placeholder = "{query}";
+  const placeholderIndex = template.indexOf(placeholder);
+  if (placeholderIndex === -1) return <>{template}</>;
+
+  return (
+    <>
+      {template.slice(0, placeholderIndex)}
+      <bdi dir="auto">{query}</bdi>
+      {template.slice(placeholderIndex + placeholder.length)}
+    </>
+  );
+}
+
+function SearchResultChoices({
   copy,
-  establishment,
-  demoNote,
-  onReset,
+  searchCopy,
+  query,
+  pagination,
+  onPageChange,
+  onSelect,
+  onSearchMap,
+  showMapSearch,
 }: {
   copy: AppCopy;
-  establishment: Db2Establishment;
-  demoNote: string;
-  onReset: () => void;
+  searchCopy: AppSearchCopy;
+  query: string;
+  pagination: ClientSearchResultPage<Db2Establishment>;
+  onPageChange: (page: number) => void;
+  onSelect: (establishment: Db2Establishment) => void;
+  onSearchMap: () => void;
+  showMapSearch: boolean;
 }) {
+  const isLastPage = pagination.page >= pagination.totalPages;
+
   return (
-    <article className={`${card} p-5 sm:p-7`} aria-label={establishment.name}>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <span className="grid size-12 place-items-center rounded-2xl bg-brand text-brand-ink">
-            <Icon name="store" size={24} />
+    <section className={`${card} relative overflow-hidden bg-gradient-to-br from-surface via-surface to-tint-1/25 p-4 sm:p-6`} aria-labelledby="client-search-results-heading">
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-tint-ink-1 via-brand to-answer opacity-55" />
+      <p className="text-xs font-bold tracking-[0.08em] text-tint-ink-1 uppercase rtl:tracking-normal rtl:normal-case">
+        {searchCopy.resultsFound}
+      </p>
+      <h2
+        id="client-search-results-heading"
+        tabIndex={-1}
+        className="mt-2 text-xl font-bold tracking-tight text-ink sm:text-2xl"
+      >
+        {searchCopy.chooseResult}
+      </h2>
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+        {searchCopy.chooseMatchingResult}
+      </p>
+
+      {showMapSearch && (
+        <div className="mt-4 rounded-2xl border border-tint-ink-1/15 bg-tint-1/35 p-3.5">
+          <p className="text-sm leading-6 text-muted">{searchCopy.searchQueryOnMapHint}</p>
+          <button
+            id="client-search-map-choice"
+            type="button"
+            className={`${btnGhost} mt-3 w-full whitespace-normal text-center leading-5 sm:w-auto`}
+            onClick={onSearchMap}
+          >
+            <Icon name="map" size={17} />
+            <span className="min-w-0 break-words [overflow-wrap:anywhere]">
+              <SearchQueryLabel template={searchCopy.searchQueryOnMap} query={query} />
+            </span>
+          </button>
+        </div>
+      )}
+
+      <ol className="mt-5 grid gap-3" aria-live="off">
+        {pagination.items.map((establishment) => (
+          <SearchResultChoice
+            key={establishment.id}
+            copy={copy}
+            searchCopy={searchCopy}
+            establishment={establishment}
+            onSelect={onSelect}
+          />
+        ))}
+      </ol>
+
+      {pagination.totalPages > 1 && (
+        <PaginationControls
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          totalCount={pagination.totalCount}
+          labels={searchCopy.pagination}
+          onPageChange={onPageChange}
+        />
+      )}
+
+      {pagination.totalPages > 1 && isLastPage && (
+        <p className="mt-3 text-center text-sm font-medium text-muted" role="status">
+          {searchCopy.noMoreResults}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function SearchResultChoice({
+  copy,
+  searchCopy,
+  establishment,
+  onSelect,
+}: {
+  copy: AppCopy;
+  searchCopy: AppSearchCopy;
+  establishment: Db2Establishment;
+  onSelect: (establishment: Db2Establishment) => void;
+}) {
+  const { t } = useI18n();
+  const primaryBranch = getPrimaryBranch(establishment);
+  const mappableBranch = primaryBranch && hasCoordinates(primaryBranch)
+    ? primaryBranch
+    : establishment.branches.find(hasCoordinates);
+  const location = primaryBranch
+    ? formatClientSearchChoiceLocation(primaryBranch)
+    : "";
+  const phone = establishment.phone ?? primaryBranch?.phone ?? null;
+  const whatsapp = establishment.whatsapp ?? primaryBranch?.whatsapp ?? null;
+  const canCall = Boolean(phone && isActionablePhone(phone));
+  const canWhatsApp = Boolean(whatsapp && isActionablePhone(whatsapp));
+  const choiceLabel = `${searchCopy.chooseThisResult}: ${establishment.name}`;
+  const placeTypeLabels = establishment.place_types.map(
+    (type) => t.superAdminServices.typeOptions[type],
+  );
+
+  return (
+    <li>
+      <article className="overflow-hidden rounded-2xl border border-line bg-gradient-to-br from-surface via-surface to-tint-5/20 card-elevated transition-colors hover:border-line-strong">
+        <div className="flex min-w-0 items-start gap-3 p-4">
+          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-tint-5 text-tint-ink-5">
+            <Icon name="store" size={20} />
           </span>
-          <div>
-            <h2 className="text-xl font-bold tracking-tight sm:text-2xl">
+          <div className="min-w-0 flex-1">
+            <h3 dir="auto" className="break-words text-base font-bold leading-6 text-ink">
               {establishment.name}
-            </h2>
-            <p className="mt-1 text-sm text-muted">
-              {establishment.category?.name ?? copy.categoryUnavailable}
-            </p>
+            </h3>
+            {establishment.category && (
+              <p dir="auto" className="mt-1 break-words text-sm text-muted">
+                {establishment.category.name}
+              </p>
+            )}
+            {placeTypeLabels.length > 0 && (
+              <p dir="auto" className="mt-1 break-words text-sm font-medium text-ink-soft">
+                {placeTypeLabels.join(" · ")}
+              </p>
+            )}
+            {location && (
+              <p dir="auto" className="mt-2 flex items-start gap-1.5 break-words text-xs leading-5 text-muted">
+                <Icon name="pin" size={14} className="mt-0.5 shrink-0" />
+                <span dir="auto">{location}</span>
+              </p>
+            )}
+            {phone && (
+              <p className="mt-2 text-xs leading-5 text-muted">
+                <span className="font-semibold text-ink-soft">{copy.phone}</span>
+                {" · "}
+                <span className="ltr-isolate text-ink">{phone}</span>
+              </p>
+            )}
+            {whatsapp && whatsapp !== phone && (
+              <p className="text-xs leading-5 text-muted">
+                <span className="font-semibold text-ink-soft">{copy.whatsapp}</span>
+                {" · "}
+                <span className="ltr-isolate text-ink">{whatsapp}</span>
+              </p>
+            )}
           </div>
         </div>
-        <span className="rounded-full border border-line bg-page-alt px-3 py-1.5 text-xs font-bold text-muted">
-          {copy.notAvailable}
-        </span>
-      </div>
-      <p className="mt-5 max-w-2xl text-sm leading-6 text-muted">{demoNote}</p>
-      <button
-        type="button"
-        className={`${btnGhost} mt-6 w-full sm:w-auto`}
-        onClick={onReset}
-      >
-        {copy.ok}
-      </button>
-    </article>
+
+        <div className="border-t border-line bg-page-alt/75 p-3">
+          <button
+            id={`client-search-result-choice-${establishment.id}`}
+            type="button"
+            className={`${btnPrimary} w-full whitespace-normal text-center leading-5`}
+            onClick={() => onSelect(establishment)}
+            aria-label={choiceLabel}
+          >
+            {searchCopy.chooseThisResult}
+            <span className="rtl:rotate-180">
+              <Icon name="arrow" size={16} />
+            </span>
+          </button>
+
+          {(canCall || canWhatsApp || mappableBranch) && (
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {canCall && phone && (
+                <a
+                  className={`${btnGhost} min-w-0 whitespace-normal px-2 text-center text-xs leading-5`}
+                  href={phoneHref(phone)}
+                  aria-label={`${copy.call}: ${establishment.name}`}
+                >
+                  <Icon name="phone" size={15} />
+                  {copy.call}
+                </a>
+              )}
+              {canWhatsApp && whatsapp && (
+                <a
+                  className={`${btnGhost} min-w-0 whitespace-normal px-2 text-center text-xs leading-5`}
+                  href={whatsappHref(whatsapp)}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`${copy.whatsapp}: ${establishment.name}`}
+                >
+                  <Icon name="message" size={15} />
+                  {copy.whatsapp}
+                </a>
+              )}
+              {mappableBranch && (
+                <a
+                  className={`${btnGhost} min-w-0 whitespace-normal px-2 text-center text-xs leading-5`}
+                  href={mapUrl(mappableBranch.latitude!, mappableBranch.longitude!)}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`${copy.viewOnMap}: ${establishment.name}`}
+                >
+                  <Icon name="map" size={15} />
+                  {copy.viewOnMap}
+                </a>
+              )}
+              {mappableBranch && (
+                <a
+                  className={`${btnGhost} min-w-0 whitespace-normal px-2 text-center text-xs leading-5`}
+                  href={directionsUrl(
+                    mappableBranch.latitude!,
+                    mappableBranch.longitude!,
+                  )}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`${copy.directionsLink}: ${establishment.name}`}
+                >
+                  <Icon name="route" size={15} />
+                  {copy.directionsLink}
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+      </article>
+    </li>
   );
 }
 
@@ -1877,8 +2131,10 @@ function ContactRow({
   external?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-surface-2 px-3 py-3">
-      <Icon name={icon} size={18} className="text-brand-deep dark:text-brand" />
+    <div className="flex items-center gap-3 rounded-xl border border-line/70 bg-page-alt/75 px-3 py-3">
+      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-tint-5/70 text-tint-ink-5">
+        <Icon name={icon} size={17} />
+      </span>
       <div className="min-w-0">
         <dt className="text-xs font-semibold text-muted">{label}</dt>
         <dd className="ltr-isolate mt-0.5 truncate font-semibold text-ink">
@@ -1913,16 +2169,15 @@ function EstablishmentResult({
   establishment: Db2Establishment;
   onReset: () => void;
 }) {
-  const mainBranch =
-    establishment.branches.find((branch) => branch.is_main) ??
-    establishment.branches[0];
-  const phone = establishment.phone;
-  const whatsapp = establishment.whatsapp;
+  const mainBranch = getPrimaryBranch(establishment);
+  const phone = establishment.phone ?? mainBranch?.phone ?? null;
+  const whatsapp = establishment.whatsapp ?? mainBranch?.whatsapp ?? null;
   const canCall = Boolean(phone && isActionablePhone(phone));
   const canWhatsApp = Boolean(whatsapp && isActionablePhone(whatsapp));
   const [mapOpen, setMapOpen] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<Db2Branch | null>(null);
   const mappableBranches = establishment.branches.filter(hasCoordinates);
+  const hasMultipleBranches = establishment.branches.length >= 2;
   const firstMappable = mappableBranches[0];
   const openMap = (branch: Db2Branch) => {
     setSelectedBranch(branch);
@@ -1931,13 +2186,17 @@ function EstablishmentResult({
 
   return (
     <article
-      className={`${card} overflow-hidden`}
+      className={`${card} relative overflow-hidden bg-gradient-to-br from-surface via-surface to-tint-5/20`}
       aria-label={establishment.name}
     >
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-tint-ink-5 via-brand to-tint-ink-1 opacity-55"
+      />
       <div className="border-b border-line p-5 sm:p-7">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-4">
-            <span className="grid size-12 place-items-center rounded-2xl bg-brand text-brand-ink">
+            <span className="grid size-12 place-items-center rounded-2xl bg-tint-5 text-tint-ink-5">
               <Icon name="store" size={24} />
             </span>
             <div>
@@ -1945,21 +2204,23 @@ function EstablishmentResult({
                 {copy.dataFromLewad}
               </span>
               <div className="mt-1 flex flex-wrap items-center gap-2">
-                <h2 className="text-2xl font-bold tracking-tight">
+                <h2 dir="auto" className="text-2xl font-bold tracking-tight">
                   {establishment.name}
                 </h2>
               </div>
-              <p className="mt-1 text-sm text-muted">
+              <p dir="auto" className="mt-1 text-sm text-muted">
                 {establishment.category?.name ?? copy.categoryUnavailable}
               </p>
             </div>
           </div>
-          <span className="rounded-full border border-line bg-surface-2 px-3 py-1.5 text-xs font-bold text-ink">
-            {establishment.branches.length} {copy.agenciesFound}
-          </span>
+          {hasMultipleBranches && (
+            <span className="rounded-full border border-line bg-surface-2 px-3 py-1.5 text-xs font-bold text-ink">
+              {establishment.branches.length} {copy.agenciesFound}
+            </span>
+          )}
         </div>
         {establishment.description && (
-          <p className="mt-5 max-w-3xl text-sm leading-6 text-muted">
+          <p dir="auto" className="mt-5 max-w-3xl text-sm leading-6 text-muted">
             {establishment.description}
           </p>
         )}
@@ -2065,7 +2326,7 @@ function EstablishmentResult({
           )}
         </div>
         <div className="hidden lg:block">
-          <div className="relative grid min-h-72 place-items-center overflow-hidden rounded-2xl border border-line bg-surface-2 p-4 text-center">
+          <div className="relative grid min-h-72 place-items-center overflow-hidden rounded-2xl border border-tint-ink-1/15 bg-gradient-to-br from-tint-1/50 via-surface-2 to-tint-5/35 p-4 text-center">
             {firstMappable ? (
               <button
                 type="button"
@@ -2082,19 +2343,21 @@ function EstablishmentResult({
           </div>
         </div>
       </div>
-      <div
-        id={`branches-${establishment.id}`}
-        className="border-t border-line bg-page-alt p-5 sm:p-7"
-      >
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-base font-bold">{copy.nearby}</h3>
-          <span className="text-xs font-semibold text-muted">
-            {establishment.branches.length} {copy.agenciesFound}
-          </span>
+      {establishment.branchesError ? (
+        <div className="border-t border-line bg-page-alt p-5 sm:p-7">
+          <p className="text-sm text-muted">{copy.branchesError}</p>
         </div>
-        {establishment.branchesError ? (
-          <p className="mt-4 text-sm text-muted">{copy.branchesError}</p>
-        ) : establishment.branches.length ? (
+      ) : hasMultipleBranches ? (
+        <div
+          id={`branches-${establishment.id}`}
+          className="border-t border-line bg-page-alt p-5 sm:p-7"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-base font-bold">{copy.chooseBranch}</h3>
+            <span className="text-xs font-semibold text-muted">
+              {establishment.branches.length} {copy.agenciesFound}
+            </span>
+          </div>
           <ol className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {establishment.branches.map((branch, index) => (
               <BranchCard
@@ -2107,10 +2370,8 @@ function EstablishmentResult({
               />
             ))}
           </ol>
-        ) : (
-          <p className="mt-4 text-sm text-muted">{copy.noBranches}</p>
-        )}
-      </div>
+        </div>
+      ) : null}
       <div className="flex justify-end border-t border-line p-5 sm:p-7">
         <button type="button" className={btnPrimary} onClick={onReset}>
           {copy.ok}
@@ -2149,14 +2410,14 @@ function BranchCard({
   const mappable = hasCoordinates(branch);
 
   return (
-    <li className="rounded-xl border border-line bg-surface px-3 py-3">
+    <li className="card-elevated rounded-xl border border-line bg-surface px-3 py-3">
       <div className="flex items-start gap-3">
         <span
           className={`mt-1 size-2.5 shrink-0 rounded-full ${pinColors[index % pinColors.length].split(" ")[0]}`}
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <p className="text-sm font-semibold text-ink">{branch.name}</p>
+            <p className="text-sm font-semibold text-ink" dir="auto">{establishment.name} — {branch.name}</p>
             {branch.is_main && (
               <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-bold text-brand-deep dark:text-brand">
                 {copy.mainBranch}

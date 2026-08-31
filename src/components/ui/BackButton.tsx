@@ -21,7 +21,7 @@ export function BackButton({ className = '' }: { className?: string }) {
       type="button"
       onClick={goBack}
       aria-label={label}
-      className={`mb-4 inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-2 hover:text-ink ${className}`}
+      className={`mb-5 inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-surface/85 px-3.5 text-sm font-semibold text-ink-soft backdrop-blur-sm transition-colors card-elevated hover:border-brand/50 hover:bg-brand-soft hover:text-brand-deep dark:hover:text-brand ${className}`}
     >
       <span className="rtl:rotate-180">
         <Icon name="chevronLeft" size={18} />

@@ -43,10 +43,17 @@ export function AppShell({
     if (documentTitle) document.title = `${documentTitle} — Lewad`
   }, [documentTitle])
 
+  const surface = adminBar ? 'app' : 'client'
+  const footerClearance = !isAuthenticated
+    ? ''
+    : adminBar
+      ? 'pb-20 lg:pb-5'
+      : 'pb-[calc(8rem+env(safe-area-inset-bottom))] lg:pb-5'
+
   return (
-    // `data-surface="app"` bascule les tokens de couleur sur la palette neutre
-    // de l'espace membre (voir src/index.css). La landing n'est pas concernée.
-    <div data-surface="app" className="flex min-h-dvh flex-col bg-page text-ink">
+    // Les pages client reprennent l'identité de la landing ; les espaces admin
+    // conservent leur palette neutre sous `data-surface="app"`.
+    <div data-surface={surface} className="flex min-h-dvh flex-col overflow-x-clip bg-page-alt text-ink">
       <a
         href={skipTarget}
         className="sr-only focus:not-sr-only focus:fixed focus:start-3 focus:top-3 focus:z-60 focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-brand-ink"
@@ -58,8 +65,8 @@ export function AppShell({
 
       <div className="flex-1">{children}</div>
 
-      {/* La marge basse du pied dégage la barre d'onglets fixe sur mobile. */}
-      <AppFooter by={copy.by} version={copy.version} className={isAuthenticated ? 'pb-20 lg:pb-5' : ''} />
+      {/* La marge basse dégage les onglets et le raccourci flottant sur mobile. */}
+      <AppFooter by={copy.by} version={copy.version} className={footerClearance} />
 
       {isAuthenticated && !adminBar && <AppTabBar active={active} />}
     </div>

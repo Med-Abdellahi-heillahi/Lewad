@@ -1,7 +1,12 @@
 import { lazy, type FormEvent, Suspense, useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { useAccount } from '../hooks/useAccount'
-import { createBusinessSubmission } from '../lib/businessSubmissions'
+import {
+  BUSINESS_SUBMISSION_BRANCH_COUNT_MAX,
+  BUSINESS_SUBMISSION_BRANCH_COUNT_MIN,
+  createBusinessSubmission,
+  normalizeRequestedBranchCount,
+} from '../lib/businessSubmissions'
 import { businessSubmissionOffer, contact, paymentApps } from '../lib/content'
 import { getActiveCategories, type Db2Category } from '../lib/db2'
 import { formatCurrency, formatNumber } from '../lib/format'
@@ -17,6 +22,7 @@ type SuccessResult = {
   submissionId: string | null
   amountMro: number | null
   periodMonths: number | null
+  requestedBranchCount: number
 }
 
 const MapLocationPicker = lazy(async () => {
@@ -46,6 +52,7 @@ export function BusinessSubmissionForm() {
   const [categories, setCategories] = useState<Db2Category[]>([])
   const [location, setLocation] = useState('')
   const [nearestPlace, setNearestPlace] = useState('')
+  const [requestedBranchCount, setRequestedBranchCount] = useState('1')
   const [mapLocation, setMapLocation] = useState<MapCoordinates | null>(null)
   const [step, setStep] = useState(1)
   const [senderPhone, setSenderPhone] = useState('')
@@ -53,6 +60,7 @@ export function BusinessSubmissionForm() {
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const prefilledUserId = useRef<string | null>(null)
+  const normalizedRequestedBranchCount = normalizeRequestedBranchCount(requestedBranchCount)
 
   useEffect(() => {
     let isCurrent = true
@@ -104,6 +112,10 @@ export function BusinessSubmissionForm() {
       next.website = copy.errors.websiteInvalid
     }
 
+    if (normalizedRequestedBranchCount === null) {
+      next.requestedBranchCount = copy.errors.requestedBranchCount
+    }
+
     if (!mapLocation) next.mapLocation = copy.errors.mapPickerRequired
 
     setErrors(next)
@@ -133,7 +145,7 @@ export function BusinessSubmissionForm() {
       if (Object.keys(paymentErrors).length === 0) setStep(3)
       return
     }
-    if (!validate() || !mapLocation) return
+    if (!validate() || !mapLocation || normalizedRequestedBranchCount === null) return
 
     setFormState('submitting')
     setServerError(null)
@@ -150,6 +162,7 @@ export function BusinessSubmissionForm() {
       categoryId: category.trim() || undefined,
       location: location.trim() || undefined,
       nearestPlace: nearestPlace.trim() || undefined,
+      requestedBranchCount: normalizedRequestedBranchCount,
       latitude: mapLocation.latitude,
       longitude: mapLocation.longitude,
     })
@@ -178,7 +191,12 @@ export function BusinessSubmissionForm() {
       return
     }
 
-    setSuccessResult({ submissionId: result.submissionId, amountMro: result.amountMro, periodMonths: result.periodMonths })
+    setSuccessResult({
+      submissionId: result.submissionId,
+      amountMro: result.amountMro,
+      periodMonths: result.periodMonths,
+      requestedBranchCount: normalizedRequestedBranchCount,
+    })
     const whatsappMessage = [
       copy.whatsappIntro,
       '',
@@ -186,6 +204,7 @@ export function BusinessSubmissionForm() {
       `${copy.establishmentName}: ${businessNameFr.trim()}`,
       `${copy.establishmentPhone}: ${businessPhone.trim()}`,
       whatsapp.trim() ? `${copy.establishmentWhatsapp}: ${whatsapp.trim()}` : null,
+      `${copy.branchCount}: ${formatNumber(normalizedRequestedBranchCount, locale)}`,
       `${copy.amountSent}: ${formatCurrency(result.amountMro ?? businessSubmissionOffer.amountMro, locale)}`,
       `${copy.durationRequested}: ${periodLabel(result.periodMonths ?? businessSubmissionOffer.periodMonths)}`,
       `${copy.senderPhone}: ${senderPhone.trim()}`,
@@ -206,6 +225,7 @@ export function BusinessSubmissionForm() {
       `${copy.establishmentName}: ${businessNameFr.trim()}`,
       `${copy.establishmentPhone}: ${businessPhone.trim()}`,
       whatsapp.trim() ? `${copy.establishmentWhatsapp}: ${whatsapp.trim()}` : null,
+      `${copy.branchCount}: ${formatNumber(successResult.requestedBranchCount, locale)}`,
       `${copy.amountSent}: ${formatCurrency(successResult.amountMro ?? businessSubmissionOffer.amountMro, locale)}`,
       `${copy.durationRequested}: ${periodLabel(successResult.periodMonths ?? businessSubmissionOffer.periodMonths)}`,
       `${copy.senderPhone}: ${senderPhone.trim()}`,
@@ -218,14 +238,15 @@ export function BusinessSubmissionForm() {
 
   if (formState === 'success' && successResult) {
     return (
-      <section className={`${card} mx-auto max-w-2xl p-6 sm:p-8`} aria-labelledby="success-title">
-        <span className="grid size-12 place-items-center rounded-2xl bg-answer-bg text-answer">
+      <section className={`${card} relative mx-auto max-w-2xl overflow-hidden p-6 sm:p-8`} aria-labelledby="success-title">
+        <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-answer via-brand to-tint-2 opacity-70" />
+        <span className="relative grid size-12 place-items-center rounded-2xl bg-answer-bg text-answer">
           <Icon name="check" size={24} />
         </span>
         <h1 id="success-title" className="mt-5 text-2xl font-bold tracking-tight sm:text-3xl">{copy.successTitle}</h1>
         <p className="mt-3 text-sm leading-7 text-muted sm:text-base">{copy.successText}</p>
 
-        <dl className="mt-6 grid gap-3 rounded-xl border border-line bg-page-alt p-4 sm:p-5">
+        <dl className="mt-6 grid gap-3 rounded-2xl border border-line bg-tint-5/25 p-4 sm:p-5">
           {successResult.submissionId && (
             <div className="flex items-center justify-between gap-3">
               <dt className="text-sm text-muted">{copy.submissionId}</dt>
@@ -245,13 +266,8 @@ export function BusinessSubmissionForm() {
             </div>
           )}
           <div className="flex items-center justify-between gap-3">
-            <dt className="text-sm text-muted">{copy.pendingReview}</dt>
-            <dd>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-deep">
-                <span className="size-1.5 rounded-full bg-brand-deep motion-safe:animate-pulse" aria-hidden="true" />
-                {copy.pendingReview}
-              </span>
-            </dd>
+            <dt className="text-sm text-muted">{copy.branchCount}</dt>
+            <dd className="tabular text-sm font-semibold text-ink">{formatNumber(successResult.requestedBranchCount, locale)}</dd>
           </div>
         </dl>
 
@@ -274,18 +290,49 @@ export function BusinessSubmissionForm() {
   }
 
   return (
-    <section className={`${card} mx-auto max-w-2xl p-6 sm:p-8`} aria-labelledby="add-business-title">
-      <span className="grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand-deep dark:text-brand">
+    <section className={`${card} relative mx-auto max-w-2xl overflow-hidden p-6 sm:p-8`} aria-labelledby="add-business-title">
+      <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-brand-deep via-brand to-tint-2 opacity-60" />
+      <span className="relative grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand-deep dark:text-brand">
         <Icon name="plus" size={24} />
       </span>
       <h1 id="add-business-title" className="mt-5 text-2xl font-bold tracking-tight sm:text-3xl">{copy.title}</h1>
       <p className="mt-3 text-sm leading-7 text-muted sm:text-base">{copy.subtitle}</p>
 
-      <div className="mt-6 flex flex-wrap gap-2" aria-label={copy.stepsLabel}>
-        {[copy.stepOne, copy.stepTwo, copy.stepThree].map((label, index) => <span key={label} className={`rounded-full px-3 py-1.5 text-xs font-bold ${step === index + 1 ? 'bg-brand text-brand-ink' : 'bg-surface-2 text-muted'}`}>{label}</span>)}
+      <div className="relative mt-7">
+        <span className="absolute inset-x-[16.66%] top-5 h-px bg-line" aria-hidden="true" />
+        <ol className="relative grid grid-cols-3 gap-2" aria-label={copy.stepsLabel}>
+          {[copy.stepOne, copy.stepTwo, copy.stepThree].map((label, index) => {
+            const number = index + 1
+            const isCurrent = step === number
+            const isComplete = step > number
+
+            return (
+              <li
+                key={label}
+                className="flex min-w-0 flex-col items-center gap-2 text-center"
+                aria-current={isCurrent ? 'step' : undefined}
+              >
+                <span
+                  className={`relative grid size-10 place-items-center rounded-full border text-sm font-bold shadow-sm ${
+                    isComplete
+                      ? 'border-answer/30 bg-answer-bg text-answer'
+                      : isCurrent
+                        ? 'border-brand bg-brand text-brand-ink'
+                        : 'border-line bg-surface text-muted'
+                  }`}
+                >
+                  {isComplete ? <Icon name="check" size={17} /> : formatNumber(number, locale)}
+                </span>
+                <span className={`text-xs font-semibold leading-5 ${isCurrent ? 'text-ink' : 'text-muted'}`}>
+                  {label}
+                </span>
+              </li>
+            )
+          })}
+        </ol>
       </div>
 
-      <div className="mt-6 rounded-xl border border-line bg-page-alt p-4 sm:p-5">
+      <div className="relative mt-6 rounded-xl border border-line bg-tint-5/30 p-4 sm:p-5">
         <h2 className="text-sm font-bold text-ink">{copy.introTitle}</h2>
         <p className="mt-2 text-sm leading-6 text-muted">{copy.introText}</p>
       </div>
@@ -299,8 +346,8 @@ export function BusinessSubmissionForm() {
       <form className="mt-8 grid gap-6" onSubmit={(e) => void handleSubmit(e)} noValidate>
         <div className={step === 1 ? 'grid gap-6' : 'hidden'}>
         {/* Owner */}
-        <fieldset className="grid gap-4">
-          <legend className="text-sm font-bold text-ink">{copy.ownerSection}</legend>
+        <fieldset className="grid gap-4 rounded-2xl border border-line bg-tint-1/25 p-4 sm:p-5">
+          <legend className="px-2 text-sm font-bold text-ink">{copy.ownerSection}</legend>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="owner-first-name" label={copy.ownerFirstName} value={ownerFirstName} onChange={setOwnerFirstName} error={errors.ownerFirstName} autoComplete="given-name" />
             <Field id="owner-last-name" label={copy.ownerLastName} value={ownerLastName} onChange={setOwnerLastName} error={errors.ownerLastName} autoComplete="family-name" />
@@ -309,22 +356,40 @@ export function BusinessSubmissionForm() {
         </fieldset>
 
         {/* Business */}
-        <fieldset className="grid gap-4">
-          <legend className="text-sm font-bold text-ink">{copy.businessSection}</legend>
+        <fieldset className="grid gap-4 rounded-2xl border border-line bg-tint-2/25 p-4 sm:p-5">
+          <legend className="px-2 text-sm font-bold text-ink">{copy.businessSection}</legend>
           <Field id="business-name-fr" label={copy.businessNameFr} value={businessNameFr} onChange={setBusinessNameFr} error={errors.businessNameFr} hint={copy.businessNameFrHint} autoComplete="organization" />
           <Field id="business-name-ar" label={copy.businessNameAr} value={businessNameAr} onChange={setBusinessNameAr} error={errors.businessNameAr} hint={copy.businessNameArHint} lang="ar" dir="auto" />
           <Field id="business-phone" label={copy.businessPhone} value={businessPhone} onChange={setBusinessPhone} error={errors.businessPhone} hint={copy.businessPhoneHint} autoComplete="tel" inputMode="tel" />
         </fieldset>
 
-        <Suspense fallback={<div className="grid min-h-64 place-items-center rounded-xl border border-line bg-page-alt text-sm text-muted sm:min-h-72" role="status">{copy.mapLoading}</div>}>
-          <MapLocationPicker copy={copy} value={mapLocation} onChange={selectMapLocation} error={errors.mapLocation} />
-        </Suspense>
+        <div className="rounded-2xl border border-line bg-tint-5/20 p-3 sm:p-4">
+          <Suspense fallback={<div className="grid min-h-64 place-items-center rounded-xl border border-line bg-page-alt text-sm text-muted sm:min-h-72" role="status">{copy.mapLoading}</div>}>
+            <MapLocationPicker copy={copy} value={mapLocation} onChange={selectMapLocation} error={errors.mapLocation} />
+          </Suspense>
+        </div>
 
         {/* Optional details */}
-        <fieldset className="grid gap-4">
-          <legend className="text-sm font-bold text-ink">{copy.optionalSection}</legend>
+        <fieldset className="grid gap-4 rounded-2xl border border-line bg-tint-3/20 p-4 sm:p-5">
+          <legend className="px-2 text-sm font-bold text-ink">{copy.optionalSection}</legend>
           <Field id="whatsapp" label={copy.whatsapp} value={whatsapp} onChange={setWhatsapp} hint={copy.whatsappHint} inputMode="tel" />
           <Field id="website" label={copy.website} value={website} onChange={setWebsite} error={errors.website} hint={copy.websiteHint} type="url" />
+          <div className="rounded-xl border border-line bg-surface/80 p-4">
+            <Field
+              id="requested-branch-count"
+              label={copy.branchCount}
+              value={requestedBranchCount}
+              onChange={setRequestedBranchCount}
+              error={errors.requestedBranchCount}
+              hint={copy.branchCountHint}
+              type="number"
+              inputMode="numeric"
+              min={BUSINESS_SUBMISSION_BRANCH_COUNT_MIN}
+              max={BUSINESS_SUBMISSION_BRANCH_COUNT_MAX}
+              step={1}
+              inputClassName="text-center tabular sm:max-w-28"
+            />
+          </div>
           <div>
             <label htmlFor="category" className={fieldLabel}>{copy.category}</label>
             <select id="category" value={category} onChange={(event) => setCategory(event.target.value)} className={field}>
@@ -339,7 +404,7 @@ export function BusinessSubmissionForm() {
           </div>
         </fieldset>
 
-        <div className="rounded-xl border border-line bg-page-alt p-4 sm:p-5">
+        <div className="rounded-2xl border border-line bg-tint-4/25 p-4 sm:p-5">
           <h2 className="text-sm font-bold text-ink">{copy.amountSection}</h2>
           <p className="mt-2 text-sm leading-6 text-muted">
             {copy.amountText
@@ -349,24 +414,66 @@ export function BusinessSubmissionForm() {
         </div>
         </div>
 
-        {step === 2 && <div className="grid gap-5">
-          <div>
-            <h2 className="text-lg font-bold">{copy.paymentTitle}</h2>
-            <p className="mt-3 rounded-xl border border-line bg-page-alt px-4 py-3 text-sm font-semibold text-ink">{copy.paymentInstruction.replace('{number}', contact.paymentNumber)}</p>
+        {step === 2 && (
+          <div className="grid gap-5 rounded-2xl border border-line bg-tint-3/20 p-4 sm:p-5">
+            <div>
+              <h2 className="text-lg font-bold">{copy.paymentTitle}</h2>
+              <p className="mt-3 rounded-xl border border-line bg-surface px-4 py-3 text-sm font-semibold leading-6 text-ink">
+                {copy.paymentInstruction.replace('{number}', contact.paymentNumber)}
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className={fieldLabel} htmlFor="business-sender-phone">{copy.senderPhone}</label>
+                <input id="business-sender-phone" className={`${field} mt-2`} value={senderPhone} onChange={(event) => setSenderPhone(event.target.value)} inputMode="tel" aria-invalid={Boolean(errors.senderPhone) || undefined} />
+                {errors.senderPhone && <p className="mt-1 text-xs text-ask" role="alert">{errors.senderPhone}</p>}
+              </div>
+              <div>
+                <label className={fieldLabel} htmlFor="business-banking-app">{copy.bankingApp}</label>
+                <select id="business-banking-app" className={`${field} mt-2`} value={bankingApp} onChange={(event) => setBankingApp(event.target.value)} aria-invalid={Boolean(errors.bankingApp) || undefined}>
+                  <option value="">{copy.chooseBankingApp}</option>
+                  {paymentApps.map((app) => <option key={app} value={app}>{app}</option>)}
+                </select>
+                {errors.bankingApp && <p className="mt-1 text-xs text-ask" role="alert">{errors.bankingApp}</p>}
+              </div>
+            </div>
           </div>
-          <div><label className={fieldLabel} htmlFor="business-sender-phone">{copy.senderPhone}</label><input id="business-sender-phone" className={`${field} mt-2`} value={senderPhone} onChange={(event) => setSenderPhone(event.target.value)} inputMode="tel" aria-invalid={Boolean(errors.senderPhone) || undefined} />{errors.senderPhone && <p className="mt-1 text-xs text-ask" role="alert">{errors.senderPhone}</p>}</div>
-          <div><label className={fieldLabel} htmlFor="business-banking-app">{copy.bankingApp}</label><select id="business-banking-app" className={`${field} mt-2`} value={bankingApp} onChange={(event) => setBankingApp(event.target.value)} aria-invalid={Boolean(errors.bankingApp) || undefined}><option value="">{copy.chooseBankingApp}</option>{paymentApps.map((app) => <option key={app} value={app}>{app}</option>)}</select>{errors.bankingApp && <p className="mt-1 text-xs text-ask" role="alert">{errors.bankingApp}</p>}</div>
-        </div>}
+        )}
 
-        {step === 3 && <div className="rounded-xl border border-line bg-page-alt p-4 sm:p-5">
-          <h2 className="text-lg font-bold">{copy.reviewTitle}</h2>
-          <p className="mt-3 text-sm leading-6 text-muted">{copy.paymentInstruction.replace('{number}', contact.paymentNumber)}</p>
-          <dl className="mt-4 grid gap-2 text-sm"><div className="flex justify-between gap-3"><dt className="text-muted">{copy.businessNameFr}</dt><dd className="font-semibold" dir="auto">{businessNameFr}</dd></div><div className="flex justify-between gap-3"><dt className="text-muted">{copy.businessPhone}</dt><dd className="font-semibold" dir="auto">{businessPhone}</dd></div><div className="flex justify-between gap-3"><dt className="text-muted">{copy.senderPhone}</dt><dd className="font-semibold" dir="auto">{senderPhone}</dd></div><div className="flex justify-between gap-3"><dt className="text-muted">{copy.bankingApp}</dt><dd className="font-semibold">{bankingApp}</dd></div></dl>
-        </div>}
+        {step === 3 && (
+          <div className="rounded-2xl border border-line bg-tint-5/20 p-4 sm:p-5">
+            <h2 className="text-lg font-bold">{copy.reviewTitle}</h2>
+            <p className="mt-3 rounded-xl border border-line bg-surface px-4 py-3 text-sm leading-6 text-muted">
+              {copy.paymentInstruction.replace('{number}', contact.paymentNumber)}
+            </p>
+            <dl className="mt-4 grid gap-px overflow-hidden rounded-xl border border-line bg-line text-sm">
+              <div className="grid gap-1 bg-surface px-3.5 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] sm:items-center sm:gap-4">
+                <dt className="text-muted">{copy.businessNameFr}</dt>
+                <dd className="min-w-0 break-words font-semibold sm:text-end" dir="auto">{businessNameFr}</dd>
+              </div>
+              <div className="grid gap-1 bg-surface px-3.5 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] sm:items-center sm:gap-4">
+                <dt className="text-muted">{copy.businessPhone}</dt>
+                <dd className="min-w-0 break-words font-semibold sm:text-end" dir="auto">{businessPhone}</dd>
+              </div>
+              <div className="grid gap-1 bg-surface px-3.5 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] sm:items-center sm:gap-4">
+                <dt className="text-muted">{copy.branchCount}</dt>
+                <dd className="tabular font-semibold sm:text-end">{formatNumber(normalizedRequestedBranchCount ?? BUSINESS_SUBMISSION_BRANCH_COUNT_MIN, locale)}</dd>
+              </div>
+              <div className="grid gap-1 bg-surface px-3.5 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] sm:items-center sm:gap-4">
+                <dt className="text-muted">{copy.senderPhone}</dt>
+                <dd className="min-w-0 break-words font-semibold sm:text-end" dir="auto">{senderPhone}</dd>
+              </div>
+              <div className="grid gap-1 bg-surface px-3.5 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] sm:items-center sm:gap-4">
+                <dt className="text-muted">{copy.bankingApp}</dt>
+                <dd className="min-w-0 break-words font-semibold sm:text-end">{bankingApp}</dd>
+              </div>
+            </dl>
+          </div>
+        )}
 
         <div className="flex flex-col-reverse gap-3 sm:flex-row">
         {step > 1 && <button type="button" className={`${btnGhost} w-full sm:w-auto`} onClick={() => { setErrors({}); setStep(step - 1) }}>{copy.back}</button>}
-        <button type="submit" className={`${btnPrimary} w-full`} disabled={formState === 'submitting'}>
+        <button type="submit" className={`${btnPrimary} w-full sm:flex-1`} disabled={formState === 'submitting'}>
           {formState === 'submitting' ? copy.submitting : step === 3 ? copy.whatsappSend : copy.continue}
           <span className="rtl:rotate-180"><Icon name="arrow" size={17} /></span>
         </button>
@@ -386,6 +493,10 @@ function Field({
   autoComplete,
   inputMode,
   type = 'text',
+  min,
+  max,
+  step,
+  inputClassName,
   lang,
   dir,
 }: {
@@ -398,10 +509,14 @@ function Field({
   autoComplete?: string
   inputMode?: string
   type?: string
+  min?: number
+  max?: number
+  step?: number
+  inputClassName?: string
   lang?: string
   dir?: string
 }) {
-  const hintId = hint ? `${id}-hint` : undefined
+  const hintId = hint && !error ? `${id}-hint` : undefined
   const errorId = error ? `${id}-error` : undefined
   const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined
 
@@ -411,6 +526,9 @@ function Field({
       <input
         id={id}
         type={type}
+        min={min}
+        max={max}
+        step={step}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         autoComplete={autoComplete}
@@ -419,7 +537,7 @@ function Field({
         dir={dir}
         aria-describedby={describedBy}
         aria-invalid={Boolean(error) || undefined}
-        className={`${field} ${error ? 'border-ask focus:border-ask focus:ring-ask/15' : ''}`}
+        className={`${field} ${inputClassName ?? ''} ${error ? 'border-ask focus:border-ask focus:ring-ask/15' : ''}`}
       />
       {hint && !error && <p id={hintId} className={fieldHint}>{hint}</p>}
       {error && <p id={errorId} className="mt-1 text-xs text-ask" role="alert">{error}</p>}

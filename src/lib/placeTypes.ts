@@ -20,3 +20,8 @@ const placeTypeKeySet = new Set<string>(PLACE_TYPE_KEYS)
 export function isPlaceTypeKey(value: unknown): value is PlaceTypeKey {
   return typeof value === 'string' && placeTypeKeySet.has(value)
 }
+
+export function readPlaceTypeKeys(value: unknown): PlaceTypeKey[] {
+  if (!Array.isArray(value)) return []
+  return [...new Set(value.filter(isPlaceTypeKey))]
+}

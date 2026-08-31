@@ -1,4 +1,5 @@
 import { type Db2Branch, type Db2Category, type Db2Establishment } from './db2'
+import { readPlaceTypeKeys } from './placeTypes'
 import { supabase } from './supabaseClient'
 
 export type Db3aSearchStatus = 'success' | 'not_found' | 'insufficient_credits' | 'invalid_query' | 'error' | 'unauthenticated'
@@ -16,8 +17,18 @@ export type Db3aSearchResponse = {
 }
 
 type RpcBranch = Omit<Db2Branch, 'establishment_id' | 'status'>
-type RpcEstablishment = Omit<Db2Establishment, 'status' | 'branches' | 'branchesError'> & {
+type RpcEstablishment = Omit<
+  Db2Establishment,
+  'status' | 'branches' | 'branchesError' | 'name_ar' | 'place_types'
+> & {
+  name_ar?: unknown
+  place_types?: unknown
   branches?: RpcBranch[]
+}
+
+type PlaceTypeHydrationRow = {
+  id: unknown
+  place_types: unknown
 }
 
 const validStatuses = new Set<Db3aSearchStatus>([
@@ -50,6 +61,8 @@ function normalizeResults(value: unknown): Db2Establishment[] {
 
     return [{
       ...establishment,
+      name_ar: typeof establishment.name_ar === 'string' ? establishment.name_ar : null,
+      place_types: readPlaceTypeKeys(establishment.place_types),
       category: (establishment.category as Db2Category | null) ?? null,
       status: 'approved' as const,
       branchesError: false,
@@ -62,6 +75,49 @@ function normalizeResults(value: unknown): Db2Establishment[] {
         : [],
     }]
   })
+}
+
+/**
+ * The paid search RPC predates imported place types, so enrich only the rows it
+ * already returned. This approved-row RLS read is optional: a failed or partial
+ * hydration must never discard a paid result or trigger another search.
+ */
+export async function hydrateApprovedClientSearchPlaceTypes(
+  results: readonly Db2Establishment[],
+): Promise<Db2Establishment[]> {
+  const resultIds = [
+    ...new Set(
+      results
+        .map(({ id }) => id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0),
+    ),
+  ].slice(0, 20)
+
+  if (resultIds.length === 0) return [...results]
+
+  try {
+    const { data, error } = await supabase
+      .from('establishments')
+      .select('id, place_types')
+      .in('id', resultIds)
+      .eq('status', 'approved')
+
+    if (error || !Array.isArray(data)) return [...results]
+
+    const allowedIds = new Set(resultIds)
+    const placeTypesById = new Map<string, Db2Establishment['place_types']>()
+    for (const row of data as PlaceTypeHydrationRow[]) {
+      if (typeof row.id !== 'string' || !allowedIds.has(row.id)) continue
+      placeTypesById.set(row.id, readPlaceTypeKeys(row.place_types))
+    }
+
+    return results.map((result) => {
+      const placeTypes = placeTypesById.get(result.id)
+      return placeTypes ? { ...result, place_types: placeTypes } : result
+    })
+  } catch {
+    return [...results]
+  }
 }
 
 export async function searchServicesWithCredit(query: string): Promise<Db3aSearchResponse> {

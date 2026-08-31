@@ -7,6 +7,7 @@ export type PaginationLabels = {
   page: string;
   of: string;
   items: string;
+  navigation?: string;
 };
 
 type PaginationControlsProps = {
@@ -25,6 +26,7 @@ const defaultLabels: PaginationLabels = {
   page: "Page",
   of: "sur",
   items: "éléments",
+  navigation: "Pagination",
 };
 
 export function PaginationControls({
@@ -37,33 +39,35 @@ export function PaginationControls({
 }: PaginationControlsProps) {
   const lastPage = Math.max(1, totalPages);
 
-  // Classes communes pour les boutons pour éviter la répétition
-  const btnClass = `
-    flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors
-    border border-gray-300 bg-white text-gray-700
-    hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1
-    disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white
-  `;
+  const btnClass =
+    "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold text-ink transition-colors hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-surface sm:px-4";
 
   return (
     <nav
-      className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-gray-200 pt-4"
-      aria-label={`Navigation de la page ${page}`}
+      className="mt-6 grid gap-3 border-t border-line pt-4 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-4"
+      aria-label={
+        labels.navigation ?? `${labels.page} ${page} ${labels.of} ${lastPage}`
+      }
     >
-      {/* Informations textuelles */}
-      <div className="text-sm text-gray-500">
-        {labels.page}{" "}
-        <span className="font-semibold text-gray-900">{page}</span> {labels.of}{" "}
-        <span className="font-semibold text-gray-900">{lastPage}</span>
-        <span className="mx-2 text-gray-300" aria-hidden="true">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+        <span>
+          {labels.page}{" "}
+          <span className="ltr-isolate inline-flex items-center gap-1">
+            <span className="tabular font-semibold text-ink">{page}</span>
+            <span>{labels.of}</span>
+            <span className="tabular font-semibold text-ink">{lastPage}</span>
+          </span>
+        </span>
+        <span className="text-line" aria-hidden="true">
           |
         </span>
-        <span className="font-medium text-gray-900">{totalCount}</span>{" "}
-        {labels.items}
+        <span>
+          <span className="tabular font-semibold text-ink">{totalCount}</span>{" "}
+          {labels.items}
+        </span>
       </div>
 
-      {/* Boutons d'action */}
-      <div className="flex items-center gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
         <button
           type="button"
           className={btnClass}
@@ -71,8 +75,10 @@ export function PaginationControls({
           onClick={() => onPageChange(page - 1)}
           aria-label={labels.previous}
         >
-          <ChevronLeft size={16} aria-hidden="true" />
-          <span className="hidden sm:inline">{labels.previous}</span>
+          <span className="rtl:rotate-180">
+            <ChevronLeft size={16} aria-hidden="true" />
+          </span>
+          <span>{labels.previous}</span>
         </button>
 
         <button
@@ -82,8 +88,10 @@ export function PaginationControls({
           onClick={() => onPageChange(page + 1)}
           aria-label={labels.next}
         >
-          <span className="hidden sm:inline">{labels.next}</span>
-          <ChevronRight size={16} aria-hidden="true" />
+          <span>{labels.next}</span>
+          <span className="rtl:rotate-180">
+            <ChevronRight size={16} aria-hidden="true" />
+          </span>
         </button>
       </div>
     </nav>

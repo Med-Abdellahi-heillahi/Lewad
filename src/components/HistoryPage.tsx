@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../i18n";
 import { formatCurrency, formatDate, formatNumber } from "../lib/format";
 import {
@@ -29,8 +29,13 @@ export function HistoryPage() {
   const [page, setPage] = useState(1);
   const [state, setState] = useState<LoadState>("loading");
   const [incomplete, setIncomplete] = useState(false);
+  const [loadInFlight, setLoadInFlight] = useState(false);
+  const loadInFlightRef = useRef(false);
 
   const load = useCallback(async (showSkeleton: boolean) => {
+    if (loadInFlightRef.current) return;
+    loadInFlightRef.current = true;
+    setLoadInFlight(true);
     if (showSkeleton) setState("loading");
     setPage(1);
 
@@ -41,6 +46,9 @@ export function HistoryPage() {
       setState("ready");
     } catch {
       setState("error");
+    } finally {
+      loadInFlightRef.current = false;
+      setLoadInFlight(false);
     }
   }, []);
 
@@ -56,30 +64,36 @@ export function HistoryPage() {
 
   return (
     <>
-      <BackButton />
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
-            {copy.title}
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-            {copy.subtitle}
-          </p>
+      <header className="page-glow relative overflow-hidden rounded-3xl border border-line bg-surface/85 p-5 card-elevated backdrop-blur-sm sm:p-6">
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -end-12 -top-16 size-40 rounded-full bg-tint-4/45 blur-2xl"
+        />
+        <BackButton />
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+              {copy.title}
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+              {copy.subtitle}
+            </p>
+          </div>
+          <button
+            type="button"
+            className={`${btnGhost} shrink-0`}
+            onClick={() => void load(false)}
+            disabled={loadInFlight || state === "loading"}
+          >
+            <Icon name="arrow" size={16} />
+            {copy.refresh}
+          </button>
         </div>
-        <button
-          type="button"
-          className={`${btnGhost} shrink-0`}
-          onClick={() => void load(false)}
-          disabled={state === "loading"}
-        >
-          <Icon name="arrow" size={16} />
-          {copy.refresh}
-        </button>
       </header>
 
       {/* L'explication des points reste au-dessus de la liste : c'est la première
           question que se pose un client qui découvre son solde. */}
-      <p className="mt-5 rounded-xl border border-line bg-page-alt px-4 py-3.5 text-sm leading-6 text-muted">
+      <p className="mt-5 rounded-2xl border border-line bg-tint-3/35 px-4 py-3.5 text-sm leading-6 text-ink-soft card-elevated">
         {copy.pointsNote}
       </p>
 
@@ -109,6 +123,7 @@ export function HistoryPage() {
                   type="button"
                   className={btnGhost}
                   onClick={() => void load(true)}
+                  disabled={loadInFlight}
                 >
                   <Icon name="arrow" size={16} />
                   {copy.refresh}
@@ -121,7 +136,7 @@ export function HistoryPage() {
             <EmptyState icon="clock" title={copy.empty} text={copy.emptyText} />
           ) : (
             <>
-              <ol className="grid list-none gap-2">
+              <ol className="grid list-none gap-3">
                 {visibleEvents.map((event) => (
                   <li key={event.id}>
                     <HistoryRow event={event} locale={locale} copy={copy} />
@@ -161,6 +176,32 @@ const iconOf: Record<UserHistoryEvent["type"], IconName> = {
   points_added: "sparkle",
   recharge: "wallet",
   business_submission: "store",
+};
+
+const eventTone: Record<
+  UserHistoryEvent["type"],
+  { accent: string; icon: string }
+> = {
+  search_success: {
+    accent: "bg-tint-2",
+    icon: "bg-tint-2 text-tint-ink-2",
+  },
+  search_no_result: {
+    accent: "bg-tint-4",
+    icon: "bg-tint-4 text-tint-ink-4",
+  },
+  points_added: {
+    accent: "bg-tint-3",
+    icon: "bg-tint-3 text-tint-ink-3",
+  },
+  recharge: {
+    accent: "bg-tint-1",
+    icon: "bg-tint-1 text-tint-ink-1",
+  },
+  business_submission: {
+    accent: "bg-tint-5",
+    icon: "bg-tint-5 text-tint-ink-5",
+  },
 };
 
 function statusLabel(status: UserHistoryStatus, copy: HistoryCopy): string {
@@ -283,11 +324,16 @@ function HistoryRow({
   const details = detailsOf(event, copy, locale);
   const spent = event.pointsDelta < 0;
   const gained = event.pointsDelta > 0;
+  const tone = eventTone[event.type];
 
   return (
-    <article className="rounded-xl border border-line bg-surface p-3.5 sm:p-4">
+    <article className="relative overflow-hidden rounded-2xl border border-line bg-surface p-3.5 ps-5 card-elevated sm:p-4 sm:ps-5">
+      <span
+        aria-hidden="true"
+        className={`absolute inset-y-0 start-0 w-1 ${tone.accent}`}
+      />
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand-deep dark:text-brand">
+        <span className={`mt-0.5 grid size-10 shrink-0 place-items-center rounded-xl ${tone.icon}`}>
           <Icon name={iconOf[event.type]} size={18} />
         </span>
 

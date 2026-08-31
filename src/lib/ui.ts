@@ -34,7 +34,7 @@ export const sectionPad = 'py-16 sm:py-20 lg:py-28'
 /** Rythme vertical des pages applicatives — plus serré, plus « produit ». */
 export const appPad = 'py-6 sm:py-9 lg:py-12'
 
-export const card = 'rounded-2xl border border-line bg-surface'
+export const card = 'rounded-2xl border border-line bg-surface card-elevated'
 
 /** Carte de second plan : sert de conteneur à une donnée, pas à une action. */
 export const cardMuted = 'rounded-2xl border border-line bg-page-alt'

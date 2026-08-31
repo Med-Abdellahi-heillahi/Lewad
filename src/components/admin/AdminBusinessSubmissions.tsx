@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AlertTriangle, CalendarDays, Check, Eye, Phone, X } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { formatDate } from '../../lib/format'
+import { formatDate, formatNumber } from '../../lib/format'
 import { btnGhost, btnPrimary, card, field, fieldLabel, iconBtn } from '../../lib/ui'
 import type { BusinessSubmissionSummary } from '../../lib/businessSubmissions'
 import { EmptyState, LoadingCard } from '../system/States'
@@ -40,6 +40,20 @@ function SubmissionNotice({ tone, text, dismissLabel, onDismiss }: { tone: 'succ
         <X size={15} aria-hidden />
       </button>
     </section>
+  )
+}
+
+function needsBranchReview(submission: BusinessSubmissionSummary) {
+  return submission.requestedBranchCount > 1
+    && submission.requestedBranchCount > submission.actualBranchCount
+}
+
+function BranchCountWarning({ text }: { text: string }) {
+  return (
+    <div role="note" className="flex items-start gap-2.5 rounded-xl border border-ask/30 bg-ask-bg px-3 py-3 text-ask">
+      <AlertTriangle size={17} aria-hidden className="mt-0.5 shrink-0" />
+      <p className="text-sm leading-6">{text}</p>
+    </div>
   )
 }
 
@@ -203,7 +217,10 @@ export function AdminBusinessSubmissions({ submissions, pagination, loading, onA
             <FieldGroup title={subCopy.businessSection}>
               <FieldRow label={subCopy.businessName} value={detailSubmission.businessNameFr} />
               <FieldRow label={copy.users.arabicFullName} value={detailSubmission.businessNameAr} dir="auto" />
+              <FieldRow label={subCopy.declaredBranchCount} value={formatNumber(detailSubmission.requestedBranchCount, locale)} mono />
             </FieldGroup>
+
+            {needsBranchReview(detailSubmission) && <BranchCountWarning text={subCopy.branchCountWarning} />}
 
             <FieldGroup title={subCopy.contactSection}>
               {detailSubmission.whatsapp && <FieldRow label={subCopy.whatsapp} value={detailSubmission.whatsapp} mono />}
@@ -232,6 +249,10 @@ export function AdminBusinessSubmissions({ submissions, pagination, loading, onA
       {approveSubmission && (
         <AdminModal title={subCopy.approveConfirmTitle} closeLabel={subCopy.close} onClose={() => setDialog(null)}>
           <p className="mt-4 text-sm leading-relaxed text-muted">{subCopy.approveConfirmText}</p>
+          <p className="mt-3 text-sm font-semibold text-ink">
+            {subCopy.declaredBranchCount}: <span className="tabular">{formatNumber(approveSubmission.requestedBranchCount, locale)}</span>
+          </p>
+          {needsBranchReview(approveSubmission) && <div className="mt-3"><BranchCountWarning text={subCopy.branchCountWarning} /></div>}
           <div className="mt-5 flex flex-wrap gap-2 border-t border-line pt-4">
             <button type="button" className={`${btnGhost} flex-1`} disabled={saving} onClick={() => setDialog(null)}>{subCopy.cancel}</button>
             <button type="button" className={`${btnPrimary} flex-1`} disabled={saving} onClick={() => void handleApprove(approveSubmission)}>{saving ? subCopy.approving : subCopy.confirm}</button>
