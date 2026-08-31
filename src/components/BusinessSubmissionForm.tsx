@@ -1,6 +1,7 @@
 import { lazy, type FormEvent, Suspense, useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { useAccount } from '../hooks/useAccount'
+import { trackEvent } from '../lib/analytics'
 import {
   BUSINESS_SUBMISSION_BRANCH_COUNT_MAX,
   BUSINESS_SUBMISSION_BRANCH_COUNT_MIN,
@@ -149,6 +150,7 @@ export function BusinessSubmissionForm() {
 
     setFormState('submitting')
     setServerError(null)
+    trackEvent('add_business_started')
 
     const result = await createBusinessSubmission({
       ownerFirstName: ownerFirstName.trim(),

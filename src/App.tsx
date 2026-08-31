@@ -27,6 +27,7 @@ import { AdminLoading } from './components/system/AdminLoading'
 import { ChunkErrorBoundary } from './components/system/ChunkErrorBoundary'
 import { useAuthSession } from './hooks/useAuthSession'
 import { AccountProvider } from './hooks/useAccount'
+import { getAnalyticsPagePath, trackEvent } from './lib/analytics'
 import { authUrlForCurrentRoute } from './lib/routeAuth'
 
 /**
@@ -200,6 +201,12 @@ function Landing() {
 function Shell() {
   const route = useRoute()
   const { online, recheck } = useOnlineStatus()
+
+  useEffect(() => {
+    if (getAnalyticsPagePath(window.location.pathname)) {
+      trackEvent('page_view')
+    }
+  }, [route])
 
   if (!online) return <OfflineScreen onRetry={recheck} />
   // `AccountProvider` coiffe les pages applicatives : le bandeau et la page

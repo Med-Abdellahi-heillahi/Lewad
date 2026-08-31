@@ -31,6 +31,7 @@ import { AdminSectionHeader } from './admin/AdminUi'
 import { adminCopy, type SuperAdminTabId } from './admin/adminCopy'
 import { AdminUsers } from './admin/AdminUsers'
 import { AdminManagement, SuperAdminAuditLog } from './super-admin/AdminManagement'
+import { SuperAdminAnalytics } from './super-admin/SuperAdminAnalytics'
 import { SuperAdminOverview } from './super-admin/SuperAdminOverview'
 import { SuperAdminServices } from './super-admin/SuperAdminServices'
 import { SuperAdminSidebar, superAdminTabs } from './super-admin/SuperAdminSidebar'
@@ -38,6 +39,20 @@ import { SuperAdminBottomNav } from './super-admin/SuperAdminBottomNav'
 
 function emptyUsersPage(): PaginatedResult<AdminUser> {
   return paginatedResult([], 0, { pageSize: DEFAULT_PAGE_SIZE })
+}
+
+function initialSuperAdminTab(): SuperAdminTabId {
+  const path = window.location.pathname.replace(/\/+$/, '')
+  if (path === '/super-admin/analytics') return 'analytics'
+
+  const requested = new URLSearchParams(window.location.search).get('tab')
+  return superAdminTabs.some((tab) => tab.id === requested) ? requested as SuperAdminTabId : 'overview'
+}
+
+function superAdminTabUrl(tab: SuperAdminTabId) {
+  if (tab === 'overview') return '/super-admin'
+  if (tab === 'analytics') return '/super-admin/analytics'
+  return `/super-admin?tab=${encodeURIComponent(tab)}`
 }
 
 function SuperAdminSettingsPanel() {
@@ -153,10 +168,7 @@ export function SuperAdminPage() {
   const copy = adminCopy[locale]
 
   if (accountLoading) return <AccountLoading />
-  const [activeTab, setActiveTab] = useState<SuperAdminTabId>(() => {
-    const requested = new URLSearchParams(window.location.search).get('tab')
-    return superAdminTabs.some((tab) => tab.id === requested) ? requested as SuperAdminTabId : 'overview'
-  })
+  const [activeTab, setActiveTab] = useState<SuperAdminTabId>(initialSuperAdminTab)
   const [overview, setOverview] = useState<AdminOverview | null>(null)
   const [analytics, setAnalytics] = useState<AdminAnalytics | null>(null)
   const [services, setServices] = useState<AdminServices | null>(null)
@@ -201,6 +213,7 @@ export function SuperAdminPage() {
   }, [activeTab, loadOverview, loadUsers])
 
   const selectTab = (tab: SuperAdminTabId) => {
+    window.history.replaceState(window.history.state, '', superAdminTabUrl(tab))
     setActiveTab(tab)
     setMobileSidebarOpen(false)
     if (tab === 'users') {
@@ -263,6 +276,7 @@ export function SuperAdminPage() {
           <section className="min-w-0" aria-label={copy.superSpace.tabs[activeTab]}>
             {error && <InlineAlert tone="error" title={copy.header.dataErrorTitle} className="mb-5">{error} {copy.header.dataErrorText}</InlineAlert>}
             {activeTab === 'overview' && <SuperAdminOverview overview={overview} analytics={analytics} services={services} loading={loading} windowDays={windowDays} onWindowChange={setWindowDays} onRetry={() => void loadOverview()} />}
+            {activeTab === 'analytics' && <SuperAdminAnalytics />}
             {activeTab === 'admins' && <AdminManagement />}
             {activeTab === 'users' && <div className="space-y-5">
               <header className={`${card} border-brand/45 p-5 sm:p-6`}><AdminSectionHeader icon={UsersRound} title={copy.superSpace.people.usersTitle} text={copy.superSpace.people.usersText} /></header>

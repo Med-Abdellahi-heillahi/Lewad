@@ -7,6 +7,7 @@ import { defaultDestinationForRole } from '../lib/routeAuth'
 import { signOut } from '../lib/auth'
 import { btnGhost, btnPrimary, iconBtn, wrap } from '../lib/ui'
 import { Icon } from './Icon'
+import { LandingActivityCounter } from './LandingActivityCounter'
 import { Logo } from './Logo'
 import { Drawer } from './shell/Drawer'
 import { LanguageMenu } from './shell/LanguageMenu'
@@ -112,6 +113,7 @@ export function Navbar() {
           {/* --- Bord de fin --- */}
           <div className="flex min-w-0 flex-1 shrink-0 items-center justify-end gap-2 lg:flex-none">
             <div className="hidden items-center gap-2 lg:flex">
+              <LandingActivityCounter className="hidden xl:inline-flex" />
               <LanguageMenu align="end" />
               <ThemeToggle />
               {!isAuthenticated && (
@@ -156,6 +158,10 @@ export function Navbar() {
               {signingOut ? t.nav.signingOut : t.nav.signOut}
             </button>
           )}
+        </div>
+
+        <div className="mt-4 border-t border-line pt-4 lg:hidden">
+          <LandingActivityCounter fullWidth />
         </div>
 
         <nav aria-label={t.nav.navigate}>

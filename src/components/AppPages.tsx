@@ -9,6 +9,7 @@
   type ReactNode,
 } from "react";
 import { type Locale, useI18n } from "../i18n";
+import { trackEvent } from "../lib/analytics";
 import { AccountLoading } from "./system/AccountLoading";
 import {
   updateMyProfile,
@@ -2173,6 +2174,7 @@ function RechargePage({ text }: { text: Copy }) {
 
     setCreatingOffer(selectedOffer.code);
     setNotice({ tone: "info", text: text.rechargeRequestCreating });
+    trackEvent("recharge_started");
     const result = await createRechargeRequest(selectedOffer.code);
     setCreatingOffer(null);
 

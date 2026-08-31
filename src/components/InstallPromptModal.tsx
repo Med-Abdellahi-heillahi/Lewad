@@ -2,6 +2,7 @@ import { useEffect, useId, useState, type ReactNode } from 'react'
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
 import { Check, EllipsisVertical, Plus, Smartphone, X } from 'lucide-react'
 import { useI18n } from '../i18n'
+import { trackEvent } from '../lib/analytics'
 import { ease } from '../lib/motion'
 import { useInstallInvitation } from '../lib/useInstallPrompt'
 import { Logo, LogoAppIcon } from './Logo'
@@ -148,6 +149,10 @@ export function InstallPromptModal() {
       document.getElementById('install')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
     })
   }
+
+  useEffect(() => {
+    if (open) trackEvent('install_prompt_viewed')
+  }, [open])
 
   useEffect(() => {
     if (reduce || !open) return

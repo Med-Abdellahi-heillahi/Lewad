@@ -8,6 +8,7 @@ import {
   Suspense,
 } from "react";
 import { type Dictionary, type Locale, useI18n } from "../i18n";
+import { trackEvent } from "../lib/analytics";
 import { type Db2Branch, type Db2Establishment } from "../lib/db2";
 import {
   hydrateApprovedClientSearchPlaceTypes,
@@ -612,6 +613,7 @@ export function PublicSearchDemo() {
     setSuggestionsOpen(false);
     clearSearchState();
     setState("loading");
+    trackEvent("search_started", { query_length: requestedQuery.length });
 
     // The account badge may be old when another tab or a previously completed
     // search changed the wallet. Reconcile it before this paid action so the
@@ -626,6 +628,10 @@ export function PublicSearchDemo() {
       result = await searchServicesWithCredit(requestedQuery);
     } catch {
       if (searchId !== searchIdRef.current) return;
+      trackEvent("search_completed", {
+        result_count: 0,
+        result_status: "error",
+      });
       debugLocationFallback("internal search failed", { query: requestedQuery });
       setSearchFailed(true);
       setState("unavailable");
@@ -633,6 +639,10 @@ export function PublicSearchDemo() {
     }
 
     if (searchId !== searchIdRef.current) return;
+    trackEvent("search_completed", {
+      result_count: result.resultsCount,
+      result_status: result.status === "unauthenticated" ? "error" : result.status,
+    });
     debugLocationFallback("internal search status", {
       query: requestedQuery,
       status: result.status,
@@ -997,6 +1007,8 @@ export function PublicSearchDemo() {
 
   const searchResultQueryOnMap = () => {
     if (!resultQuery) return;
+
+    trackEvent("external_map_lookup");
 
     externalSearchIdRef.current += 1;
     externalLocationFlowIdRef.current += 1;
