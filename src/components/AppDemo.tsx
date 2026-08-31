@@ -42,7 +42,9 @@ import {
   type SearchCoordinates,
 } from "../lib/searchLocationContext";
 import {
+  APPROVED_SUGGESTION_LIMIT,
   SUGGESTION_MIN_LENGTH,
+  getApprovedServiceSuggestions,
   type ServiceSuggestion,
   suggestServices,
 } from "../lib/searchSuggestions";
@@ -93,10 +95,8 @@ const appCopy = {
     description:
       "Recherchez un service, une agence ou un établissement local en Mauritanie.",
     input: "Rechercher un service",
-    placeholder: "Ex. Bankily, pharmacie, restaurant…",
+    placeholder: "Nom d’un établissement ou d’un lieu…",
     submit: "Rechercher",
-    examples: "Exemples",
-    chips: ["Bankily", "Pharmacie", "Salle de sport", "Restaurant"],
     initialTitle: "Commencez votre recherche",
     initialText: "Recherchez un service local.",
     empty: "Veuillez saisir le nom d’un service.",
@@ -157,10 +157,8 @@ const appCopy = {
     welcome: "ماذا تبحث عنه اليوم؟",
     description: "ابحث عن خدمة أو وكالة أو مؤسسة محلية في موريتانيا.",
     input: "ابحث عن خدمة",
-    placeholder: "مثال: Bankily أو صيدلية أو مطعم…",
+    placeholder: "اسم مؤسسة أو مكان…",
     submit: "ابحث",
-    examples: "أمثلة",
-    chips: ["Bankily", "صيدلية", "قاعة رياضة", "مطعم"],
     initialTitle: "ابدأ بحثك",
     initialText: "ابحث عن خدمة محلية.",
     empty: "يرجى إدخال اسم خدمة.",
@@ -220,10 +218,8 @@ const appCopy = {
     description:
       "Search for a local service, agency or business in Mauritania.",
     input: "Search for a service",
-    placeholder: "E.g. Bankily, pharmacy, restaurant…",
+    placeholder: "Establishment or place name…",
     submit: "Search",
-    examples: "Examples",
-    chips: ["Bankily", "Pharmacy", "Gym", "Restaurant"],
     initialTitle: "Start your search",
     initialText: "Search for a local service.",
     empty: "Please enter a service name.",
@@ -433,6 +429,9 @@ export function PublicSearchDemo() {
 
   const [suggestions, setSuggestions] = useState<ServiceSuggestion[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [approvedSuggestions, setApprovedSuggestions] = useState<
+    ServiceSuggestion[]
+  >([]);
   const suggestionQuery = useMemo(() => normalizeSearchText(query), [query]);
   const hasSuggestionQuery = suggestionQuery.length >= SUGGESTION_MIN_LENGTH;
   const balance = wallet?.balance ?? null;
@@ -448,6 +447,18 @@ export function PublicSearchDemo() {
         '[role="option"]',
       ) ?? [],
     );
+
+  useEffect(() => {
+    if (accountLoading) return;
+
+    const controller = new AbortController();
+    void getApprovedServiceSuggestions(controller.signal).then((items) => {
+      if (controller.signal.aborted) return;
+      setApprovedSuggestions(items.slice(0, APPROVED_SUGGESTION_LIMIT));
+    });
+
+    return () => controller.abort();
+  }, [accountLoading]);
 
   useEffect(() => {
     const promptReason = locationPromptVisible
@@ -1290,24 +1301,33 @@ export function PublicSearchDemo() {
               )}
           </form>
 
-          <div className="-mx-4 mt-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
-            <span className="shrink-0 text-xs font-semibold text-muted">
-              {copy.examples}
-            </span>
-            {copy.chips.map((chip) => (
-              <button
-                type="button"
-                key={chip}
-                onClick={() => {
-                  setQuery(chip);
-                  void runSearch(chip);
-                }}
-                className="min-h-11 shrink-0 rounded-full border border-line bg-surface/90 px-4 text-sm text-ink transition-colors hover:border-tint-ink-3/30 hover:bg-tint-3/40"
-              >
-                {chip}
-              </button>
-            ))}
-          </div>
+          {approvedSuggestions.length > 0 && (
+            <section
+              className="mt-4 min-w-0"
+              aria-label={searchCopy.suggestions}
+            >
+              <p className="text-xs font-semibold text-muted">
+                {searchCopy.suggestions}
+              </p>
+              <div className="mt-2 flex min-w-0 flex-wrap gap-2">
+                {approvedSuggestions.map((suggestion) => (
+                  <button
+                    type="button"
+                    key={suggestion.id}
+                    onClick={() => {
+                      setQuery(suggestion.name);
+                      void runSearch(suggestion.name);
+                    }}
+                    className="min-h-11 max-w-full rounded-full border border-line bg-surface/90 px-4 text-sm text-ink transition-colors hover:border-tint-ink-3/30 hover:bg-tint-3/40"
+                  >
+                    <bdi dir="auto" className="block max-w-full truncate">
+                      {suggestion.name}
+                    </bdi>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
 
           <div
             className="mt-6 min-w-0 sm:mt-8"

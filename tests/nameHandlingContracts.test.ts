@@ -85,53 +85,40 @@ describe("brand name contracts", () => {
 });
 
 describe("proper name non-translation contracts", () => {
-  it("English appCopy does not translate French business names in chips", () => {
+  it("DB-backed starter chips render the canonical stored name in every locale", () => {
     const appDemo = read(appDemoPath);
-
-    // Extract FR chips
-    const frChipsMatch = appDemo.match(
-      /fr:\s*\{[\s\S]*?chips:\s*\[(.*?)\]/,
+    const sectionStart = appDemo.indexOf(
+      "{approvedSuggestions.length > 0 && (",
     );
-    expect(frChipsMatch).not.toBeNull();
-    const frChips = frChipsMatch![1];
+    const sectionEnd = appDemo.indexOf('aria-live={', sectionStart);
+    const section = appDemo.slice(sectionStart, sectionEnd);
 
-    // Extract EN chips
-    const enChipsMatch = appDemo.match(
-      /en:\s*\{[\s\S]*?chips:\s*\[(.*?)\]/,
-    );
-    expect(enChipsMatch).not.toBeNull();
-    const enChips = enChipsMatch![1];
-
-    // "Bankily" is a proper name — must not be translated.
-    expect(frChips).toContain("Bankily");
-    expect(enChips).toContain("Bankily");
+    expect(sectionStart).toBeGreaterThan(-1);
+    expect(section).toContain("approvedSuggestions.map((suggestion)");
+    expect(section).toContain("{suggestion.name}");
+    expect(section).not.toContain("suggestion.nameAr");
+    expect(section).not.toContain('locale === "ar"');
   });
 
-  it("Arabic search chips keep Bankily as Bankily, not transliterated", () => {
+  it("starter suggestions never hardcode or transliterate a business name", () => {
     const appDemo = read(appDemoPath);
 
-    // Find the Arabic chips array.
-    const arChipsMatch = appDemo.match(
-      /ar:\s*\{[\s\S]*?chips:\s*\[(.*?)\]/,
-    );
-    expect(arChipsMatch).not.toBeNull();
-
-    const arChips = arChipsMatch![1];
-
-    // "Bankily" is a proper name — must not be transliterated to بنكيلي.
-    expect(arChips).toContain("Bankily");
-    expect(arChips).not.toContain("بنكيلي");
+    expect(appDemo).not.toContain("chips:");
+    expect(appDemo).not.toContain("Bankily");
+    expect(appDemo).not.toContain("بنكيلي");
+    expect(appDemo).toContain("getApprovedServiceSuggestions");
   });
 
-  it("Arabic demo query placeholder keeps Bankily as Bankily", () => {
+  it("Arabic query placeholder stays generic instead of naming demo data", () => {
     const appDemo = read(appDemoPath);
 
-    // The Arabic placeholder must reference "Bankily" not "بنكيلي".
     const arPlaceholderMatch = appDemo.match(
       /ar:\s*\{[\s\S]*?placeholder:\s*["'](.*?)["']/,
     );
     expect(arPlaceholderMatch).not.toBeNull();
-    expect(arPlaceholderMatch![1]).toContain("Bankily");
+    expect(arPlaceholderMatch![1]).toBe("اسم مؤسسة أو مكان…");
+    expect(arPlaceholderMatch![1]).not.toContain("Bankily");
+    expect(arPlaceholderMatch![1]).not.toContain("بنكيلي");
   });
 
   it("English demo suggestions are category labels, not translated business names", () => {

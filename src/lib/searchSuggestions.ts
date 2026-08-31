@@ -28,6 +28,11 @@ export const SUGGESTION_MIN_LENGTH = 1
 /** Le serveur plafonne déjà à 8 ; la constante sert aux libellés et aux tests. */
 export const SUGGESTION_LIMIT = 8
 
+/** Les suggestions permanentes sous le champ restent volontairement rares. */
+export const APPROVED_SUGGESTION_LIMIT = 3
+
+const approvedSuggestionFields = 'id, name, name_ar, slug'
+
 const emptyResponse: SuggestServicesResponse = { ok: false, status: 'error', items: [] }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -81,4 +86,28 @@ export async function suggestServices(query: string, signal?: AbortSignal): Prom
     status: 'success',
     items: readSuggestions(data.items),
   }
+}
+
+/**
+ * Suggestions initiales en lecture seule. La requête ne sélectionne que les
+ * noms publics nécessaires à l'interface, et la policy RLS des établissements
+ * limite en plus les clients authentifiés aux lignes approuvées.
+ */
+export async function getApprovedServiceSuggestions(signal?: AbortSignal): Promise<ServiceSuggestion[]> {
+  if (signal?.aborted) return []
+
+  const request = supabase
+    .from('establishments')
+    .select(approvedSuggestionFields)
+    .eq('status', 'approved')
+    .order('is_verified', { ascending: false })
+    .order('name', { ascending: true })
+    .limit(APPROVED_SUGGESTION_LIMIT)
+
+  if (signal) request.abortSignal(signal)
+
+  const { data, error } = await request
+  if (signal?.aborted || error) return []
+
+  return readSuggestions(data).slice(0, APPROVED_SUGGESTION_LIMIT)
 }

@@ -21,6 +21,15 @@ const dataLayerPath = new URL(
   import.meta.url,
 );
 const searchUiPath = new URL("../src/components/AppDemo.tsx", import.meta.url);
+const establishmentRlsPath = new URL(
+  "../supabase/migrations/20260819000001_phase_db2_categories_establishments_branches.sql",
+  import.meta.url,
+);
+const translationPaths = {
+  fr: new URL("../src/i18n/fr.ts", import.meta.url),
+  ar: new URL("../src/i18n/ar.ts", import.meta.url),
+  en: new URL("../src/i18n/en.ts", import.meta.url),
+};
 
 function migration() {
   return readFileSync(suggestionsPath, "utf8").replaceAll("\r\n", "\n");
@@ -89,10 +98,16 @@ describe("search suggestion contracts", () => {
 
   it("keeps the browser boundary read-only and free of contact fields", () => {
     const source = readFileSync(dataLayerPath, "utf8");
+    const autocomplete = source.slice(
+      source.indexOf("export async function suggestServices"),
+      source.indexOf("export async function getApprovedServiceSuggestions"),
+    );
 
-    expect(source).toContain("supabase.rpc('suggest_services'");
-    expect(source).not.toContain("supabase.rpc('search_services_with_credit'");
-    expect(source).not.toContain(".from(");
+    expect(autocomplete).toContain("supabase.rpc('suggest_services'");
+    expect(autocomplete).not.toContain(
+      "supabase.rpc('search_services_with_credit'",
+    );
+    expect(autocomplete).not.toContain(".from(");
 
     // The exported shape is the contract: a field that does not exist here
     // cannot reach a component, whatever the server later starts returning.
@@ -135,6 +150,135 @@ describe("search suggestion contracts", () => {
 
     // The demo catalogue must no longer feed anything the user can act on.
     expect(source).not.toContain("searchDemoEstablishments");
+  });
+});
+
+describe("approved client starter suggestion contracts", () => {
+  it("reads at most three approved names through the existing RLS boundary", () => {
+    const source = readFileSync(dataLayerPath, "utf8");
+    const helper = source.slice(
+      source.indexOf("export async function getApprovedServiceSuggestions"),
+    );
+    const selectedFields = source.slice(
+      source.indexOf("const approvedSuggestionFields"),
+      source.indexOf("\n", source.indexOf("const approvedSuggestionFields")),
+    );
+    const rls = readFileSync(establishmentRlsPath, "utf8").replaceAll(
+      "\r\n",
+      "\n",
+    );
+
+    expect(source).toContain("export const APPROVED_SUGGESTION_LIMIT = 3");
+    expect(source).toContain(
+      "const approvedSuggestionFields = 'id, name, name_ar, slug'",
+    );
+    expect(helper).toContain(".from('establishments')");
+    expect(helper).toContain(".select(approvedSuggestionFields)");
+    expect(helper).toContain(".eq('status', 'approved')");
+    expect(helper).toContain(".limit(APPROVED_SUGGESTION_LIMIT)");
+    expect(helper).toContain(
+      "readSuggestions(data).slice(0, APPROVED_SUGGESTION_LIMIT)",
+    );
+
+    // This is a name-only, read-only request. Merely rendering it cannot spend
+    // a point, record a search, or start an external provider lookup.
+    for (const forbidden of [
+      "search_services_with_credit",
+      "credit_ledger",
+      "search_logs",
+      "searchExternalPlace",
+      "pending_review",
+      "service_role",
+    ]) {
+      expect(helper).not.toContain(forbidden);
+    }
+    for (const privateField of [
+      "phone",
+      "whatsapp",
+      "website",
+      "description",
+    ]) {
+      expect(selectedFields).not.toContain(privateField);
+    }
+
+    expect(rls).toContain(
+      'create policy "Authenticated users can read approved establishments"',
+    );
+    expect(rls).toContain("on public.establishments for select");
+    expect(rls).toContain("to authenticated");
+    expect(rls).toContain("using (status = 'approved');");
+  });
+
+  it("hides an empty list and preserves the explicit normal-search click", () => {
+    const source = readFileSync(searchUiPath, "utf8");
+    const loadStart = source.indexOf(
+      "void getApprovedServiceSuggestions(controller.signal)",
+    );
+    const loadEnd = source.indexOf("}, [accountLoading]);", loadStart);
+    const loadEffect = source.slice(loadStart, loadEnd);
+    const sectionStart = source.indexOf(
+      "{approvedSuggestions.length > 0 && (",
+    );
+    const sectionEnd = source.indexOf('aria-live={', sectionStart);
+    const section = source.slice(sectionStart, sectionEnd);
+
+    expect(loadStart).toBeGreaterThan(-1);
+    expect(loadEnd).toBeGreaterThan(loadStart);
+    expect(loadEffect).toContain(
+      "items.slice(0, APPROVED_SUGGESTION_LIMIT)",
+    );
+    expect(loadEffect).not.toContain("runSearch");
+    expect(loadEffect).not.toContain("searchServicesWithCredit");
+    expect(loadEffect).not.toContain("searchExternalPlace");
+
+    // No rows (including errors) leave the initial [] in place, so there is no
+    // heading or fake fallback content to render.
+    expect(sectionStart).toBeGreaterThan(-1);
+    expect(section).toContain(
+      "{approvedSuggestions.length > 0 && (",
+    );
+    expect(section).toContain("approvedSuggestions.map((suggestion)");
+    expect(section).toContain("flex min-w-0 flex-wrap gap-2");
+    expect(section).toContain("{suggestion.name}");
+    expect(section).not.toContain("suggestion.nameAr");
+
+    // The former chips submitted a normal search on click; the DB-backed chips
+    // retain that explicit action while their initial load remains free.
+    expect(section).toContain("setQuery(suggestion.name)");
+    expect(section).toContain("void runSearch(suggestion.name)");
+
+    expect(source).not.toContain("copy.chips");
+    expect(source).not.toContain("examples:");
+    for (const fake of ["Bankily", "Hotel Akjoujt", "Nasser"]) {
+      expect(source).not.toContain(fake);
+    }
+    expect(source).not.toContain("pending_review");
+    expect(source).not.toContain("service_role");
+  });
+
+  it("keeps translated section labels while leaving proper names untouched", () => {
+    const expectedLabels = {
+      fr: 'suggestions: "Suggestions"',
+      ar: 'suggestions: "اقتراحات"',
+      en: 'suggestions: "Suggestions"',
+    };
+
+    for (const locale of Object.keys(expectedLabels) as Array<
+      keyof typeof expectedLabels
+    >) {
+      const source = readFileSync(translationPaths[locale], "utf8");
+      expect(source).toContain("appSearch: {");
+      expect(source).toContain(expectedLabels[locale]);
+    }
+
+    const source = readFileSync(searchUiPath, "utf8");
+    const sectionStart = source.indexOf(
+      "{approvedSuggestions.length > 0 && (",
+    );
+    const sectionEnd = source.indexOf('aria-live={', sectionStart);
+    const section = source.slice(sectionStart, sectionEnd);
+    expect(section).toContain("{searchCopy.suggestions}");
+    expect(section).toContain("{suggestion.name}");
   });
 });
 
