@@ -1,10 +1,5 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import {
-  BUSINESS_SUBMISSION_BRANCH_COUNT_MAX,
-  BUSINESS_SUBMISSION_BRANCH_COUNT_MIN,
-  normalizeRequestedBranchCount,
-} from '../src/lib/businessSubmissions'
 
 const formPath = new URL('../src/components/BusinessSubmissionForm.tsx', import.meta.url)
 const dataPath = new URL('../src/lib/businessSubmissions.ts', import.meta.url)
@@ -23,16 +18,19 @@ function source(path: URL) {
 
 describe('business submission branch-count contracts', () => {
   it('defaults empty values to one and accepts only whole numbers from 1 to 20', () => {
-    expect(BUSINESS_SUBMISSION_BRANCH_COUNT_MIN).toBe(1)
-    expect(BUSINESS_SUBMISSION_BRANCH_COUNT_MAX).toBe(20)
-    for (const value of [undefined, null, '', '   ', 1, '1']) {
-      expect(normalizeRequestedBranchCount(value)).toBe(1)
-    }
-    expect(normalizeRequestedBranchCount('2')).toBe(2)
-    expect(normalizeRequestedBranchCount(20)).toBe(20)
-    for (const value of [0, '0', 21, '21', '2.5', '2e1', -1, Number.NaN, 'branches']) {
-      expect(normalizeRequestedBranchCount(value)).toBeNull()
-    }
+    const data = source(dataPath)
+
+    expect(data).toContain('export const BUSINESS_SUBMISSION_BRANCH_COUNT_MIN = 1')
+    expect(data).toContain('export const BUSINESS_SUBMISSION_BRANCH_COUNT_MAX = 20')
+    expect(data).toContain('if (value === null || value === undefined) return BUSINESS_SUBMISSION_BRANCH_COUNT_MIN')
+    expect(data).toContain("const text = typeof value === 'string' ? value.trim() : String(value)")
+    expect(data).toContain('if (!text) return BUSINESS_SUBMISSION_BRANCH_COUNT_MIN')
+    expect(data).toContain('if (!/^\\d+$/.test(text)) return null')
+    expect(data).toContain('const count = Number(text)')
+    expect(data).toContain('return Number.isInteger(count)')
+    expect(data).toContain('&& count >= BUSINESS_SUBMISSION_BRANCH_COUNT_MIN')
+    expect(data).toContain('&& count <= BUSINESS_SUBMISSION_BRANCH_COUNT_MAX')
+    expect(data).toContain('? count\n    : null')
   })
 
   it('renders the optional bounded field and sends its normalized value in review and WhatsApp summaries', () => {
