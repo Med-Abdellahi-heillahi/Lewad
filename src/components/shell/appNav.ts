@@ -134,7 +134,7 @@ export const appShellCopy: Record<Locale, AppShellCopy> = {
     theme: "السمة",
     light: "فاتح",
     dark: "داكن",
-    primaryNav: "التنقل في Lewad",
+    primaryNav: "التنقل في لواد",
     guest: "زائر",
     by: "By Wasla",
     version: "الإصدار 1.0.0",

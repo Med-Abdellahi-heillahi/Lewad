@@ -164,7 +164,7 @@ const appCopy = {
     empty: "يرجى إدخال اسم خدمة.",
     minimum: "أدخل حرفين على الأقل لبدء البحث.",
     loading: "جارٍ البحث…",
-    dataFromLewad: "بيانات Lewad",
+    dataFromLewad: "بيانات لواد",
     categoryUnavailable: "فئة غير محددة",
     phone: "الهاتف",
     website: "الموقع الإلكتروني",
@@ -179,7 +179,7 @@ const appCopy = {
     notAvailable: "غير متاح",
     noBranches: "لا توجد وكالة نشطة حاليًا.",
     branchesError: "الوكالات غير متاحة مؤقتًا.",
-    unavailableTitle: "هذه الخدمة غير متاحة بعد على Lewad.",
+    unavailableTitle: "هذه الخدمة غير متاحة بعد على لواد.",
     unavailableText: "يمكنك تجهيز طلب ليضيفها فريقنا.",
     request: "طلب الإضافة",
     searchErrorTitle: "البحث غير متاح مؤقتًا.",
@@ -196,7 +196,7 @@ const appCopy = {
     retryRequest: "أعد المحاولة",
     requestError: "تعذّر إرسال الطلب حاليًا.",
     requestedTitle: "تم إرسال الطلب",
-    requestedText: "تم إرسال طلبك إلى فريق Lewad.",
+    requestedText: "تم إرسال طلبك إلى فريق لواد.",
     requestDuplicateTitle: "الطلب قيد الانتظار بالفعل",
     requestDuplicateText: "يوجد طلب قيد الانتظار لهذه الخدمة بالفعل.",
     reset: "بحث جديد",
@@ -1055,7 +1055,7 @@ export function PublicSearchDemo() {
             <span aria-hidden="true" className="pointer-events-none absolute -top-16 end-[-3rem] size-44 rounded-full bg-tint-3/45 blur-3xl" />
             <span className="relative inline-flex items-center gap-2 rounded-full border border-tint-ink-5/15 bg-tint-5/65 px-3 py-1.5 text-[11px] font-bold tracking-[0.08em] text-tint-ink-5 uppercase rtl:tracking-normal rtl:normal-case">
               <span className="size-1.5 rounded-full bg-tint-ink-5" />
-              Lewad V1
+              {t.brandName} V1
             </span>
             <h1
               id="app-demo-title"

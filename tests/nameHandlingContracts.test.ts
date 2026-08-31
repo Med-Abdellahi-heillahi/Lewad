@@ -2,10 +2,8 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 /**
- * Proper names and brand names must never be translated by the i18n layer.
- *
- * "Lewad" must stay "Lewad" in all three languages. Business/service names
- * (e.g. Bankily, Pharmacie Centrale) must not be converted to English or
+ * The Lewad product brand is localized only in Arabic UI. Business/service
+ * names (e.g. Bankily, Pharmacie Centrale) must not be converted to English or
  * Arabic equivalents — they are stored data, not translatable UI copy.
  *
  * Category/example labels (Pharmacie, Gym, etc.) may be localized normally.
@@ -18,6 +16,12 @@ const localePaths = ["fr", "ar", "en"].map(
 
 const appDemoPath = new URL("../src/components/AppDemo.tsx", import.meta.url);
 const appPagesPath = new URL("../src/components/AppPages.tsx", import.meta.url);
+const authPagePath = new URL("../src/components/AuthPage.tsx", import.meta.url);
+const logoPath = new URL("../src/components/Logo.tsx", import.meta.url);
+const navbarPath = new URL("../src/components/Navbar.tsx", import.meta.url);
+const appBarPath = new URL("../src/components/shell/AppBar.tsx", import.meta.url);
+const appShellPath = new URL("../src/components/shell/AppShell.tsx", import.meta.url);
+const appNavPath = new URL("../src/components/shell/appNav.ts", import.meta.url);
 const historyPagePath = new URL(
   "../src/components/HistoryPage.tsx",
   import.meta.url,
@@ -33,54 +37,62 @@ function read(url: URL) {
   return readFileSync(url, "utf8").replaceAll("\r\n", "\n");
 }
 
+function latinBrandStringValues(source: string) {
+  return source.match(/["'][^"'\n]*Lewad[^"'\n]*["']/g) ?? [];
+}
+
 describe("brand name contracts", () => {
-  it("Lewad remains Lewad in all three locale dictionaries", () => {
-    for (const path of localePaths) {
-      const src = read(path);
-
-      // The Latin brand name must appear in every locale.
-      expect(src).toContain("Lewad");
-
-      // Arabic must not use the transliterated form in active i18n values.
-      // Only comments about the logo file may reference it.
-      if (path.pathname.includes("/ar.")) {
-        // Extract only value strings (inside quotes), skip comments.
-        const valueLines = src
-          .split("\n")
-          .filter((line) => !line.trim().startsWith("//") && !line.trim().startsWith("*"));
-
-        for (const line of valueLines) {
-          // Match Arabic-transliterated Lewad inside string values.
-          const matches = line.match(/['"](.*? لواد .*?)['"]/g) ?? [];
-          for (const match of matches) {
-            throw new Error(
-              `Arabic dictionary contains transliterated "لواد" in value: ${match}`,
-            );
-          }
-        }
-      }
-    }
+  it("centralizes Lewad in French and English and لواد in Arabic", () => {
+    expect(read(localePaths[0])).toContain('brandName: "Lewad"');
+    expect(read(localePaths[1])).toContain('brandName: "لواد"');
+    expect(read(localePaths[2])).toContain('brandName: "Lewad"');
   });
 
-  it("Lewad is never translated in component-level Arabic copy", () => {
+  it("renders the localized key in shared brand surfaces", () => {
+    const logo = read(logoPath);
+    const navbar = read(navbarPath);
+    const auth = read(authPagePath);
+    const appBar = read(appBarPath);
+    const appShell = read(appShellPath);
+
+    expect(logo).toContain("{t.brandName}");
+    expect(logo).toContain('<bdi dir="auto"');
+    expect(logo).not.toContain(">LEWAD<");
+    expect(navbar).toContain("aria-label={t.brandName}");
+    expect(navbar).toContain("title={t.brandName}");
+    expect(auth).toContain("aria-label={t.brandName}");
+    expect(auth).toContain("`${screenTitle} — ${t.brandName}`");
+    expect(appBar).toContain("aria-label={t.brandName}");
+    expect(appShell).toContain("`${documentTitle} — ${t.brandName}`");
+  });
+
+  it("uses لواد throughout Arabic product-brand copy", () => {
+    const arabicDictionary = read(localePaths[1]);
+    expect(arabicDictionary).toContain("لواد");
+    expect(latinBrandStringValues(arabicDictionary)).toEqual([]);
+
     const files = [
       { path: appDemoPath, name: "AppDemo.tsx" },
       { path: appPagesPath, name: "AppPages.tsx" },
-      { path: appPagesPath, name: "appNav.ts" },
+      { path: authPagePath, name: "AuthPage.tsx" },
+      { path: appNavPath, name: "appNav.ts" },
     ];
 
     for (const { path, name } of files) {
       const src = read(path);
-      // Find Arabic string values that contain the transliterated form.
-      const arSection = src.includes("ar:")
-        ? src.slice(src.indexOf("ar:"), src.indexOf("ar:") + 5000)
-        : src;
-      const lines = arSection.split("\n").filter((l) => l.includes("لواد"));
+      const start = src.indexOf("  ar: {");
+      const end = src.indexOf("  en: {", start);
+      const arSection = src.slice(start, end);
+
+      expect(start, `${name} exposes an Arabic copy block`).toBeGreaterThan(-1);
+      expect(end, `${name} exposes an English copy block after Arabic`).toBeGreaterThan(start);
+      expect(arSection, `${name} keeps the Arabic product brand localized`).toContain("لواد");
       expect(
-        lines,
-        `${name} Arabic copy contains transliterated "لواد": ${lines.join("; ")}`,
-      ).toHaveLength(0);
+        latinBrandStringValues(arSection),
+        `${name} has no Latin product brand in Arabic UI`,
+      ).toEqual([]);
     }
+
   });
 });
 
@@ -219,6 +231,18 @@ describe("search results name contracts", () => {
     // No translation function wraps the name.
     expect(source).not.toMatch(/translate\(.*\.name/);
     expect(source).not.toMatch(/localize\(.*\.name/);
+  });
+
+  it("external place results preserve the provider's display name and address", () => {
+    const source = read(appDemoPath);
+    const start = source.indexOf('{externalPlace.displayName}');
+    const section = source.slice(start, source.indexOf('</div>', start));
+
+    expect(start).toBeGreaterThan(-1);
+    expect(section).toContain('{externalPlace.displayName}');
+    expect(section).toContain('{externalPlace.address}');
+    expect(section).not.toMatch(/translate\(.*externalPlace/);
+    expect(section).not.toMatch(/localize\(.*externalPlace/);
   });
 
   it("content.ts demo data uses stored names, not translated labels", () => {

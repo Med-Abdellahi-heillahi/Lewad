@@ -9,7 +9,7 @@ import { appShellCopy, type AppNavId } from './appNav'
 type AppShellProps = {
   /** Entrée de navigation active, pour la barre du haut et les onglets. */
   active?: AppNavId
-  /** Titre du document — toujours suffixé « — Lewad ». */
+  /** Titre du document — toujours suffixé par le nom de marque localisé. */
   documentTitle?: string
   /** Cible du lien d'évitement ; `#app-main` par défaut. */
   skipTarget?: string
@@ -35,13 +35,13 @@ export function AppShell({
   adminBar,
   children,
 }: AppShellProps) {
-  const { locale } = useI18n()
+  const { locale, t } = useI18n()
   const { isAuthenticated } = useAccount()
   const copy = appShellCopy[locale]
 
   useEffect(() => {
-    if (documentTitle) document.title = `${documentTitle} — Lewad`
-  }, [documentTitle])
+    if (documentTitle) document.title = `${documentTitle} — ${t.brandName}`
+  }, [documentTitle, t.brandName])
 
   const surface = adminBar ? 'app' : 'client'
   const footerClearance = !isAuthenticated

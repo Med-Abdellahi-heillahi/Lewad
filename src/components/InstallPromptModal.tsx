@@ -44,7 +44,7 @@ function BrowserBar({ highlightMenu = false }: { highlightMenu?: boolean }) {
 function PhoneFrame({ children }: { children: ReactNode }) {
   return (
     <div className="relative mx-auto h-[124px] w-52 overflow-hidden rounded-[1.35rem] border-4 border-panel bg-page shadow-lg shadow-black/[0.12]">
-      <span aria-hidden="true" className="absolute top-1.5 start-1/2 z-10 h-1.5 w-10 -translate-x-1/2 rounded-full bg-panel" />
+      <span aria-hidden="true" className="absolute top-1.5 left-1/2 z-10 h-1.5 w-10 -translate-x-1/2 rounded-full bg-panel" />
       {children}
     </div>
   )

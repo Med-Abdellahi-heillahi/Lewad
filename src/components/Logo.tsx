@@ -1,4 +1,5 @@
 import { logoEmblemCrop, logoSrc } from '../lib/assets'
+import { useI18n } from '../i18n'
 
 /**
  * Le logo officiel est un PNG transparent dont l'encre principale est bleu nuit,
@@ -46,13 +47,15 @@ function LogoEmblem({ className }: { className: string }) {
  * hauteur permet d'afficher le verrouillage complet.
  */
 export function Logo({ compact = false, className = '' }: LogoProps) {
+  const { locale, t } = useI18n()
+
   return (
-    // `dir="ltr"` : le mot-symbole latin garde toujours l'emblème en tête,
-    // y compris sur une page arabe — un logo ne se miroite pas.
-    <span dir="ltr" className={`inline-flex items-center gap-2.5 ${className}`}>
+    <span dir={locale === 'ar' ? 'rtl' : 'ltr'} className={`inline-flex items-center gap-2.5 ${className}`}>
       <LogoEmblem className="size-8 rounded-[10px]" />
       {!compact && (
-        <span className="font-display text-[19px] leading-none font-bold tracking-[0.04em] text-ink">LEWAD</span>
+        <bdi dir="auto" lang={locale} className="font-display text-[19px] leading-none font-bold tracking-[0.04em] text-ink rtl:tracking-normal">
+          {t.brandName}
+        </bdi>
       )}
     </span>
   )
@@ -71,12 +74,14 @@ type LogoLockupProps = {
  *
  * `object-contain` garde le ratio ; la hauteur est pilotée par `className`.
  */
-export function LogoLockup({ className = 'h-20', alt = 'Lewad' }: LogoLockupProps) {
+export function LogoLockup({ className = 'h-20', alt }: LogoLockupProps) {
+  const { t } = useI18n()
+
   return (
     <span dir="ltr" className={`inline-flex w-max rounded-2xl p-2 ${logoPlate}`}>
       <img
         src={logoSrc}
-        alt={alt}
+        alt={alt ?? t.brandName}
         width={500}
         height={500}
         loading="lazy"

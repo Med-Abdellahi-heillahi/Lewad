@@ -82,8 +82,8 @@ export function Navbar() {
         <div className={`${wrap} flex h-16 min-w-0 items-center gap-3 overflow-x-clip sm:h-[72px]`}>
           {/* --- Logo : toujours au bord de début --- */}
           <div className="flex min-w-0 flex-1 justify-start lg:flex-none">
-            <a href="#top" aria-label="Lewad" className="min-w-0 max-w-full rounded-lg">
-              <Logo className="max-w-full max-[359px]:[&>span:last-child]:hidden" />
+            <a href="#top" aria-label={t.brandName} className="inline-flex min-h-11 min-w-0 max-w-full items-center rounded-lg">
+              <Logo className="max-w-full max-[389px]:[&>bdi:last-child]:hidden" />
             </a>
           </div>
 
@@ -141,7 +141,7 @@ export function Navbar() {
         </div>
       </header>
 
-      <Drawer open={drawerOpen} onClose={closeDrawer} title={t.nav.navigate}>
+      <Drawer open={drawerOpen} onClose={closeDrawer} title={t.brandName}>
         <div className="grid gap-2">
           <a href={accountHref} className={btnPrimary} onClick={closeDrawer}>
             {accountLabel}

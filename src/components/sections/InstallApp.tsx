@@ -44,7 +44,7 @@ function PlatformGuide({ id, copy, screenshots }: { id: 'android' | 'iphone'; co
       {screenshots.length > 0 && (
         <div className="mt-5 -me-1 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 pe-3 md:grid md:grid-cols-3 md:overflow-visible md:pe-0">
           {screenshots.map((screenshot, index) => (
-            <figure key={screenshot.src} className="w-[min(76vw,18rem)] shrink-0 snap-start overflow-hidden rounded-2xl border border-line bg-page-alt md:w-auto">
+            <figure key={screenshot.src} className="w-[min(68vw,18rem)] shrink-0 snap-start overflow-hidden rounded-2xl border border-line bg-page-alt sm:w-[min(76vw,18rem)] md:w-auto">
               <img
                 src={screenshot.src}
                 alt={copy.visuals[index] ?? copy.steps[index] ?? copy.title}

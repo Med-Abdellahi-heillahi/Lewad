@@ -43,7 +43,7 @@ export function Footer() {
               <ul className={`list-none space-y-2.5 text-sm ${index === 0 ? 'mt-4' : 'mt-4 lg:mt-9'}`}>
                 {column.map((id) => (
                   <li key={id}>
-                    <a href={`#${id}`} className="text-muted transition-colors hover:text-ink">
+                    <a href={`#${id}`} className="inline-flex min-h-11 items-center text-muted transition-colors hover:text-ink">
                       {t.nav.sections[id]}
                     </a>
                   </li>
@@ -60,7 +60,7 @@ export function Footer() {
             <ul className="mt-4 list-none space-y-3">
               {channels.map((channel) => (
                 <li key={channel.label}>
-                  <a href={channel.href} className="group flex items-center gap-2.5 text-sm">
+                  <a href={channel.href} className="group flex min-h-11 items-center gap-2.5 text-sm">
                     <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-line bg-surface text-muted transition-colors group-hover:text-ink">
                       <Icon name={channel.icon} size={15} />
                     </span>

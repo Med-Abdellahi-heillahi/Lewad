@@ -22,6 +22,7 @@ const offersPath = new URL('../src/components/sections/Offers.tsx', import.meta.
 const appPagesPath = new URL('../src/components/AppPages.tsx', import.meta.url)
 const languageMenuPath = new URL('../src/components/shell/LanguageMenu.tsx', import.meta.url)
 const navbarPath = new URL('../src/components/Navbar.tsx', import.meta.url)
+const footerPath = new URL('../src/components/Footer.tsx', import.meta.url)
 const heroPath = new URL('../src/components/sections/Hero.tsx', import.meta.url)
 const authPagePath = new URL('../src/components/AuthPage.tsx', import.meta.url)
 const authPath = new URL('../src/lib/auth.ts', import.meta.url)
@@ -257,9 +258,25 @@ describe('public launch contracts', () => {
 
   it('keeps all three install-section titles localized', () => {
     expect(read(frPath)).toContain('Comment installer Lewad sur votre téléphone')
-    expect(read(arPath)).toMatch(/title: ".*Lewad.*"/)
-    expect(read(arPath)).not.toContain('لواد')
+    expect(read(arPath)).toContain('كيفية تثبيت لواد على هاتفك')
+    expect(read(arPath)).toContain('افتح لواد في Chrome.')
+    expect(read(arPath)).toContain('installCta: "تثبيت لواد"')
     expect(read(enPath)).toContain('How to install Lewad on your phone')
+  })
+
+  it('keeps narrow Android landing controls touch-safe and RTL-neutral', () => {
+    const navbar = read(navbarPath)
+    const footer = read(footerPath)
+    const install = read(installSectionPath)
+    const modal = read(installModalPath)
+
+    expect(navbar).toContain('max-[389px]:[&>bdi:last-child]:hidden')
+    expect(navbar).toContain('inline-flex min-h-11 min-w-0')
+    expect(footer).toContain('inline-flex min-h-11 items-center')
+    expect(footer).toContain('group flex min-h-11 items-center')
+    expect(install).toContain('w-[min(68vw,18rem)]')
+    expect(modal).toContain('left-1/2')
+    expect(modal).not.toContain('start-1/2')
   })
 
   it('keeps AI and tool branding out of public copy and rendered install screenshots', () => {

@@ -49,7 +49,7 @@ type AppBarProps = {
  * complet, là où le mobile privilégie le solde et une cible tactile large.
  */
 export function AppBar({ active, homeHref = "/app", admin }: AppBarProps) {
-  const { locale, setLocale } = useI18n();
+  const { locale, setLocale, t } = useI18n();
   const { theme, setTheme } = useTheme();
   const { user, isAuthenticated, profile, wallet, loading, walletError } =
     useAccount();
@@ -205,7 +205,7 @@ export function AppBar({ active, homeHref = "/app", admin }: AppBarProps) {
         >
           <a
             href={homeHref}
-            aria-label="Lewad"
+            aria-label={t.brandName}
             className="w-max shrink-0 rounded-lg"
           >
             <Logo compact />

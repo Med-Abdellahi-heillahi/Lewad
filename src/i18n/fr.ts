@@ -17,6 +17,8 @@ export type Offer = {
 export type StripItem = { label: string; alt: string };
 
 export const fr = {
+  brandName: "Lewad",
+
   meta: {
     label: "Français",
     short: "FR",

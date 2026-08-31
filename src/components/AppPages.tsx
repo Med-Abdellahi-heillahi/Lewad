@@ -313,12 +313,12 @@ const copy = {
     readOnly: "للقراءة فقط",
     close: "إغلاق",
     profile: "الملف الشخصي",
-    profileSubtitle: "معلوماتك في Lewad. تُستخدم للتعريف بك لدى المؤسسات.",
+    profileSubtitle: "معلوماتك في لواد. تُستخدم للتعريف بك لدى المؤسسات.",
     personalInfo: "المعلومات الشخصية",
     email: "البريد الإلكتروني",
     fullName: "الاسم الكامل",
     fullNameAr: "الاسم الكامل بالعربية",
-    fullNameArHint: "يُعرض بدل الاسم اللاتيني عندما يكون Lewad بالعربية.",
+    fullNameArHint: "يُعرض بدل الاسم اللاتيني عندما يكون لواد بالعربية.",
     phone: "الهاتف",
     phoneHint: "8 أرقام تبدأ بـ 2 أو 3 أو 4.",
     avatar: "صورة الملف الشخصي",
@@ -336,10 +336,10 @@ const copy = {
       "يجب أن يتكون الرقم من 8 أرقام بالضبط وأن يبدأ بـ 2 أو 3 أو 4.",
     invalidArabicFullName: "يجب أن يحتوي الاسم العربي على أحرف عربية فقط.",
     invalidAvatarFormat: "يجب أن تكون الصورة بصيغة PNG أو JPG أو JPEG.",
-    profileDatabaseNote: "تُحفظ هذه المعلومات في ملفك الشخصي على Lewad.",
+    profileDatabaseNote: "تُحفظ هذه المعلومات في ملفك الشخصي على لواد.",
     loadingProfile: "جارٍ تحميل الملف الشخصي…",
     profileUnavailable: "الملف الشخصي غير متاح مؤقتًا.",
-    profileMissing: "تعذر العثور على ملفك الشخصي في Lewad.",
+    profileMissing: "تعذر العثور على ملفك الشخصي في لواد.",
     backApp: "العودة إلى البحث",
     role: "الدور",
     status: "الحالة",
@@ -354,9 +354,9 @@ const copy = {
     creditsSubtitle: "رصيدك من النقاط وسجل حركاتك.",
     walletBalance: "رصيد النقاط",
     creditsText:
-      "تُستخدم النقاط لإجراء عمليات بحث في Lewad. نقطة واحدة = عملية بحث واحدة.",
-    unlimitedRoleNote: "دورك يسمح بعمليات بحث غير محدودة داخل Lewad.",
-    zeroBalance: "رصيدك 0. أعد شحن نقاطك لمتابعة استخدام Lewad.",
+      "تُستخدم النقاط لإجراء عمليات بحث في لواد. نقطة واحدة = عملية بحث واحدة.",
+    unlimitedRoleNote: "دورك يسمح بعمليات بحث غير محدودة داخل لواد.",
+    zeroBalance: "رصيدك 0. أعد شحن نقاطك لمتابعة استخدام لواد.",
     rechargeCta: "شحن نقاطي",
     loadingWallet: "جارٍ تحميل الرصيد…",
     walletUnavailable: "الرصيد غير متاح مؤقتًا.",
@@ -372,7 +372,7 @@ const copy = {
     searchDebit: "بحث",
     rechargeCredit: "شحن",
     adminAdjustment: "تعديل",
-    referralBonus: "مشاركة Lewad",
+    referralBonus: "مشاركة لواد",
     movement: "حركة",
     showAllMovements: "عرض السجل كاملًا",
     showFewerMovements: "تصغير السجل",
@@ -395,13 +395,13 @@ const copy = {
     stepThree: "الخطوة 3",
     continue: "متابعة",
     back: "رجوع",
-    paymentNumber: "أرسل المبلغ إلى رقم Lewad: {number}",
+    paymentNumber: "أرسل المبلغ إلى رقم لواد: {number}",
     senderPhone: "الرقم المستخدم في الإرسال",
     bankingApp: "التطبيق البنكي",
     chooseBankingApp: "اختر التطبيق البنكي",
     acceptedBankingApps: "التطبيقات المقبولة",
     paymentValidation: "يرجى ملء هذا الحقل.",
-    offerTest: "لتجربة Lewad وإجراء بعض عمليات البحث.",
+    offerTest: "لتجربة لواد وإجراء بعض عمليات البحث.",
     offerRegular: "لاستخدام منتظم.",
     offerAdvanced: "لاستخدام متقدم.",
     chooseOffer: "اختر هذا العرض",
@@ -412,21 +412,21 @@ const copy = {
     minimumPoints: "الحد الأدنى: نقطة واحدة",
     rechargeModalTitle: "إتمام شحن النقاط",
     rechargeModalText:
-      "لإتمام شراء نقاطك، تواصل مع فريق Lewad عبر واتساب. سنرشدك إلى الدفع والتفعيل.",
+      "لإتمام شراء نقاطك، تواصل مع فريق لواد عبر واتساب. سنرشدك إلى الدفع والتفعيل.",
     selectedOffer: "العرض المختار",
     contactWhatsApp: "التواصل عبر واتساب",
     closeRechargeModal: "إغلاق نافذة الشحن",
-    whatsappMessagePrefix: "مرحبًا Lewad، أريد شحن حسابي بـ",
+    whatsappMessagePrefix: "مرحبًا لواد، أريد شحن حسابي بـ",
     whatsappMessageFor: "مقابل",
-    paymentNotice: "الدفع الإلكتروني غير مفعّل بعد: يتم الشحن مع فريق Lewad.",
-    activationNotice: "ستُضاف النقاط بعد موافقة فريق Lewad على طلب الشحن.",
+    paymentNotice: "الدفع الإلكتروني غير مفعّل بعد: يتم الشحن مع فريق لواد.",
+    activationNotice: "ستُضاف النقاط بعد موافقة فريق لواد على طلب الشحن.",
     rechargeRequestCreating: "جارٍ إنشاء طلب إعادة الشحن…",
     rechargeRequestCreated: "تم إنشاء طلب إعادة الشحن.",
     rechargeRequestDuplicate: "لديك بالفعل طلب إعادة شحن معلق.",
     rechargeRequestError: "تعذر إنشاء طلب إعادة الشحن.",
     rechargeRequestContinue: "أرسل الآن رسالة واتساب مع معلومات طلبك.",
     whatsappFallback: "لم يُفتح واتساب تلقائيًا. استخدم الزر أدناه.",
-    whatsappMessageIntro: "السلام عليكم فريق Lewad،\nأريد شحن حسابي بالنقاط.",
+    whatsappMessageIntro: "السلام عليكم فريق لواد،\nأريد شحن حسابي بالنقاط.",
     whatsappUserName: "اسم العميل",
     whatsappUserEmail: "البريد الإلكتروني",
     whatsappUserPhone: "الهاتف",
@@ -435,13 +435,13 @@ const copy = {
     whatsappAmount: "المبلغ المرسل",
     whatsappSenderPhone: "الرقم المستخدم في الإرسال",
     whatsappBankingApp: "التطبيق البنكي",
-    whatsappPaymentNumber: "رقم Lewad الذي تم الدفع إليه",
+    whatsappPaymentNumber: "رقم لواد الذي تم الدفع إليه",
     whatsappRequestId: "معرّف الطلب",
     whatsappThanks: "شكرًا.",
     history: "السجل",
     whereMyPoints: "أين ذهبت نقاطي؟",
     establishmentsTitle: "مؤسساتي",
-    establishmentsSubtitle: "المؤسسات التي أضفتها إلى Lewad.",
+    establishmentsSubtitle: "المؤسسات التي أضفتها إلى لواد.",
     establishmentsEmpty: "لم تقم بإضافة أي مؤسسة بعد.",
     establishmentsAdd: "إضافة مؤسسة",
     establishmentsRefresh: "تحديث",
@@ -479,7 +479,7 @@ const copy = {
     notVerified: "غير موثّق",
     perPeriod: "/ {months} أشهر",
     settings: "الإعدادات",
-    settingsSubtitle: "اضبط مظهر Lewad واطّلع على خيارات حسابك.",
+    settingsSubtitle: "اضبط مظهر لواد واطّلع على خيارات حسابك.",
     appearance: "المظهر واللغة",
     appearanceText: "يُحفظ اختيارك على هذا الجهاز.",
     language: "اللغة",
@@ -492,7 +492,7 @@ const copy = {
     securityText: "ستضاف إعدادات الأمان مع الملف الشخصي الكامل.",
     contact: "التواصل",
     contactTitle: "لنتحدث عن حاجتك.",
-    contactText: "فريق Wasla Tech يرافق مستخدمي ومؤسسات Lewad.",
+    contactText: "فريق Wasla Tech يرافق مستخدمي ومؤسسات لواد.",
     reason: "السبب",
     reasonOptions: ["إضافة مؤسسة", "طلب خدمة", "دعم الحساب", "أخرى"],
     message: "رسالتك",
@@ -2702,7 +2702,7 @@ function SettingsCard({
 /* ---------------------------------------------------------------- contact */
 
 export function ContactPage() {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const { isAuthenticated } = useAccount();
   const text = copy[locale];
 
@@ -2806,7 +2806,7 @@ export function ContactPage() {
                 const reason = String(form.get("reason") ?? "").trim();
                 const message = String(form.get("message") ?? "").trim();
                 const params = new URLSearchParams();
-                if (reason) params.set("subject", `[Lewad] ${reason}`);
+                if (reason) params.set("subject", `[${t.brandName}] ${reason}`);
                 if (message) params.set("body", message);
                 window.location.href = `${contactDetails.emailHref}?${params.toString()}`;
               }}

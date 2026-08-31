@@ -1,6 +1,8 @@
 import type { Dictionary, DemoStep, FaqItem, Offer, StripItem } from "./fr";
 
 export const en: Dictionary = {
+  brandName: "Lewad",
+
   meta: {
     label: "English",
     short: "EN",

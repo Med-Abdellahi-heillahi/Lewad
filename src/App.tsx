@@ -163,6 +163,10 @@ function useRoute(): Route {
 function Landing() {
   const { t } = useI18n()
 
+  useEffect(() => {
+    document.title = `${t.brandName} — ${t.hero.title}`
+  }, [t.brandName, t.hero.title])
+
   return (
     <>
       <a

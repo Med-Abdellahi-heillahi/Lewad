@@ -436,13 +436,13 @@ describe("external place fallback contracts", () => {
     expect(frenchCopy).not.toContain("En attente de vérification");
     expect(frenchCopy).not.toContain("Lewad va le vérifier");
     expect(arabicCopy).toContain(
-      "يمكن لـ Lewad استخدام موقعك للبحث عن الخدمات القريبة منك.",
+      "يمكن لتطبيق لواد استخدام موقعك للبحث عن الخدمات القريبة منك.",
     );
     expect(arabicCopy).toContain("سيتم البحث في الولاية: {wilaya}.");
     expect(arabicCopy).toContain("تعذر البحث على الخريطة الآن. حاول مرة أخرى.");
     expect(arabicCopy).toContain("داخلت نواذيبو");
     expect(arabicCopy).toContain("تم عرض النتيجة، لكن تعذر حفظها حاليًا.");
-    expect(arabicCopy).not.toContain("سيقوم Lewad بالتحقق منها");
+    expect(arabicCopy).not.toContain("سيقوم لواد بالتحقق منها");
     expect(englishCopy).toContain(
       "Lewad can use your location to search for services near you.",
     );
