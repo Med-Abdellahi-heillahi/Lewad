@@ -32,6 +32,7 @@ import { adminCopy, type SuperAdminTabId } from './admin/adminCopy'
 import { AdminUsers } from './admin/AdminUsers'
 import { AdminManagement, SuperAdminAuditLog } from './super-admin/AdminManagement'
 import { SuperAdminAnalytics } from './super-admin/SuperAdminAnalytics'
+import { SuperAdminLocalisationImport } from './super-admin/SuperAdminLocalisationImport'
 import { SuperAdminOverview } from './super-admin/SuperAdminOverview'
 import { SuperAdminServices } from './super-admin/SuperAdminServices'
 import { SuperAdminSidebar, superAdminTabs } from './super-admin/SuperAdminSidebar'
@@ -44,6 +45,7 @@ function emptyUsersPage(): PaginatedResult<AdminUser> {
 function initialSuperAdminTab(): SuperAdminTabId {
   const path = window.location.pathname.replace(/\/+$/, '')
   if (path === '/super-admin/analytics') return 'analytics'
+  if (path === '/super-admin/localisation-import') return 'localisation-import'
 
   const requested = new URLSearchParams(window.location.search).get('tab')
   return superAdminTabs.some((tab) => tab.id === requested) ? requested as SuperAdminTabId : 'overview'
@@ -52,6 +54,7 @@ function initialSuperAdminTab(): SuperAdminTabId {
 function superAdminTabUrl(tab: SuperAdminTabId) {
   if (tab === 'overview') return '/super-admin'
   if (tab === 'analytics') return '/super-admin/analytics'
+  if (tab === 'localisation-import') return '/super-admin/localisation-import'
   return `/super-admin?tab=${encodeURIComponent(tab)}`
 }
 
@@ -277,6 +280,7 @@ export function SuperAdminPage() {
             {error && <InlineAlert tone="error" title={copy.header.dataErrorTitle} className="mb-5">{error} {copy.header.dataErrorText}</InlineAlert>}
             {activeTab === 'overview' && <SuperAdminOverview overview={overview} analytics={analytics} services={services} loading={loading} windowDays={windowDays} onWindowChange={setWindowDays} onRetry={() => void loadOverview()} />}
             {activeTab === 'analytics' && <SuperAdminAnalytics />}
+            {activeTab === 'localisation-import' && <SuperAdminLocalisationImport />}
             {activeTab === 'admins' && <AdminManagement />}
             {activeTab === 'users' && <div className="space-y-5">
               <header className={`${card} border-brand/45 p-5 sm:p-6`}><AdminSectionHeader icon={UsersRound} title={copy.superSpace.people.usersTitle} text={copy.superSpace.people.usersText} /></header>

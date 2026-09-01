@@ -19,6 +19,7 @@
     "react": "latest",
     "react-dom": "latest",
     "react-leaflet": "^5.0.0",
+    "read-excel-file": "^9.3.10",
     "typescript": "latest",
     "vite": "latest"
   },

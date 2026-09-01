@@ -62,7 +62,7 @@ describe('analytics UI contracts', () => {
     expect(page).toContain("activeTab === 'analytics'")
     expect(page).toContain('<SuperAdminAnalytics />')
     expect(sidebar).toContain("{ id: 'analytics', icon: BarChart3 }")
-    expect(copy).toContain("'overview' | 'analytics' | 'admins'")
+    expect(copy).toContain("'overview' | 'analytics' | 'localisation-import' | 'admins'")
     expect(copy).toContain("analytics: 'Analytique'")
     expect(copy).toContain("analytics: 'التحليلات'")
     expect(copy).toContain("analytics: 'Analytics'")

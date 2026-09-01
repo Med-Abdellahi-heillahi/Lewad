@@ -3,7 +3,7 @@ import type { PlaceTypeKey } from '../../lib/placeTypes'
 import type { AdminAlertId } from '../../lib/admin'
 
 export type AdminTabId = 'dashboard' | 'requests' | 'discoveries' | 'users' | 'credits' | 'search-logs' | 'services' | 'submissions' | 'system'
-export type SuperAdminTabId = 'overview' | 'analytics' | 'admins' | 'users' | 'services' | 'audit' | 'settings'
+export type SuperAdminTabId = 'overview' | 'analytics' | 'localisation-import' | 'admins' | 'users' | 'services' | 'audit' | 'settings'
 
 type AlertText = { title: string; text: string }
 
@@ -936,7 +936,7 @@ export const adminCopy: Record<Locale, AdminCopy> = {
     pagination: { previous: 'Précédent', next: 'Suivant', page: 'Page', of: 'sur', items: 'éléments' },
     superSpace: {
       title: 'Espace Super Admin', intro: 'Pilotage global, sécurité et gestion des accès de la plateforme.', navigation: 'Navigation Super Admin', accessOnly: 'Accès réservé au super admin',
-      tabs: { overview: 'Vue globale', analytics: 'Analytique', admins: 'Gestion des admins', users: 'Utilisateurs', services: 'Services et établissements', audit: 'Audit', settings: 'Paramètres système' },
+      tabs: { overview: 'Vue globale', analytics: 'Analytique', 'localisation-import': 'Import localisation', admins: 'Gestion des admins', users: 'Utilisateurs', services: 'Services et établissements', audit: 'Audit', settings: 'Paramètres système' },
       goToAdmin: 'Retour Admin', backToApp: 'Retour App', badge: 'Super Admin', subtitle: 'Pilotage plateforme',
       overview: { title: 'Vue globale de la plateforme', text: 'Indicateurs issus de votre portée d’administration existante.', totalUsers: 'Total utilisateurs', admins: 'Admins', superAdmins: 'Super admins', activeUsers: 'Utilisateurs actifs', suspendedUsers: 'Utilisateurs suspendus', totalSearches: 'Total recherches', pendingRequests: 'Demandes en attente', pendingRecharges: 'Recharges en attente', approvedServices: 'Services approuvés', unavailable: 'Indisponible' },
       platformAnalytics: { title: 'Analytique plateforme', text: 'Lecture globale des opérations Lewad.' },
@@ -1200,7 +1200,7 @@ export const adminCopy: Record<Locale, AdminCopy> = {
     pagination: { previous: 'السابق', next: 'التالي', page: 'الصفحة', of: 'من', items: 'عنصر' },
     superSpace: {
       title: 'مساحة المدير الأعلى', intro: 'إدارة شاملة للمنصة والأمان وصلاحيات الوصول.', navigation: 'تنقل المدير الأعلى', accessOnly: 'الوصول مخصص للمدير الأعلى فقط',
-      tabs: { overview: 'نظرة عامة', analytics: 'التحليلات', admins: 'إدارة المدراء', users: 'المستخدمون', services: 'الخدمات والمؤسسات', audit: 'سجل التدقيق', settings: 'إعدادات النظام' },
+      tabs: { overview: 'نظرة عامة', analytics: 'التحليلات', 'localisation-import': 'استيراد المواقع', admins: 'إدارة المدراء', users: 'المستخدمون', services: 'الخدمات والمؤسسات', audit: 'سجل التدقيق', settings: 'إعدادات النظام' },
       goToAdmin: 'العودة إلى الإدارة', backToApp: 'العودة إلى التطبيق', badge: 'مشرف عام', subtitle: 'إدارة المنصة',
       overview: { title: 'نظرة عامة على المنصة', text: 'مؤشرات من نطاق الإدارة المتاح لحسابك.', totalUsers: 'إجمالي المستخدمين', admins: 'المدراء', superAdmins: 'المدراء الأعلى', activeUsers: 'المستخدمون النشطون', suspendedUsers: 'المستخدمون الموقوفون', totalSearches: 'إجمالي عمليات البحث', pendingRequests: 'طلبات معلقة', pendingRecharges: 'عمليات شحن معلقة', approvedServices: 'خدمات معتمدة', unavailable: 'غير متاح' },
       platformAnalytics: { title: 'تحليلات المنصة', text: 'عرض شامل لعمليات Lewad.' },
@@ -1477,7 +1477,7 @@ export const adminCopy: Record<Locale, AdminCopy> = {
     pagination: { previous: 'Previous', next: 'Next', page: 'Page', of: 'of', items: 'items' },
     superSpace: {
       title: 'Super Admin Space', intro: 'Platform control, security and access management.', navigation: 'Super Admin navigation', accessOnly: 'Super admin access only',
-      tabs: { overview: 'Overview', analytics: 'Analytics', admins: 'Admin Management', users: 'Users', services: 'Services and establishments', audit: 'Audit', settings: 'System Settings' },
+      tabs: { overview: 'Overview', analytics: 'Analytics', 'localisation-import': 'Localization import', admins: 'Admin Management', users: 'Users', services: 'Services and establishments', audit: 'Audit', settings: 'System Settings' },
       goToAdmin: 'Back to Admin', backToApp: 'Back to App', badge: 'Super Admin', subtitle: 'Platform control',
       overview: { title: 'Platform overview', text: 'Counters from your existing administration scope.', totalUsers: 'Total users', admins: 'Admins', superAdmins: 'Super admins', activeUsers: 'Active users', suspendedUsers: 'Suspended users', totalSearches: 'Total searches', pendingRequests: 'Pending requests', pendingRecharges: 'Pending recharges', approvedServices: 'Approved services', unavailable: 'Unavailable' },
       platformAnalytics: { title: 'Platform analytics', text: 'Global view of Lewad operations.' },

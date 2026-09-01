@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BarChart3, Building2, Home, LayoutDashboard, LogOut, Shield, Users, Settings, ClipboardList, User } from 'lucide-react'
+import { BarChart3, Building2, FileSpreadsheet, Home, LayoutDashboard, LogOut, Shield, Users, Settings, ClipboardList, User } from 'lucide-react'
 import { useI18n } from '../../i18n'
 import { adminCopy, type SuperAdminTabId } from '../admin/adminCopy'
 import { Drawer } from '../shell/Drawer'
@@ -7,6 +7,7 @@ import { Drawer } from '../shell/Drawer'
 export const superAdminTabs: { id: SuperAdminTabId; icon: typeof LayoutDashboard }[] = [
   { id: 'overview', icon: LayoutDashboard },
   { id: 'analytics', icon: BarChart3 },
+  { id: 'localisation-import', icon: FileSpreadsheet },
   { id: 'admins', icon: Shield },
   { id: 'users', icon: Users },
   { id: 'services', icon: Building2 },
