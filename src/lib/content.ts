@@ -12,7 +12,7 @@ export const contact = {
   phoneHref: 'tel:+22242015464',
   whatsappDisplay: '+222 42 01 54 64',
   whatsappHref: 'https://wa.me/22242015464',
-  paymentNumber: '42015464',
+  paymentNumber: '30687543',
   email: 'lewad.help@gmail.com',
   emailHref: 'mailto:lewad.help@gmail.com',
 }

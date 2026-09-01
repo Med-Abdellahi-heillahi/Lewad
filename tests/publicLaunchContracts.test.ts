@@ -20,6 +20,7 @@ const rechargePath = new URL('../src/lib/recharge.ts', import.meta.url)
 const rechargeMigrationPath = new URL('../supabase/migrations/20260820000003_create_recharge_request_rpc.sql', import.meta.url)
 const offersPath = new URL('../src/components/sections/Offers.tsx', import.meta.url)
 const appPagesPath = new URL('../src/components/AppPages.tsx', import.meta.url)
+const businessSubmissionFormPath = new URL('../src/components/BusinessSubmissionForm.tsx', import.meta.url)
 const languageMenuPath = new URL('../src/components/shell/LanguageMenu.tsx', import.meta.url)
 const navbarPath = new URL('../src/components/Navbar.tsx', import.meta.url)
 const footerPath = new URL('../src/components/Footer.tsx', import.meta.url)
@@ -59,20 +60,44 @@ const publicCopyPaths = [
 ]
 
 describe('public launch contracts', () => {
-  it('keeps official support details in the centralized contact object without old details in frontend source', () => {
+  it('keeps the banking payment receiver separate from support and report contacts', () => {
     const contact = read(contentPath)
     const frontend = sourceFiles(fileURLToPath(new URL('../src/', import.meta.url))).join('\n')
-    const retiredPhone = ['306', '87543'].join('')
+    const rechargeUi = read(appPagesPath)
+    const businessSubmissionUi = read(businessSubmissionFormPath)
     const retiredEmail = ['deda', 'hisdh'].join('') + '@gmail.com'
 
+    expect(contact).toContain("phoneDisplay: '+222 42 01 54 64'")
     expect(contact).toContain("phoneHref: 'tel:+22242015464'")
+    expect(contact).toContain("whatsappDisplay: '+222 42 01 54 64'")
     expect(contact).toContain("whatsappHref: 'https://wa.me/22242015464'")
+    expect(contact).not.toContain("whatsappHref: 'https://wa.me/22230687543'")
+    expect(contact).toContain("paymentNumber: '30687543'")
+    expect(contact).not.toContain("paymentNumber: '42015464'")
     expect(contact).toContain("email: 'lewad.help@gmail.com'")
-    expect(frontend).not.toContain(retiredPhone)
+    expect(frontend.match(/30687543/g) ?? []).toHaveLength(1)
     expect(frontend).not.toContain(retiredEmail)
+
+    expect(rechargeUi.match(/contactDetails\.paymentNumber/g) ?? []).toHaveLength(3)
+    expect(businessSubmissionUi.match(/contact\.paymentNumber/g) ?? []).toHaveLength(4)
+    for (const paymentUi of [rechargeUi, businessSubmissionUi]) {
+      expect(paymentUi).not.toContain('30687543')
+      expect(paymentUi).not.toContain('42015464')
+    }
+    expect(rechargeUi).toContain('`${text.whatsappPaymentNumber}: ${contactDetails.paymentNumber}`')
+    expect(rechargeUi).toContain('return `${contactDetails.whatsappHref}?text=')
+    expect(businessSubmissionUi).toContain('`${copy.paymentNumberLabel}: ${contact.paymentNumber}`')
+    expect(businessSubmissionUi).toContain('`${contact.whatsappHref}?text=')
+
+    expect(rechargeUi.match(/paymentNumber: "[^"\n]*\{number\}"/g)).toHaveLength(3)
+    for (const dictionary of [read(frPath), read(arPath), read(enPath)]) {
+      expect(dictionary).toMatch(/paymentInstruction: "[^"\n]*\{number\}"/)
+      expect(dictionary).not.toContain('42015464')
+    }
   })
 
   it('uses the reviewed recharge contract catalogue on both landing and member recharge screens', () => {
+    const content = read(contentPath)
     const recharge = read(rechargePath)
     const offers = read(offersPath)
     const appPages = read(appPagesPath)
@@ -88,7 +113,10 @@ describe('public launch contracts', () => {
     expect(offers).toContain('rechargeOffers.map')
     expect(offers).toContain('formatCurrency(rechargeOffer.amountMro, locale)')
     expect(appPages).toContain('rechargeOffers.map')
+    expect(appPages).toContain('paymentApps.map')
+    expect(read(businessSubmissionFormPath)).toContain('paymentApps.map')
     expect(appPages).not.toContain("{ code: 'starter_10', points: 10, amountMro: 50")
+    expect(content).toContain("export const paymentApps = ['Bankily', 'Sedad', 'Masrivi', 'Bimbank', 'Gazapay', 'Bamis Digital', 'Barid Cash', 'Click'] as const")
     expect(migration).toContain("v_offer_label := '10 points · 50 MRO'")
     expect(migration).toContain("v_offer_label := '30 points · 100 MRO'")
     expect(migration).toContain("v_offer_label := '100 points · 500 MRO'")
