@@ -18,7 +18,7 @@ import { analyticsCopy } from './analyticsCopy'
 
 const dateLocales: Record<Locale, string> = { fr: 'fr-FR', ar: 'ar-u-nu-latn', en: 'en-US' }
 
-function formatActivityTime(value: string, locale: Locale) {
+function formatCoarseActivityTime(value: string, locale: Locale) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return '—'
   return new Intl.DateTimeFormat(dateLocales[locale], {
@@ -170,7 +170,7 @@ export function SuperAdminAnalytics() {
         ) : (
           <ol className="mt-5 grid list-none gap-2.5">
             {summary.recentEvents.map((event, index) => (
-              <li key={`${event.createdAt}-${event.eventType}-${event.path}-${index}`} className="flex min-w-0 flex-col gap-3 rounded-xl border border-line bg-page-alt px-3.5 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <li key={`${event.createdMinute}-${event.eventType}-${event.path}-${index}`} className="flex min-w-0 flex-col gap-3 rounded-xl border border-line bg-page-alt px-3.5 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-start gap-3">
                   <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-surface-2 text-ink-soft">
                     <Activity size={16} aria-hidden />
@@ -183,13 +183,11 @@ export function SuperAdminAnalytics() {
                       <span>{copy.deviceLabels[event.deviceType]}</span>
                       <span aria-hidden>·</span>
                       <span>{copy.localeLabels[event.locale]}</span>
-                      <span aria-hidden>·</span>
-                      <span>{event.authenticated ? copy.recentAuthenticated : copy.recentAnonymous}</span>
                     </p>
                   </div>
                 </div>
-                <time dateTime={event.createdAt} className="shrink-0 text-xs font-medium text-muted sm:text-end">
-                  {formatActivityTime(event.createdAt, locale)}
+                <time dateTime={event.createdMinute} className="shrink-0 text-xs font-medium text-muted sm:text-end">
+                  {formatCoarseActivityTime(event.createdMinute, locale)}
                 </time>
               </li>
             ))}

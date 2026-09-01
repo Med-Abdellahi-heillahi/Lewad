@@ -36,8 +36,6 @@ type SuperAdminAnalyticsCopy = {
     recent: string
     recentText: string
   }
-  recentAuthenticated: string
-  recentAnonymous: string
   eventLabels: Record<AnalyticsEventType, string>
   deviceLabels: Record<AnalyticsDeviceType, string>
   localeLabels: Record<AnalyticsLocale, string>
@@ -77,10 +75,8 @@ export const analyticsCopy: Record<Locale, SuperAdminAnalyticsCopy> = {
       locales: 'Langues',
       localesText: 'Répartition selon la langue de l’interface.',
       recent: 'Activité récente',
-      recentText: 'Flux agrégé sans identifiant utilisateur, session ou métadonnée brute.',
+      recentText: 'Flux agrégé sans identifiant ni métadonnée brute, avec heure regroupée par tranches de cinq minutes.',
     },
-    recentAuthenticated: 'Session authentifiée',
-    recentAnonymous: 'Session anonyme',
     eventLabels: {
       page_view: 'Vue de page',
       search_started: 'Recherche démarrée',
@@ -126,10 +122,8 @@ export const analyticsCopy: Record<Locale, SuperAdminAnalyticsCopy> = {
       locales: 'اللغات',
       localesText: 'التوزيع حسب لغة الواجهة.',
       recent: 'النشاط الأخير',
-      recentText: 'تدفق مجمّع بلا معرّفات مستخدمين أو جلسات أو بيانات وصفية خام.',
+      recentText: 'تدفق مجمّع بلا معرّفات أو بيانات وصفية خام، مع تجميع الوقت في فترات من خمس دقائق.',
     },
-    recentAuthenticated: 'جلسة مسجّلة الدخول',
-    recentAnonymous: 'جلسة مجهولة',
     eventLabels: {
       page_view: 'عرض صفحة',
       search_started: 'بدء بحث',
@@ -175,10 +169,8 @@ export const analyticsCopy: Record<Locale, SuperAdminAnalyticsCopy> = {
       locales: 'Languages',
       localesText: 'Distribution by interface language.',
       recent: 'Recent activity',
-      recentText: 'Aggregated feed without user IDs, session IDs or raw metadata.',
+      recentText: 'Aggregated feed without identifiers or raw metadata, with time grouped into five-minute buckets.',
     },
-    recentAuthenticated: 'Authenticated session',
-    recentAnonymous: 'Anonymous session',
     eventLabels: {
       page_view: 'Page view',
       search_started: 'Search started',

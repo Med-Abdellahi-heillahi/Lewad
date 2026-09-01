@@ -32,10 +32,10 @@ export function LandingActivityCounter({ className = '', fullWidth = false }: La
     }
   }, [])
 
-  const estimate = stats?.estimatedActivity
-  const visibleLabel = estimate === undefined
-    ? t.nav.activityFallback
-    : `+${formatNumber(estimate, locale)} ${t.nav.activityEstimatedVisits}`
+  const estimate = stats?.estimatedActivity ?? 0
+  if (estimate <= 0) return null
+
+  const visibleLabel = `+${formatNumber(estimate, locale)} ${t.nav.activityEstimatedVisits}`
 
   return (
     <span
@@ -45,16 +45,12 @@ export function LandingActivityCounter({ className = '', fullWidth = false }: La
     >
       <span
         aria-hidden="true"
-        className={`size-2 shrink-0 rounded-full ring-4 ${estimate === undefined ? 'bg-muted/50 ring-surface-2' : 'bg-answer ring-answer-bg'}`}
+        className="size-2 shrink-0 rounded-full bg-answer ring-4 ring-answer-bg"
       />
-      {estimate === undefined ? (
-        <span className="truncate">{t.nav.activityFallback}</span>
-      ) : (
-        <span className="min-w-0 truncate whitespace-nowrap">
-          <bdi dir="ltr" className="tabular text-ink">+{formatNumber(estimate, locale)}</bdi>{' '}
-          <span>{t.nav.activityEstimatedVisits}</span>
-        </span>
-      )}
+      <span className="min-w-0 truncate whitespace-nowrap">
+        <bdi dir="ltr" className="tabular text-ink">+{formatNumber(estimate, locale)}</bdi>{' '}
+        <span>{t.nav.activityEstimatedVisits}</span>
+      </span>
     </span>
   )
 }

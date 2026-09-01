@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient'
 import type { Locale } from '../i18n'
+import { rotateAnalyticsSession } from './analytics'
 
 export async function signUpWithEmail(params: { fullName: string; email: string; password: string }) {
   const { fullName, email, password } = params
@@ -22,7 +23,9 @@ export async function signInWithEmail(params: { email: string; password: string 
 }
 
 export async function signOut() {
-  return supabase.auth.signOut()
+  const result = await supabase.auth.signOut()
+  if (!result.error) rotateAnalyticsSession()
+  return result
 }
 
 /**

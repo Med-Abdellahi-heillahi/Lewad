@@ -35,6 +35,12 @@ export type AnalyticsSearchStatus =
   | 'invalid_query'
   | 'error'
 
+export type AnalyticsSession = Readonly<{
+  id: string
+  created_at: string
+  expires_at: string
+}>
+
 export type AnalyticsEventMetadata = {
   page_view: Record<never, never>
   search_started: { query_length: number }
@@ -49,8 +55,6 @@ export type AnalyticsEventMetadata = {
 }
 
 export type PublicActivityStats = Readonly<{
-  activeSessionsReal: number
-  visitsTodayReal: number
   estimatedActivity: number
 }>
 
@@ -75,12 +79,11 @@ export type AnalyticsLocaleCount = Readonly<{
 }>
 
 export type RecentAnalyticsEvent = Readonly<{
-  createdAt: string
+  createdMinute: string
   eventType: AnalyticsEventType
   path: AnalyticsPagePath
   locale: AnalyticsLocale
   deviceType: AnalyticsDeviceType
-  authenticated: boolean
 }>
 
 export type AnalyticsAuthBreakdown = Readonly<{
@@ -117,11 +120,16 @@ const SEARCH_STATUS_SET = new Set<string>([
 const LOCALE_SET = new Set<string>(['fr', 'ar', 'en', 'unknown'])
 const DEVICE_TYPE_SET = new Set<string>(['mobile', 'tablet', 'desktop', 'unknown'])
 const SESSION_STORAGE_KEY = 'lewad-analytics-session-id'
+const SESSION_TTL_MS = 24 * 60 * 60 * 1_000
+const PAGE_VIEW_THROTTLE_MS = 5 * 60 * 1_000
+const SEARCH_EVENT_THROTTLE_MS = 10_000
 const PUBLIC_STATS_TTL_MS = 60_000
+const PUBLIC_ESTIMATE_MAX = 1_000_000
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
-let volatileSessionId: string | null = null
-let lastPageViewKey: string | null = null
+let volatileSession: AnalyticsSession | null = null
+const lastPageViewAt = new Map<string, number>()
+const lastSearchEventAt = new Map<string, number>()
 let publicStatsCache: { value: PublicActivityStats | null; expiresAt: number } | null = null
 let publicStatsRequest: Promise<PublicActivityStats | null> | null = null
 
@@ -145,26 +153,108 @@ function createUuid() {
   return `${randomHex()}${randomHex()}-${randomHex()}-4${randomHex().slice(1)}-a${randomHex().slice(1)}-${randomHex()}${randomHex()}${randomHex()}`
 }
 
-export function getAnalyticsSessionId() {
-  if (volatileSessionId) return volatileSessionId
+function createAnalyticsSession(now = Date.now()): AnalyticsSession {
+  return Object.freeze({
+    id: createUuid().toLowerCase(),
+    created_at: new Date(now).toISOString(),
+    expires_at: new Date(now + SESSION_TTL_MS).toISOString(),
+  })
+}
+
+function validAnalyticsSession(value: unknown, now: number): AnalyticsSession | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const source = value as Record<string, unknown>
+  const keys = Object.keys(source)
+  if (
+    keys.length !== 3
+    || !keys.every((key) => key === 'id' || key === 'created_at' || key === 'expires_at')
+    || typeof source.id !== 'string'
+    || typeof source.created_at !== 'string'
+    || typeof source.expires_at !== 'string'
+    || !UUID_PATTERN.test(source.id)
+  ) return null
+
+  const createdAt = Date.parse(source.created_at)
+  const expiresAt = Date.parse(source.expires_at)
+  if (
+    !Number.isFinite(createdAt)
+    || !Number.isFinite(expiresAt)
+    || createdAt > now
+    || expiresAt <= now
+    || expiresAt - createdAt !== SESSION_TTL_MS
+  ) return null
+
+  return Object.freeze({
+    id: source.id.toLowerCase(),
+    created_at: new Date(createdAt).toISOString(),
+    expires_at: new Date(expiresAt).toISOString(),
+  })
+}
+
+function readStoredAnalyticsSession(value: string | null, now: number) {
+  if (!value) return null
+  try {
+    return validAnalyticsSession(JSON.parse(value), now)
+  } catch {
+    return null
+  }
+}
+
+function persistAnalyticsSession(record: AnalyticsSession) {
+  try {
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(record))
+    return true
+  } catch {
+    return false
+  }
+}
+
+function removeStoredAnalyticsSession() {
+  try {
+    localStorage.removeItem(SESSION_STORAGE_KEY)
+  } catch {
+    // Rotation remains safe and non-blocking when storage is restricted.
+  }
+}
+
+function replaceAnalyticsSession(now = Date.now()) {
+  removeStoredAnalyticsSession()
+  volatileSession = createAnalyticsSession(now)
+  lastPageViewAt.clear()
+  lastSearchEventAt.clear()
+  persistAnalyticsSession(volatileSession)
+  return volatileSession
+}
+
+export function getAnalyticsSession(): AnalyticsSession {
+  const now = Date.now()
+  const current = validAnalyticsSession(volatileSession, now)
+  if (current) {
+    volatileSession = current
+    return current
+  }
 
   try {
     const stored = localStorage.getItem(SESSION_STORAGE_KEY)
-    if (stored && UUID_PATTERN.test(stored)) {
-      volatileSessionId = stored.toLowerCase()
-      return volatileSessionId
+    const parsed = readStoredAnalyticsSession(stored, now)
+    if (parsed) {
+      volatileSession = parsed
+      return parsed
     }
   } catch {
-    // Storage can be unavailable in private browsing or restricted webviews.
+    // A restricted/broken storage backend gets a fresh document-local session.
   }
 
-  volatileSessionId = createUuid().toLowerCase()
-  try {
-    localStorage.setItem(SESSION_STORAGE_KEY, volatileSessionId)
-  } catch {
-    // Keep the in-memory identifier for this document when persistence fails.
-  }
-  return volatileSessionId
+  return replaceAnalyticsSession(now)
+}
+
+export function getAnalyticsSessionId() {
+  return getAnalyticsSession().id
+}
+
+/** Breaks the analytics link across privacy boundaries such as a safe logout. */
+export function rotateAnalyticsSession() {
+  return replaceAnalyticsSession()
 }
 
 function normalizedPath(pathname: string) {
@@ -247,10 +337,18 @@ export function trackEvent<EventType extends AnalyticsEventType>(
   if (!path) return
 
   const sessionId = getAnalyticsSessionId()
+  const now = Date.now()
   if (eventType === 'page_view') {
     const pageViewKey = `${sessionId}:${path}`
-    if (lastPageViewKey === pageViewKey) return
-    lastPageViewKey = pageViewKey
+    const previous = lastPageViewAt.get(pageViewKey)
+    if (previous !== undefined && now - previous < PAGE_VIEW_THROTTLE_MS) return
+    lastPageViewAt.set(pageViewKey, now)
+  }
+  if (eventType === 'search_started' || eventType === 'search_completed') {
+    const searchEventKey = `${sessionId}:${path}:${eventType}`
+    const previous = lastSearchEventAt.get(searchEventKey)
+    if (previous !== undefined && now - previous < SEARCH_EVENT_THROTTLE_MS) return
+    lastSearchEventAt.set(searchEventKey, now)
   }
 
   try {
@@ -283,11 +381,12 @@ function countValue(value: unknown): number | null {
 function parsePublicActivityStats(value: unknown): PublicActivityStats | null {
   const source = recordValue(value)
   if (!source) return null
-  const activeSessionsReal = countValue(source.active_sessions_real)
-  const visitsTodayReal = countValue(source.visits_today_real)
   const estimatedActivity = countValue(source.estimated_activity)
-  if (activeSessionsReal === null || visitsTodayReal === null || estimatedActivity === null) return null
-  return Object.freeze({ activeSessionsReal, visitsTodayReal, estimatedActivity })
+  const isSafePublicBucket = estimatedActivity === 0
+    || (estimatedActivity !== null && estimatedActivity >= 100 && estimatedActivity % 100 === 0)
+  return estimatedActivity === null || estimatedActivity > PUBLIC_ESTIMATE_MAX || !isSafePublicBucket
+    ? null
+    : Object.freeze({ estimatedActivity })
 }
 
 export function getPublicActivityStats(): Promise<PublicActivityStats | null> {
@@ -374,6 +473,16 @@ function parseLocaleCounts(value: unknown): AnalyticsLocaleCount[] | null {
   }).slice(0, 4)
 }
 
+function fiveMinuteTimestamp(value: unknown) {
+  if (typeof value !== 'string') return null
+  const timestamp = Date.parse(value)
+  if (!Number.isFinite(timestamp)) return null
+  const date = new Date(timestamp)
+  return date.getUTCMinutes() % 5 === 0 && date.getUTCSeconds() === 0 && date.getUTCMilliseconds() === 0
+    ? value
+    : null
+}
+
 function parseRecentEvents(value: unknown): RecentAnalyticsEvent[] | null {
   const rows = countRows(value)
   if (!rows) return null
@@ -391,13 +500,11 @@ function parseRecentEvents(value: unknown): RecentAnalyticsEvent[] | null {
     const deviceType = typeof row.device_type === 'string' && DEVICE_TYPE_SET.has(row.device_type)
       ? row.device_type as AnalyticsDeviceType
       : null
-    const createdAt = typeof row.created_at === 'string' && Number.isFinite(Date.parse(row.created_at))
-      ? row.created_at
-      : null
-    return eventType && path && locale && deviceType && typeof row.authenticated === 'boolean' && createdAt
-      ? [{ createdAt, eventType, path, locale, deviceType, authenticated: row.authenticated }]
+    const createdMinute = fiveMinuteTimestamp(row.created_minute)
+    return eventType && path && locale && deviceType && createdMinute
+      ? [{ createdMinute, eventType, path, locale, deviceType }]
       : []
-  }).slice(0, 50)
+  }).slice(0, 20)
 }
 
 function parseAuthBreakdown(value: unknown) {
