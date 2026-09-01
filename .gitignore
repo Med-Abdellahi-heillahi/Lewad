@@ -50,5 +50,8 @@ test-results/
 .claude/settings.json
 Supabase.docx
 
+# Raw localisation source corpus (scraped URLs/contact data; local audit only)
+localisation/
+
 # Vercel CLI local project link (.vercel/project.json holds project + org IDs)
 .vercel

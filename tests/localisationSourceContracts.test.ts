@@ -13,6 +13,13 @@ import {
 } from '../src/lib/localisationImport'
 
 const localisationRoot = fileURLToPath(new URL('../localisation/', import.meta.url))
+const runLocalisationSourceContracts = process.env.RUN_LOCALISATION_SOURCE_CONTRACTS === '1'
+
+// This suite audits the owner's raw local corpus and is deliberately excluded
+// from normal CI. Opt in explicitly with RUN_LOCALISATION_SOURCE_CONTRACTS=1.
+const describeLocalisationSourceContracts = runLocalisationSourceContracts
+  ? describe
+  : describe.skip
 
 function discoverSourceFiles(directory = localisationRoot): string[] {
   return readdirSync(directory, { withFileTypes: true })
@@ -73,7 +80,7 @@ function expectImportErrorCode(operation: () => unknown, code: string) {
   throw new Error(`Expected LocalisationImportError with code ${code}.`)
 }
 
-describe('localisation source corpus contracts', () => {
+describeLocalisationSourceContracts('local-only localisation source corpus contracts (set RUN_LOCALISATION_SOURCE_CONTRACTS=1)', () => {
   it('discovers every supplied spreadsheet source, including nested wilaya files', () => {
     const files = discoverSourceFiles()
     const paths = files.map(repositoryPath)
